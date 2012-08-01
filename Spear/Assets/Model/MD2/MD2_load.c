@@ -451,7 +451,7 @@ Model_error_code MD2_load (const char* filename, char clockwise, char left_hande
     currentAnimation->start = start;
     currentAnimation->end   = header->numFrames-1;
 
-    printf ("finished loading model %s\n", filename);
+    /*printf ("finished loading model %s\n", filename);
     printf ("numAnimations: %u\n", numAnimations);
     printf ("animations: %p\n", animations);
 
@@ -461,8 +461,8 @@ Model_error_code MD2_load (const char* filename, char clockwise, char left_hande
         printf ("Animation %d, name: %s, start: %d, end %d\n",
             i, currentAnimation->name, currentAnimation->start, currentAnimation->end);
         currentAnimation++;
-    }
-
+    }*/
+    
     model->vertices   = vertices;
     model->normals    = normals;
     model->texCoords  = texCoords;

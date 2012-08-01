@@ -195,18 +195,16 @@ transform right up fwd pos = mat4
 
 
 -- | Build a transformation 'Matrix4' defined by the given position and target.
---
--- This function is essentially like gluLookAt.
 lookAt :: Vector3 -- ^ Eye position.
        -> Vector3 -- ^ Target point.
-       -> Vector3 -- ^ Up vector.
        -> Matrix4
 
-lookAt pos target up =
+lookAt pos target =
         let fwd = Vector3.normalise $ target - pos
-            r   = fwd `cross` up
+            r    = fwd `cross` Vector3.unitY
+            u    = r `cross` fwd
         in
-            transform r up (-fwd) pos
+            transform r u (-fwd) pos
 
 
 -- | Zip two matrices together with the specified function.
@@ -413,14 +411,17 @@ transpose m = mat4
 -- | Invert the given transformation matrix.
 inverseTransform :: Matrix4 -> Matrix4
 inverseTransform mat = mat4fromVec u v w p where
-    u = vec4 (Vector4.x $ col0 mat) (Vector4.y $ col0 mat) (Vector4.z $ col0 mat) 0
-    v = vec4 (Vector4.x $ col1 mat) (Vector4.y $ col1 mat) (Vector4.z $ col1 mat) 0
-    w = vec4 (Vector4.x $ col2 mat) (Vector4.y $ col2 mat) (Vector4.z $ col2 mat) 0
-    p = vec4 tdotu tdotv tdotw 1
-    t = -(col3 mat)
-    tdotu = t `Vector4.dot` u
-    tdotv = t `Vector4.dot` v
-    tdotw = t `Vector4.dot` w
+    v0 = row0 mat
+    v1 = row1 mat
+    v2 = row2 mat
+    u  = vec4 (Vector4.x v0) (Vector4.y v0) (Vector4.z v0) 0
+    v  = vec4 (Vector4.x v1) (Vector4.y v1) (Vector4.z v1) 0
+    w  = vec4 (Vector4.x v2) (Vector4.y v2) (Vector4.z v2) 0
+    p  = vec4 tdotu tdotv tdotw 1
+    t  = -(col3 mat)
+    tdotu = t `Vector4.dot` col0 mat
+    tdotv = t `Vector4.dot` col1 mat
+    tdotw = t `Vector4.dot` col2 mat
 
 
 -- | Invert the given matrix.

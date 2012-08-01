@@ -140,9 +140,9 @@ orbit center radius anglex angley =
         sy = sin ay
         cx = cos ax
         cy = cos ay
-        px = (x center) + radius*cy*sx
-        py = (y center) + radius*sy
-        pz = (z center) + radius*cx*cy
+        px = x center + radius*cy*sx
+        py = y center + radius*sy
+        pz = z center + radius*cx*cy
     in
         vec3 px py pz
 

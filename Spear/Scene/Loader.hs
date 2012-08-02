@@ -1,12 +1,18 @@
 module Spear.Scene.Loader
 (
     SceneResources(..)
-,   CreateStaticObject
-,   CreateAnimatedObject
+,   CreateGameObject
 ,   loadScene
 ,   validate
 ,   resourceMap
 ,   loadObjects
+,   value
+,   unspecified
+,   mandatory
+,   asString
+,   asFloat
+,   asVec3
+,   asVec4
 )
 where
 
@@ -41,10 +47,6 @@ type Loader = StateT SceneResources Setup
 loaderSetup = lift
 loaderIO    = loaderSetup . setupIO
 loaderError = loaderSetup . setupError
-
-
-type CreateStaticObject   a = String -> Matrix4 -> StaticModelResource   -> a
-type CreateAnimatedObject a = String -> Matrix4 -> AnimatedModelResource -> a
 
 
 -- | Load the scene specified by the given file.
@@ -141,15 +143,15 @@ getResource field key = do
 
 newModel :: SceneGraph -> Loader ()
 newModel (SceneLeaf _ props) = do
-    name <- asString $ mandatory "name"           props
-    file <- asString $ mandatory "file"           props
-    tex  <- asString $ mandatory "texture"        props
-    prog <- asString $ mandatory "shader-program" props
-    ke   <- asVec4   $ mandatory "ke"             props
-    ka   <- asVec4   $ mandatory "ka"             props
-    kd   <- asVec4   $ mandatory "kd"             props
-    ks   <- asVec4   $ mandatory "ks"             props
-    shi  <- asFloat  $ mandatory "shi"            props
+    name <- asString $ mandatory' "name"           props
+    file <- asString $ mandatory' "file"           props
+    tex  <- asString $ mandatory' "texture"        props
+    prog <- asString $ mandatory' "shader-program" props
+    ke   <- asVec4   $ mandatory' "ke"             props
+    ka   <- asVec4   $ mandatory' "ka"             props
+    kd   <- asVec4   $ mandatory' "kd"             props
+    ks   <- asVec4   $ mandatory' "ks"             props
+    shi  <- asFloat  $ mandatory' "shi"            props
     
     let rotation = asRotation $ value "rotation" props
         scale    = asVec3 $ value "scale" props
@@ -192,6 +194,7 @@ loadModel' file rotation scale = do
     case scale of
         Just s  -> setupIO $ Model.transform (scalev s) model
         Nothing -> return ()
+    setupIO $ toGround model
     return model
 
 
@@ -213,17 +216,17 @@ newShaderProgram :: SceneGraph -> Loader ()
 newShaderProgram (SceneLeaf _ props) = do
     (vsName, vertShader) <- Spear.Scene.Loader.loadShader GLSL.VertexShader props
     (fsName, fragShader) <- Spear.Scene.Loader.loadShader GLSL.FragmentShader props
-    name       <- asString $ mandatory "name" props
-    stype      <- asString $ mandatory "type" props
-    texChan    <- fmap read $ asString $ mandatory "texture-channel" props
-    ambient    <- asString $ mandatory "ambient"    props
-    diffuse    <- asString $ mandatory "diffuse"    props
-    specular   <- asString $ mandatory "specular"   props
-    shininess  <- asString $ mandatory "shininess"  props
-    texture    <- asString $ mandatory "texture"    props
-    modelview  <- asString $ mandatory "modelview"  props
-    normalmat  <- asString $ mandatory "normalmat"  props
-    projection <- asString $ mandatory "projection" props
+    name       <- asString $ mandatory' "name" props
+    stype      <- asString $ mandatory' "type" props
+    texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
+    ambient    <- asString $ mandatory' "ambient"    props
+    diffuse    <- asString $ mandatory' "diffuse"    props
+    specular   <- asString $ mandatory' "specular"   props
+    shininess  <- asString $ mandatory' "shininess"  props
+    texture    <- asString $ mandatory' "texture"    props
+    modelview  <- asString $ mandatory' "modelview"  props
+    normalmat  <- asString $ mandatory' "normalmat"  props
+    projection <- asString $ mandatory' "projection" props
     prog       <- loaderSetup $ GLSL.newProgram [vertShader, fragShader]
     
     let getUniformLoc name =
@@ -240,8 +243,8 @@ newShaderProgram (SceneLeaf _ props) = do
     
     case stype of
         "static" -> do
-            vertChan  <- fmap read $ asString $ mandatory "vertex-channel" props
-            normChan  <- fmap read $ asString $ mandatory "normal-channel" props
+            vertChan  <- fmap read $ asString $ mandatory' "vertex-channel" props
+            normChan  <- fmap read $ asString $ mandatory' "normal-channel" props
             
             let channels = StaticProgramChannels vertChan normChan texChan
                 uniforms = StaticProgramUniforms ka kd ks shi tex mview nmat proj
@@ -251,11 +254,11 @@ newShaderProgram (SceneLeaf _ props) = do
             return ()
         
         "animated" -> do
-            vertChan1  <- fmap read $ asString $ mandatory "vertex-channel1" props
-            vertChan2  <- fmap read $ asString $ mandatory "vertex-channel2" props
-            normChan1  <- fmap read $ asString $ mandatory "normal-channel1" props
-            normChan2  <- fmap read $ asString $ mandatory "normal-channel2" props
-            fp <- asString $ mandatory "fp" props
+            vertChan1  <- fmap read $ asString $ mandatory' "vertex-channel1" props
+            vertChan2  <- fmap read $ asString $ mandatory' "vertex-channel2" props
+            normChan1  <- fmap read $ asString $ mandatory' "normal-channel1" props
+            normChan2  <- fmap read $ asString $ mandatory' "normal-channel2" props
+            fp <- asString $ mandatory' "fp" props
             p  <- getUniformLoc fp
             
             let channels = AnimatedProgramChannels vertChan1 vertChan2 normChan1 normChan2 texChan
@@ -290,34 +293,34 @@ newLight _ = return ()
 -- Object Loading --
 --------------------
 
+type CreateGameObject a = String -- ^ The object's name.
+                          -> SceneResources
+                          -> [Property]
+                          -> Matrix4 -- ^ The object's transform.
+                          -> Setup a
+
 
 -- | Load objects from the given 'SceneGraph'.
-loadObjects :: CreateStaticObject a -> CreateAnimatedObject a -> SceneResources -> SceneGraph -> Setup [a]
-loadObjects newSO newAO sceneRes g =
+loadObjects :: CreateGameObject a -> SceneResources -> SceneGraph -> Setup [a]
+loadObjects newGO sceneRes g =
     case node "layout" g of
         Nothing -> return []
-        Just n  -> do
-            let gos = concat . fmap (newObject newSO newAO sceneRes) $ children n
-            forM gos $ \go -> case go of
-                Left err -> setupError err
-                Right go -> return go
+        Just n  -> sequence . concat . fmap (newObject newGO sceneRes) $ children n
 
 
 -- to-do: use a strict accumulator and make loadObjects tail recursive.
-newObject :: CreateStaticObject a -> CreateAnimatedObject a -> SceneResources -> SceneGraph -> [Either String a]
-newObject newSO newAO sceneRes (SceneNode nid props children) =
-    let o = newObject' newSO newAO sceneRes nid props
-    in o : (concat $ fmap (newObject newSO newAO sceneRes) children)
+newObject :: CreateGameObject a -> SceneResources -> SceneGraph -> [Setup a]
+newObject newGO sceneRes (SceneNode nid props children) =
+    let o = newObject' newGO sceneRes nid props
+    in o : (concat $ fmap (newObject newGO sceneRes) children)
 
-newObject newSO newAO sceneRes (SceneLeaf nid props) = [newObject' newSO newAO sceneRes nid props]
+newObject newGO sceneRes (SceneLeaf nid props) = [newObject' newGO sceneRes nid props]
 
 
-newObject' :: CreateStaticObject a -> CreateAnimatedObject a -> SceneResources
-           -> String -> [Property] -> Either String a
-newObject' newSO newAO sceneRes nid props = do
+newObject' :: CreateGameObject a -> SceneResources -> String -> [Property] -> Setup a
+newObject' newGO sceneRes nid props = do
     -- Optional properties.
     let name     = (asString $ value "name"     props) `unspecified` "unknown"
-        model    = (asString $ value "model"    props) `unspecified` "ghost"
         position = (asVec3   $ value "position" props) `unspecified` vec3 0 0 0
         rotation = (asVec3   $ value "rotation" props) `unspecified` vec3 0 0 0
         right'   = (asVec3   $ value "right"    props) `unspecified` vec3 1 0 0
@@ -328,11 +331,7 @@ newObject' newSO newAO sceneRes nid props = do
     -- Compute the object's vectors if a forward vector has been specified.
     let (right, up, forward) = vectors forward'
     
-    case M.lookup model $ staticModels sceneRes of
-        Just m  -> Right $ newSO name (M4.transform right up forward position) m
-        Nothing -> case M.lookup model $ animatedModels sceneRes of
-            Just m  -> Right $ newAO name (M4.transform right up forward position) m
-            Nothing -> Left $ "Loader::newObject: model " ++ model ++ " has not been loaded."
+    newGO name sceneRes props (M4.transform right up forward position)
 
 
 vectors :: Maybe Vector3 -> (Vector3, Vector3, Vector3)
@@ -363,10 +362,14 @@ unspecified (Just x) _ = x
 unspecified Nothing  x = x
 
 
-mandatory :: String -> [Property] -> Loader [String]
+mandatory :: String -> [Property] -> Setup [String]
 mandatory name props = case value name props of
-    Nothing -> loaderError $ "Loader::mandatory: key not found: " ++ name
+    Nothing -> setupError $ "Loader::mandatory: key not found: " ++ name
     Just x  -> return x
+
+
+mandatory' :: String -> [Property] -> Loader [String]
+mandatory' name props = loaderSetup $ mandatory name props
 
 
 asString :: Functor f => f [String] -> f String

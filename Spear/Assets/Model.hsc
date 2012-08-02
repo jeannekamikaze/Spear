@@ -30,6 +30,7 @@ module Spear.Assets.Model
 ,   numAnimations
     -- * Manipulation
 ,   transform
+,   toGround
 )
 where
 
@@ -329,6 +330,15 @@ transform mat (Model model _ _) =
 
 foreign import ccall "Model.h model_transform"
     model_transform :: Ptr CModel -> Ptr M4.Matrix4 -> Ptr M3.Matrix3 -> IO ()
+
+
+-- | Transform the given 'Model' such that its lowest point has y = 0.
+toGround :: Model -> IO ()
+toGround (Model model _ _) = with model model_to_ground
+
+
+foreign import ccall "Model.h model_to_ground"
+    model_to_ground :: Ptr CModel -> IO ()
 
 
 sizeFloat = #{size float}

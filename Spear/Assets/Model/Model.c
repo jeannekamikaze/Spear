@@ -71,3 +71,29 @@ void model_transform (Model* model, float mat[16], float normal[9])
         n++;
     }
 }
+
+
+void model_to_ground (Model* model)
+{
+    unsigned i, f;
+    vec3* v = model->vertices;
+    
+    // Compute the minimum y coordinate for each frame and translate
+    // the model appropriately.
+    for (f = 0; f < model->numFrames; ++f)
+    {
+        vec3* w = v;
+        float y = v->y;
+        
+        for (i = 0; i < model->numVertices; ++i, ++v)
+        {
+            y = fmin (y, v->y);
+        }
+        
+        v = w;
+        for (i = 0; i < model->numVertices; ++i, ++v)
+        {
+            v->y -= y;
+        }
+    }
+}

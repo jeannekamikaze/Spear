@@ -49,6 +49,14 @@ class Spatial s where
     -- | Set the 'Spatial''s transform.
     setTransform :: Matrix4 -> s -> s
     
+    -- | Set the 'Spatial''s position.
+    setPos :: Vector3 -> s -> s
+    setPos p s = setTransform t' s
+        where t' = M.transform r u f p
+              r  = Spear.Math.Spatial.right s
+              u  = Spear.Math.Spatial.up s
+              f  = Spear.Math.Spatial.fwd s 
+    
     -- | Make the 'Spatial' look at the given point.
     lookAt :: Vector3 -> s -> s
     lookAt pt s =

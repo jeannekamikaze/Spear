@@ -1,7 +1,6 @@
 module Spear.Collision.Collision
 (
     Collisionable(..)
-,   collidePlane
 ,   aabbFromSphere
 )
 where

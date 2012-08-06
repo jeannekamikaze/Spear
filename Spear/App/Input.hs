@@ -37,7 +37,7 @@ data Key
     | KEY_Y | KEY_Z | KEY_0 | KEY_1 | KEY_2 | KEY_3 | KEY_4 | KEY_5
     | KEY_6 | KEY_7 | KEY_8 | KEY_9 | KEY_F1 | KEY_F2 | KEY_F3
     | KEY_F4 | KEY_F5 | KEY_F6 | KEY_F7 | KEY_F8 | KEY_F9 | KEY_F10
-    | KEY_F11 | KEY_F12 | KEY_ESC
+    | KEY_F11 | KEY_F12 | KEY_ESC | KEY_SPACE
     deriving (Enum, Bounded)
 
 
@@ -212,6 +212,7 @@ toGLFWkey KEY_F10 = fromEnum GLFW.F10
 toGLFWkey KEY_F11 = fromEnum GLFW.F11
 toGLFWkey KEY_F12 = fromEnum GLFW.F12
 toGLFWkey KEY_ESC = fromEnum GLFW.ESC
+toGLFWkey KEY_SPACE = ord ' '
 
 
 toGLFWbutton :: MouseButton -> GLFW.MouseButton

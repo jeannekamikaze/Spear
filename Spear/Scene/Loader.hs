@@ -293,15 +293,16 @@ newLight _ = return ()
 -- Object Loading --
 --------------------
 
-type CreateGameObject a = String -- ^ The object's name.
-                          -> SceneResources
-                          -> [Property]
-                          -> Matrix4 -- ^ The object's transform.
-                          -> Setup a
+type CreateGameObject m a
+    = String -- ^ The object's name.
+    -> SceneResources
+    -> [Property]
+    -> Matrix4 -- ^ The object's transform.
+    -> m a
 
 
 -- | Load objects from the given 'SceneGraph'.
-loadObjects :: CreateGameObject a -> SceneResources -> SceneGraph -> Setup [a]
+loadObjects :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> m [a]
 loadObjects newGO sceneRes g =
     case node "layout" g of
         Nothing -> return []
@@ -309,7 +310,7 @@ loadObjects newGO sceneRes g =
 
 
 -- to-do: use a strict accumulator and make loadObjects tail recursive.
-newObject :: CreateGameObject a -> SceneResources -> SceneGraph -> [Setup a]
+newObject :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> [m a]
 newObject newGO sceneRes (SceneNode nid props children) =
     let o = newObject' newGO sceneRes nid props
     in o : (concat $ fmap (newObject newGO sceneRes) children)
@@ -317,7 +318,7 @@ newObject newGO sceneRes (SceneNode nid props children) =
 newObject newGO sceneRes (SceneLeaf nid props) = [newObject' newGO sceneRes nid props]
 
 
-newObject' :: CreateGameObject a -> SceneResources -> String -> [Property] -> Setup a
+newObject' :: Monad m => CreateGameObject m a -> SceneResources -> String -> [Property] -> m a
 newObject' newGO sceneRes nid props = do
     -- Optional properties.
     let name     = (asString $ value "name"     props) `unspecified` "unknown"

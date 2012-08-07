@@ -4,6 +4,8 @@ module Spear.Physics.Rigid
 ,   RigidBody(..)
 ,   rigidBody
 ,   update
+,   setVelocity
+,   setAcceleration
 )
 where
 
@@ -77,6 +79,16 @@ update forces dt body =
         v2 = v1 + scale (dt/2) (a2+a1) + scale (0.5*dt) a2
     in
         RigidBody m r2 v2 a2
+
+
+-- | Set the body's velocity.
+setVelocity :: Velocity -> RigidBody -> RigidBody
+setVelocity v body = body { velocity = v }
+
+
+-- | Set the body's acceleration.
+setAcceleration :: Acceleration -> RigidBody -> RigidBody
+setAcceleration a body = body { acceleration = a }
 
 
 -- test

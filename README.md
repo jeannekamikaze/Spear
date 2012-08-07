@@ -9,9 +9,9 @@ Installation
 Simply clone the repo and build with cabal:
 
 ```
-git clone https://github.com/jeannekamikaze/Spear.git
-cd Spear
-cabal install
+$ git clone https://github.com/jeannekamikaze/Spear.git
+$ cd Spear
+$ cabal install
 ```
 
 Documentation

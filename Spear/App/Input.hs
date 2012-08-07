@@ -27,7 +27,7 @@ import Data.Char (ord)
 import qualified Data.Vector.Unboxed as V
 import qualified Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL.GL.CoordTrans
-import Graphics.Rendering.OpenGL.GL.StateVar
+import Data.StateVar
 
 
 data Key

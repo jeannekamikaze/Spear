@@ -1,4 +1,4 @@
-module Spear.IDStore
+module Spear.Sys.Store.ID
 (
     ID   
 ,   IDStore

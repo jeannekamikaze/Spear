@@ -29,7 +29,8 @@ module Spear.Assets.Model
 ,   animationByName
 ,   numAnimations
     -- * Manipulation
-,   transform
+,   transformVerts
+,   transformNormals
 ,   toGround
 )
 where
@@ -232,72 +233,72 @@ fromCAnimation (CAnimation cname start end) =
     Animation (B.unpack cname) (fromIntegral start) (fromIntegral end)
 
 
--- | Release the given 'Model'.
+-- | Release the model.
 releaseModel :: Model -> Setup ()
 releaseModel = release . rkey
 
 
--- | Free the given 'CModel'.
+-- | Free the C model.
 freeModel :: CModel -> IO ()
 freeModel model = Foreign.with model model_free
 
 
--- | Return 'True' if the given 'Model' is animated, 'False' otherwise.
+-- | Return 'True' if the model is animated, 'False' otherwise.
 animated :: Model -> Bool
 animated = (>1) . numFrames
 
 
--- | Return the given 'Model's vertices.
+-- | Return the model's vertices.
 vertices :: Model -> Ptr Vec3
 vertices = cVerts . modelData
 
 
--- | Return the given 'Model's normals.
+-- | Return the model's normals.
 normals :: Model -> Ptr Vec3
 normals = cNormals . modelData
 
 
--- | Return the given 'Model's texCoords.
+-- | Return the model's texCoords.
 texCoords :: Model -> Ptr TexCoord
 texCoords = cTexCoords . modelData
 
 
--- | Return the given 'Model's triangles.
+-- | Return the model's triangles.
 triangles :: Model -> Ptr Triangle
 triangles = cTris . modelData
 
 
--- | Return the given 'Model's skins.
+-- | Return the model's skins.
 skins :: Model -> Ptr Skin
 skins = cSkins . modelData
 
 
--- | Return the given 'Model's number of frames.
+-- | Return the model's number of frames.
 numFrames :: Model -> Int
 numFrames = fromIntegral . cnFrames . modelData
 
 
--- | Return the given 'Model's number of vertices.
+-- | Return the model's number of vertices.
 numVertices :: Model -> Int
 numVertices = fromIntegral . cnVerts . modelData
 
 
--- | Return the given 'Model's number of triangles.
+-- | Return the model's number of triangles.
 numTriangles :: Model -> Int
 numTriangles = fromIntegral . cnTris . modelData
 
 
--- | Return the given 'Model's number of texture coordinates.
+-- | Return the model's number of texture coordinates.
 numTexCoords :: Model -> Int
 numTexCoords = fromIntegral . cnTexCoords . modelData
 
 
--- | Return the given 'Model's number of skins.
+-- | Return the model's number of skins.
 numSkins :: Model -> Int
 numSkins = fromIntegral . cnSkins . modelData
 
 
--- | Return the underlying 'CModel'.
+-- | Return the underlying C model.
 cmodel :: Model -> CModel
 cmodel = modelData
 
@@ -312,27 +313,38 @@ animationByName :: Model -> String -> Maybe Animation
 animationByName model anim = V.find ((==) anim . name) $ mAnimations model
 
 
--- | Return the number of animations in the given 'Model'.
+-- | Return the number of animations of the given model.
 numAnimations :: Model -> Int
 numAnimations = V.length . mAnimations
 
 
--- | Transform the given 'Model's vertices with the given matrix.
-transform :: M4.Matrix4 -> Model -> IO ()
-transform mat (Model model _ _) =
+-- | Transform the model's vertices with the given matrix.
+transformVerts :: M4.Matrix4 -> Model -> IO ()
+transformVerts mat (Model model _ _) =
     allocaBytes (16*sizeFloat) $ \matPtr ->
-    allocaBytes (9*sizeFloat)  $ \normalPtr ->
     with model $ \modelPtr -> do
         poke matPtr mat
-        poke normalPtr $ fastNormalMatrix mat
-        model_transform modelPtr matPtr normalPtr
+        model_transform_vertices modelPtr matPtr
 
 
-foreign import ccall "Model.h model_transform"
-    model_transform :: Ptr CModel -> Ptr M4.Matrix4 -> Ptr M3.Matrix3 -> IO ()
+-- | Transform the model's normals with the given matrix.
+transformNormals :: M3.Matrix3 -> Model -> IO ()
+transformNormals mat (Model model _ _) =
+    allocaBytes (9*sizeFloat) $ \normalPtr ->
+    with model $ \modelPtr -> do
+        poke normalPtr mat
+        model_transform_normals modelPtr normalPtr
 
 
--- | Transform the given 'Model' such that its lowest point has y = 0.
+foreign import ccall "Model.h model_transform_vertices"
+    model_transform_vertices :: Ptr CModel -> Ptr M4.Matrix4 -> IO ()
+
+
+foreign import ccall "Model.h model_transform_normals"
+    model_transform_normals :: Ptr CModel -> Ptr M3.Matrix3 -> IO ()
+
+
+-- | Transform the model such that its lowest point has y = 0.
 toGround :: Model -> IO ()
 toGround (Model model _ _) = with model model_to_ground
 

@@ -20,6 +20,7 @@ where
 import Spear.Assets.Model as Model
 import qualified Spear.GLSL as GLSL
 import Spear.Math.Matrix4 as M4
+import Spear.Math.MatrixUtils (fastNormalMatrix)
 import Spear.Math.Vector3 as V3
 import Spear.Math.Vector4
 import Spear.Render.AnimatedModel
@@ -192,20 +193,24 @@ loadModel' file rotation scale = do
         Just rot -> setupIO $ rotateModel model rot
         Nothing  -> return ()
     case scale of
-        Just s  -> setupIO $ Model.transform (scalev s) model
+        Just s  -> setupIO $ Model.transformVerts (scalev s) model
         Nothing -> return ()
     setupIO $ toGround model
     return model
 
 
 rotateModel :: Model -> Rotation -> IO ()
-rotateModel model (Rotation x y z order) = case order of
-    XYZ -> Model.transform (rotZ z * rotY y * rotX x) model
-    XZY -> Model.transform (rotY y * rotZ z * rotX x) model
-    YXZ -> Model.transform (rotZ z * rotX x * rotY y) model
-    YZX -> Model.transform (rotX x * rotZ z * rotY y) model
-    ZXY -> Model.transform (rotY y * rotX x * rotZ z) model
-    ZYX -> Model.transform (rotX x * rotY y * rotZ z) model
+rotateModel model (Rotation x y z order) =
+    let mat = case order of
+            XYZ -> rotZ z * rotY y * rotX x
+            XZY -> rotY y * rotZ z * rotX x
+            YXZ -> rotZ z * rotX x * rotY y
+            YZX -> rotX x * rotZ z * rotY y
+            ZXY -> rotY y * rotX x * rotZ z
+            ZYX -> rotX x * rotY y * rotZ z
+        normalMat = fastNormalMatrix mat
+    in
+        Model.transformVerts mat model >> Model.transformNormals normalMat model
 
 
 loadTexture :: FilePath -> Loader GLSL.Texture

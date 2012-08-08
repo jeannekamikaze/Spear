@@ -56,19 +56,28 @@ static void mul_normal (float m[9], vec3* n)
 }
 
 
-void model_transform (Model* model, float mat[16], float normal[9])
+void model_transform_vertices (Model* model, float mat[16])
 {
     unsigned i = 0;
     unsigned j = model->numVertices * model->numFrames;
     vec3* v = model->vertices;
-    vec3* n = model->normals;
     
-    for (; i < j; ++i)
+    for (; i < j; ++i, ++v)
     {
         mul (mat, v);
+    }
+}
+
+
+void model_transform_normals (Model* model, float normal[9])
+{
+    unsigned i = 0;
+    unsigned j = model->numVertices * model->numFrames;
+    vec3* n = model->normals;
+    
+    for (; i < j; ++i, ++n)
+    {
         mul_normal (normal, n);
-        v++;
-        n++;
     }
 }
 

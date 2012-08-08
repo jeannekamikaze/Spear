@@ -131,7 +131,7 @@ setForces fs (ObjectID i) world = world { bodies = bodies' }
             bs  <- thaw $ bodies world
             obj <- readArray bs i
             writeArray bs i $ fmap (\obj -> obj { forces = fs }) obj
-            return bs 
+            return bs
 
 
 -- | Set the world's gravity.

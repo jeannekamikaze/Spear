@@ -49,7 +49,7 @@ typedef struct
     texCoord*   texCoords;  // One array for all frames.
     triangle*   triangles;  // One array for all frames.
     skin*       skins;      // Holds the model's texture files.
-    animation* animations; // Holds the model's animations.
+    animation*  animations; // Holds the model's animations.
     
     unsigned int numFrames;
     unsigned int numVertices;   // Number of vertices per frame.
@@ -59,6 +59,21 @@ typedef struct
     unsigned int numAnimations;
 }
 Model;
+
+
+typedef struct
+{
+    vec3 v0;
+    vec3 v1;
+    vec3 v2;
+    vec3 n0;
+    vec3 n1;
+    vec3 n2;
+    texCoord t0;
+    texCoord t1;
+    texCoord t2;
+}
+model_triangle;
 
 
 #ifdef __cplusplus
@@ -77,6 +92,9 @@ void model_transform_normals (Model* model, float normal[9]);
 
 /// Translate the Model such that its lowest point has y = 0.
 void model_to_ground (Model* model);
+
+/// Copy the triangles of the given frame from the Model into the given array.
+void model_copy_triangles (Model* model, unsigned frame, model_triangle* tris);
 
 #ifdef __cplusplus
 }

@@ -4,21 +4,17 @@ module Spear.Assets.Model
 (
     -- * Data types
     ModelErrorCode
-,   Vec3
-,   TexCoord
-,   CModel(..)
+,   Vec3(..)
+,   TexCoord(..)
+,   CModel
 ,   Animation(..)
+,   Triangle(..)
 ,   Model
     -- * Loading and unloading
 ,   loadModel
 ,   releaseModel
     -- * Accessors
 ,   animated
-,   vertices
-,   normals
-,   texCoords
-,   triangles
-,   skins
 ,   numFrames
 ,   numVertices
 ,   numTriangles
@@ -28,6 +24,7 @@ module Spear.Assets.Model
 ,   animation
 ,   animationByName
 ,   numAnimations
+,   triangles
     -- * Manipulation
 ,   transformVerts
 ,   transformNormals
@@ -41,6 +38,7 @@ import qualified Spear.Math.Matrix4 as M4
 import qualified Spear.Math.Matrix3 as M3
 import Spear.Math.MatrixUtils
 
+
 import qualified Data.ByteString.Char8 as B
 import Data.Char (toLower)
 import Data.List (splitAt, elemIndex)
@@ -51,7 +49,7 @@ import Foreign.C.Types
 import Foreign.C.String
 import Foreign.Marshal.Utils as Foreign (with)
 import Foreign.Marshal.Alloc (alloca, allocaBytes)
-import Foreign.Marshal.Array (copyArray, peekArray)
+import Foreign.Marshal.Array (allocaArray, copyArray, peekArray)
 import Unsafe.Coerce (unsafeCoerce)
 
 
@@ -70,13 +68,52 @@ data ModelErrorCode
     deriving (Eq, Enum, Show)
 
 
+sizeFloat = #{size float}
+
+
+-- | A 3D vector.
 data Vec3 = Vec3 !CFloat !CFloat !CFloat
 
+
+instance Storable Vec3 where
+    sizeOf _ = 3*sizeFloat
+    alignment _ = alignment (undefined :: CFloat)
+    
+    peek ptr = do
+        f0 <- peekByteOff ptr 0
+        f1 <- peekByteOff ptr sizeFloat
+        f2 <- peekByteOff ptr (2*sizeFloat)
+        return $ Vec3 f0 f1 f2
+    
+    poke ptr (Vec3 f0 f1 f2) = do
+        pokeByteOff ptr 0             f0
+        pokeByteOff ptr sizeFloat     f1
+        pokeByteOff ptr (2*sizeFloat) f2
+
+
+-- | A 2D texture coordinate.
 data TexCoord = TexCoord !CFloat !CFloat
 
-data Triangle = Triangle !CUShort !CUShort !CUShort !CUShort !CUShort !CUShort
+
+instance Storable TexCoord where
+    sizeOf _ = 2*sizeFloat
+    alignment _ = alignment (undefined :: CFloat)
+    
+    peek ptr = do
+        f0 <- peekByteOff ptr 0
+        f1 <- peekByteOff ptr sizeFloat
+        return $ TexCoord f0 f1
+    
+    poke ptr (TexCoord f0 f1) = do
+        pokeByteOff ptr 0         f0
+        pokeByteOff ptr sizeFloat f1
+
+
+data CTriangle = CTriangle !CUShort !CUShort !CUShort !CUShort !CUShort !CUShort
+
 
 data Skin = Skin !(Ptr Char)
+
 
 data CAnimation = CAnimation !B.ByteString !CUInt !CUInt
 
@@ -86,7 +123,7 @@ data CModel = CModel
     { cVerts       :: Ptr Vec3       -- ^ Pointer to an array of 'cnFrames' * 'cnVerts' vertices.
     , cNormals     :: Ptr Vec3       -- ^ Pointer to an array of 'cnFrames' * cnVerts normals.
     , cTexCoords   :: Ptr TexCoord   -- ^ Pointer to an array of 'cnTris' texture coordinates.
-    , cTris        :: Ptr Triangle   -- ^ Pointer to an array of 'cnTris' triangles.
+    , cTris        :: Ptr CTriangle   -- ^ Pointer to an array of 'cnTris' triangles.
     , cSkins       :: Ptr Skin       -- ^ Pointer to an array of 'cnSkins' skins.
     , cAnimations  :: Ptr CAnimation -- ^ Pointer to an array of 'cnAnimations' animations.
     , cnFrames     :: CUInt          -- ^ Number of frames.
@@ -153,11 +190,55 @@ instance Storable CAnimation where
         #{poke animation, end}   ptr end
 
 
+-- | A model's animation.
+--
+-- See also: 'animation', 'animationByName', 'numAnimations'.
 data Animation = Animation
     { name  :: String
     , start :: Int
     , end   :: Int
     }
+
+
+data Triangle = Triangle
+    { v0 :: Vec3
+    , v1 :: Vec3
+    , v2 :: Vec3
+    , n0 :: Vec3
+    , n1 :: Vec3
+    , n2 :: Vec3
+    , t0 :: TexCoord
+    , t1 :: TexCoord
+    , t2 :: TexCoord
+    }
+
+
+instance Storable Triangle where
+    sizeOf _ = #{size model_triangle}
+    alignment _ = alignment (undefined :: Float)
+    
+    peek ptr = do
+        v0 <- #{peek model_triangle, v0} ptr
+        v1 <- #{peek model_triangle, v1} ptr
+        v2 <- #{peek model_triangle, v2} ptr
+        n0 <- #{peek model_triangle, n0} ptr
+        n1 <- #{peek model_triangle, n1} ptr
+        n2 <- #{peek model_triangle, n2} ptr
+        t0 <- #{peek model_triangle, t0} ptr
+        t1 <- #{peek model_triangle, t1} ptr
+        t2 <- #{peek model_triangle, t2} ptr
+        return $ Triangle v0 v1 v2 n0 n1 n2 t0 t1 t2
+    
+    poke ptr (Triangle v0 v1 v2 n0 n1 n2 t0 t1 t2) = do
+        #{poke model_triangle, v0} ptr v0
+        #{poke model_triangle, v1} ptr v1
+        #{poke model_triangle, v2} ptr v2
+        #{poke model_triangle, n0} ptr n0
+        #{poke model_triangle, n1} ptr n1
+        #{poke model_triangle, n2} ptr n2
+        #{poke model_triangle, t0} ptr t0
+        #{poke model_triangle, t1} ptr t1
+        #{poke model_triangle, t2} ptr t2
 
 
 -- | A model 'Resource'.
@@ -248,31 +329,6 @@ animated :: Model -> Bool
 animated = (>1) . numFrames
 
 
--- | Return the model's vertices.
-vertices :: Model -> Ptr Vec3
-vertices = cVerts . modelData
-
-
--- | Return the model's normals.
-normals :: Model -> Ptr Vec3
-normals = cNormals . modelData
-
-
--- | Return the model's texCoords.
-texCoords :: Model -> Ptr TexCoord
-texCoords = cTexCoords . modelData
-
-
--- | Return the model's triangles.
-triangles :: Model -> Ptr Triangle
-triangles = cTris . modelData
-
-
--- | Return the model's skins.
-skins :: Model -> Ptr Skin
-skins = cSkins . modelData
-
-
 -- | Return the model's number of frames.
 numFrames :: Model -> Int
 numFrames = fromIntegral . cnFrames . modelData
@@ -318,6 +374,21 @@ numAnimations :: Model -> Int
 numAnimations = V.length . mAnimations
 
 
+-- | Return a copy of the model's triangles.
+triangles :: Model -> IO [Triangle]
+triangles m@(Model model _ _) =
+    let n = numVertices m * numFrames m
+    in  with model $ \modelPtr ->
+        allocaArray n $ \arrayPtr -> do
+            model_copy_triangles modelPtr arrayPtr
+            tris <- peekArray n arrayPtr
+            return tris
+
+
+foreign import ccall "Model.h model_copy_triangles"
+    model_copy_triangles :: Ptr CModel -> Ptr Triangle -> IO ()
+
+
 -- | Transform the model's vertices with the given matrix.
 transformVerts :: M4.Matrix4 -> Model -> IO ()
 transformVerts mat (Model model _ _) =
@@ -351,6 +422,3 @@ toGround (Model model _ _) = with model model_to_ground
 
 foreign import ccall "Model.h model_to_ground"
     model_to_ground :: Ptr CModel -> IO ()
-
-
-sizeFloat = #{size float}

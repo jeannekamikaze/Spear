@@ -106,3 +106,31 @@ void model_to_ground (Model* model)
         }
     }
 }
+
+
+void model_copy_triangles (Model* model, unsigned frame, model_triangle* tris)
+{
+    int i;
+    int j = model->numVertices;
+    
+    vec3* v = model->vertices + j * frame;
+    vec3* n = model->normals  + j * frame;
+    texCoord* t = model->texCoords;
+    triangle* tri = model->triangles;
+    
+    
+    for (i = 0; i < j; ++i, ++tri, ++tris)
+    {
+        tris->v0 = v[tri->vertexIndices[0]];
+        tris->v1 = v[tri->vertexIndices[1]];
+        tris->v2 = v[tri->vertexIndices[2]];
+        
+        tris->n0 = n[tri->vertexIndices[0]];
+        tris->n1 = n[tri->vertexIndices[1]];
+        tris->n2 = n[tri->vertexIndices[2]];
+        
+        tris->t0 = t[tri->textureIndices[0]];
+        tris->t1 = t[tri->textureIndices[1]];
+        tris->t2 = t[tri->textureIndices[2]];
+    }
+}

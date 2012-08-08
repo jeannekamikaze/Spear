@@ -12,7 +12,6 @@ where
 import Data.Vector.Unboxed as U
 import Control.Monad.State -- test
 import Text.Printf -- test
-import Debug.Trace
 
 
 type ID = Int

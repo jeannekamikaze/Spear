@@ -36,7 +36,7 @@ newID store@(IDStore assigned last) =
     if last == U.length assigned - 1
     then case findIndex (==False) assigned of
         Just i  -> assign i store
-        Nothing -> newID $ IDStore (assigned U.++ U.replicate (max 1 last+1) False) last
+        Nothing -> newID $ IDStore (assigned U.++ U.replicate (max 1 last + 1) False) last
     else
         assign (last+1) store
 

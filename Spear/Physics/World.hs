@@ -12,9 +12,8 @@ module Spear.Physics.World
     -- * Object operations
 ,   newObject
 ,   deleteObject
-,   modifyObject
+,   withBody
 ,   objectTransform
-,   objectForces
 ,   setForces
 )
 where
@@ -28,10 +27,9 @@ import Spear.Math.Spatial
 import Spear.Math.Vector3
 import Spear.Physics.Rigid as Rigid
 import Spear.Physics.Types
+import Spear.Sys.Store
 
-import Control.Monad.ST
-import Data.Array as A
-import Data.Array.ST
+
 import Data.Maybe (fromJust)
 
 
@@ -48,90 +46,47 @@ data Object = Object
 
 -- | The world where physical bodies are simulated.
 data World = World
-    { bodies  :: Array Int (Maybe Object) -- ^ Collection of objects.
+    { bodies  :: Store Object -- ^ Collection of objects.
     , gravity :: Vector3 -- ^ World gravity.
     }
 
 
--- | Create an empty 'World'.
+-- | Create an empty world.
 emptyWorld :: World
-emptyWorld = World emptyArray defaultGravity
-    where
-        defaultGravity = vec3 0 (-9.8) 0
-        emptyArray = listArray (0,0) []
+emptyWorld = World emptyStore $ vec3 0 (-9.8) 0
 
 
 -- | Create a new object.
-newObject :: RigidBody -> Collisioner -> World -> (World, ObjectID)
+newObject :: RigidBody -> Collisioner -> World -> (ObjectID, World)
 newObject body collisioner world =
-    let obj = (Object body collisioner [])
-    in case emptySlot world of
-        Just i  -> (insert i obj world, ObjectID i)
-        Nothing -> append obj world
+    let (index, bodies') = store (Object body collisioner []) $ bodies world 
+    in (ObjectID index, world { bodies = bodies' })
 
 
--- | Search for an empty slot in the given 'World'.
-emptySlot :: World -> Maybe Int
-emptySlot world = Nothing
-
-
--- | Insert the given 'Object' in the given 'World' at the given position.
-insert :: Int -> Object -> World -> World
-insert i obj world = world { bodies = bodies' }
-    where
-        bodies' = runSTArray $ do
-            bs <- thaw $ bodies world
-            writeArray bs i $ Just obj
-            return bs
-
-
--- | Append the given object to the given 'World'.
---
--- The world's vectors are doubled in size to make future insertions faster.
-append :: Object -> World -> (World, ObjectID)
-append obj world = (world, ObjectID 0)
-
-
--- | Remove the object specified by the given 'ObjectID' from the given 'World'.
+-- | Remove the object specified by the given object ID.
 deleteObject :: ObjectID -> World -> World
 deleteObject (ObjectID i) world = world { bodies = bodies' }
     where
-        bodies' = runSTArray $ do
-            bs <- thaw $ bodies world
-            writeArray bs i Nothing
-            return bs
+        bodies' = storeFree i $ bodies world
 
 
--- | Modify the object identified by the given 'ObjectID' in the given 'World'.
-modifyObject :: (RigidBody -> RigidBody) -> ObjectID -> World -> World
-modifyObject f (ObjectID i) world = world { bodies = bodies' }
+-- | Modify the object identified by the given object ID.
+withBody :: ObjectID -> World -> (RigidBody -> RigidBody) -> World
+withBody (ObjectID index) world f = world { bodies = bodies' }
     where
-        bodies' = runSTArray $ do
-            bs  <- thaw $ bodies world
-            obj <- readArray bs i
-            writeArray bs i $ fmap (\obj -> obj { body = f $ body obj }) obj
-            return bs
+        bodies' = withElement index (bodies world) $ \obj -> obj { body = f $ body obj }
 
 
--- | Get the transform of the object identified by the given 'ObjectID'.
+-- | Get the transform of the object identified by the given object ID.
 objectTransform :: World -> ObjectID -> Matrix4
-objectTransform world (ObjectID i) = transform . body . fromJust $ bodies world ! i
+objectTransform world (ObjectID i) = transform . body . fromJust $ (element i $ bodies world)
 
 
--- | Get the forces acting on the object identified by the given 'ObjectID'.
-objectForces :: World -> ObjectID -> [Force]
-objectForces world (ObjectID i) = forces . fromJust $ bodies world ! i
-
-
--- | Add the given force to the forces acting on the object identified by the given 'ObjectID'.
+-- | Add the given force to the forces acting on the object identified by the given object ID.
 setForces :: [Force] -> ObjectID -> World -> World
 setForces fs (ObjectID i) world = world { bodies = bodies' }
     where
-        bodies' = runSTArray $ do
-            bs  <- thaw $ bodies world
-            obj <- readArray bs i
-            writeArray bs i $ fmap (\obj -> obj { forces = fs }) obj
-            return bs
+        bodies' = withElement i (bodies world) $ \obj -> obj { forces = fs }
 
 
 -- | Set the world's gravity.
@@ -139,17 +94,11 @@ setGravity :: Vector3 -> World -> World
 setGravity g world = world { gravity = g }
 
 
--- | Update the 'World'.
+-- | Update the world.
 updateWorld :: Dt -> World -> World
-updateWorld dt world = world { bodies = bodies' }
-    where
-        bodies' = runSTArray $ do
-            bs <- thaw $ bodies world
-            mapArray updateObject bs
-            return bs
-        
-        updateObject = fmap updateObject'
-        updateObject' (Object body collisioner forces) = Object body' collisioner' forces
+updateWorld dt world = world { bodies = fmap updateObject $ bodies world }
+    where        
+        updateObject (Object body collisioner forces) = Object body' collisioner' forces
             where
                 -- Forces acting on the body.
                 forces' = scale (mass body) (gravity world) : forces
@@ -170,7 +119,7 @@ updateWorld dt world = world { bodies = bodies' }
                         aabbCollisioner $ AABB min' max'
 
 
-{--- | Test for potential collisions in the given 'World'.
+{--- | Test for potential collisions.
 --
 -- Returns a new world and a list of colliding pairs of objects.
 --testCollisions :: World -> (World, [(ObjectID, ObjectID)])-}

@@ -8,6 +8,8 @@ module Spear.Sys.Store
 ,   storeFree
 ,   storeFreel
 ,   element
+,   setElement
+,   withElement
 )
 where
 
@@ -27,6 +29,10 @@ data Store a = Store
     , last    :: Index -- ^ The greatest index assigned so far.
     }
     deriving Show
+
+
+instance Functor Store where
+    fmap f (Store objects last) = Store (fmap (fmap f) objects) last
 
 
 -- | Create an empty store.
@@ -133,6 +139,21 @@ storeFreel is (Store objects last) =
 -- | Access the element in the given slot.
 element :: Index -> Store a -> Maybe a
 element index (Store objects _) = objects V.! index
+
+
+-- | Set the element in the given slot.
+setElement :: Index -> a -> Store a -> Store a
+setElement index elem s = s { objects = objects s // [(index,Just elem)] }
+
+
+-- | Apply a function to the element in the given slot.
+withElement :: Index -> Store a -> (a -> a) -> Store a
+withElement index store f = store { objects = objects' }
+    where
+        objects' = objects store // [(index, obj')]
+        obj' = case element index store of
+            Nothing -> Nothing
+            Just x  -> Just $ f x
 
 
 -- test

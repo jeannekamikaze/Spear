@@ -4,12 +4,15 @@ module Spear.Sys.Store
 ,   Index
 ,   emptyStore
 ,   store
+,   storel
 ,   storeFree
+,   storeFreel
 ,   element
 )
 where
 
 
+import Data.List as L (find)
 import Data.Maybe (isJust, isNothing)
 import Data.Vector as V
 import Control.Monad.State -- test
@@ -20,8 +23,8 @@ type Index = Int
 
 
 data Store a = Store
-    { assigned :: Vector (Maybe a) -- ^ An array of objects.
-    , last     :: Index -- ^ The greatest index assigned so far.
+    { objects :: Vector (Maybe a) -- ^ An array of objects.
+    , last    :: Index -- ^ The greatest index assigned so far.
     }
     deriving Show
 
@@ -33,32 +36,76 @@ emptyStore = Store V.empty (-1)
 
 -- | Store the given element in the store.
 store :: a -> Store a -> (Index, Store a)
-store elem s@(Store assigned last) =
-    if last == V.length assigned - 1
-    then case findIndex isNothing assigned of
+store elem s@(Store objects last) =
+    if last == V.length objects - 1
+    then case findIndex isNothing objects of
         Just i  -> assign i elem s
-        Nothing -> store elem $ Store (assigned V.++ V.replicate (max 1 last + 1) Nothing) last
+        Nothing -> store elem $ Store (objects V.++ V.replicate (max 1 last + 1) Nothing) last
     else
         assign (last+1) elem s
 
 
 -- Assign a slot the given element in the store.
 assign :: Index -> a -> Store a -> (Index, Store a)
-assign i elem (Store assigned last) =
-    let assigned' = assigned // [(i,Just elem)]
-    in (i, Store assigned' (max last i))
+assign i elem (Store objects last) =
+    let objects' = objects // [(i,Just elem)]
+    in (i, Store objects' (max last i))
 
 
--- | Free the given element from the store.
+-- | Store the given elements in the store.
+storel :: [a] -> Store a -> ([Index], Store a)
+storel elems s@(Store objects last) =
+    let n = Prelude.length elems
+        (count, slots) = freeSlots objects
+    in
+       let -- place count elements in free slots.
+            (is, s'') = storeInSlots slots (Prelude.take count elems) s
+            
+            -- append the remaining elements
+            (is', s') = append (Prelude.drop count elems) s''
+        in
+            (is Prelude.++ is', s')
+
+
+-- Count and return the free slots.
+freeSlots :: Vector (Maybe a) -> (Int, Vector Int)
+freeSlots v = let is = findIndices isNothing v in (V.length is, is) 
+
+
+-- Store the given elements in the given slots.
+-- Pre: valid indices.
+storeInSlots :: Vector Int -> [a] -> Store a -> ([Index], Store a)
+storeInSlots is elems (Store objects last) =
+    let objects' = V.update_ objects is (V.fromList $ fmap Just elems)
+        last' = let i = V.length is - 1
+                in if i < 0 then last else max last $ is ! i
+    in
+        (V.toList is, Store objects' last')
+
+
+-- Append the given elements to the last slot of the store, making space if necessary.
+append :: [a] -> Store a -> ([Index], Store a)
+append elems (Store objects last) =
+    let n = Prelude.length elems
+        indices = [last+1..last+n]
+        objects'' = if V.length objects <= last+n
+                    then objects V.++ V.replicate n Nothing
+                    else objects
+        objects'  = objects'' // (Prelude.zipWith (,) indices (fmap Just elems))
+    in
+        (indices, Store objects' $ last+n)
+
+
+-- | Free the given slot.
 storeFree :: Index -> Store a -> Store a
-storeFree i (Store assigned last) =
-    let assigned' = assigned // [(i,Nothing)]
+storeFree i (Store objects last) =
+    let objects' = objects // [(i,Nothing)]
     in  if i == last
-        then case findLastIndex isJust assigned' of
-            Just j  -> Store assigned' j
-            Nothing -> Store assigned' 0
+        then case findLastIndex isJust objects' of
+            Just j  -> Store objects' j
+            Nothing -> Store objects' 0
         else
-            Store assigned' last
+            Store objects' last
 
 
 findLastIndex :: (a -> Bool) -> Vector a -> Maybe Index
@@ -70,9 +117,22 @@ findLastIndex p v = findLastIndex' p v Nothing 0
             else findLastIndex' p v current (i+1) 
 
 
+-- | Free the given slots.
+storeFreel :: [Index] -> Store a -> Store a
+storeFreel is (Store objects last) =
+    let objects' = objects // Prelude.zipWith (,) is (repeat Nothing)
+        last' = case L.find (==last) is of
+                    Nothing -> last
+                    Just _  -> case findLastIndex isJust objects' of
+                        Just j  -> j
+                        Nothing -> (-1)
+    in
+        Store objects' last'
+
+
 -- | Access the element in the given slot.
 element :: Index -> Store a -> Maybe a
-element index (Store assigned _) = assigned V.! index
+element index (Store objects _) = objects V.! index
 
 
 -- test

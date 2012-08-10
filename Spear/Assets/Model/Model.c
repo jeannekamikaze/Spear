@@ -23,6 +23,7 @@ void model_free (Model* model)
     safe_free (model->texCoords);
     safe_free (model->triangles);
     safe_free (model->skins);
+    safe_free (model->animations);
 }
 
 

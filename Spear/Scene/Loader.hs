@@ -19,6 +19,7 @@ where
 
 import Spear.Assets.Model as Model
 import qualified Spear.GLSL as GLSL
+import qualified Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
 import Spear.Math.Vector3 as V3
@@ -188,19 +189,21 @@ newModel (SceneLeaf _ props) = do
 
 loadModel' :: FilePath -> Maybe Rotation -> Maybe Vector3 -> Setup Model
 loadModel' file rotation scale = do
-    model <- Model.loadModel file
-    case rotation of
-        Just rot -> setupIO $ rotateModel model rot
-        Nothing  -> return ()
-    case scale of
-        Just s  -> setupIO $ Model.transformVerts (scalev s) model
-        Nothing -> return ()
-    setupIO $ toGround model
-    return model
+    let transform =
+            (case rotation of
+                Nothing  -> Prelude.id
+                Just rot -> rotateModel rot) .
+            
+            (case scale of
+                Nothing -> Prelude.id
+                Just s  -> flip Model.transformVerts $
+                    \(Vec3 x' y' z') -> Vec3 (V3.x s * x') (V3.y s * y') (V3.z s * z'))
+    
+    (fmap transform $ Model.loadModel file) >>= setupIO . toGround
 
 
-rotateModel :: Model -> Rotation -> IO ()
-rotateModel model (Rotation x y z order) =
+rotateModel :: Rotation -> Model -> Model
+rotateModel (Rotation x y z order) model =
     let mat = case order of
             XYZ -> rotZ z * rotY y * rotX x
             XZY -> rotY y * rotZ z * rotX x
@@ -209,8 +212,14 @@ rotateModel model (Rotation x y z order) =
             ZXY -> rotY y * rotX x * rotZ z
             ZYX -> rotX x * rotY y * rotZ z
         normalMat = fastNormalMatrix mat
+        
+        vTransform (Vec3 x' y' z') =
+            let v = mat `mulp` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
+        
+        nTransform (Vec3 x' y' z') =
+            let v = normalMat `M3.mul` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
     in
-        Model.transformVerts mat model >> Model.transformNormals normalMat model
+        flip Model.transformVerts vTransform . flip Model.transformNormals nTransform $ model
 
 
 loadTexture :: FilePath -> Loader GLSL.Texture

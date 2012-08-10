@@ -3,28 +3,20 @@
 module Spear.Assets.Model
 (
     -- * Data types
-    ModelErrorCode
-,   Vec3(..)
+    Vec3(..)
 ,   TexCoord(..)
-,   CModel
+,   CTriangle(..)
+,   Skin(..)
 ,   Animation(..)
 ,   Triangle(..)
-,   Model
-    -- * Loading and unloading
+,   Model(..)
+    -- * Loading
 ,   loadModel
-,   releaseModel
     -- * Accessors
 ,   animated
-,   numFrames
-,   numVertices
-,   numTriangles
-,   numTexCoords
-,   numSkins
-,   cmodel
 ,   animation
 ,   animationByName
-,   numAnimations
-,   triangles
+,   triangles'
     -- * Manipulation
 ,   transformVerts
 ,   transformNormals
@@ -34,15 +26,12 @@ where
 
 
 import Spear.Setup
-import qualified Spear.Math.Matrix4 as M4
-import qualified Spear.Math.Matrix3 as M3
-import Spear.Math.MatrixUtils
 
 
 import qualified Data.ByteString.Char8 as B
 import Data.Char (toLower)
 import Data.List (splitAt, elemIndex)
-import qualified Data.Vector as V
+import qualified Data.Vector.Storable as V
 import Foreign.Ptr
 import Foreign.Storable
 import Foreign.C.Types
@@ -69,10 +58,11 @@ data ModelErrorCode
 
 
 sizeFloat = #{size float}
+sizePtr   = #{size int*}
 
 
 -- | A 3D vector.
-data Vec3 = Vec3 !CFloat !CFloat !CFloat
+data Vec3 = Vec3 !Float !Float !Float
 
 
 instance Storable Vec3 where
@@ -92,7 +82,7 @@ instance Storable Vec3 where
 
 
 -- | A 2D texture coordinate.
-data TexCoord = TexCoord !CFloat !CFloat
+data TexCoord = TexCoord !Float !Float
 
 
 instance Storable TexCoord where
@@ -109,97 +99,154 @@ instance Storable TexCoord where
         pokeByteOff ptr sizeFloat f1
 
 
-data CTriangle = CTriangle !CUShort !CUShort !CUShort !CUShort !CUShort !CUShort
-
-
-data Skin = Skin !(Ptr Char)
-
-
-data CAnimation = CAnimation !B.ByteString !CUInt !CUInt
-
-
--- | The model's underlying representation.
-data CModel = CModel
-    { cVerts       :: Ptr Vec3       -- ^ Pointer to an array of 'cnFrames' * 'cnVerts' vertices.
-    , cNormals     :: Ptr Vec3       -- ^ Pointer to an array of 'cnFrames' * cnVerts normals.
-    , cTexCoords   :: Ptr TexCoord   -- ^ Pointer to an array of 'cnTris' texture coordinates.
-    , cTris        :: Ptr CTriangle   -- ^ Pointer to an array of 'cnTris' triangles.
-    , cSkins       :: Ptr Skin       -- ^ Pointer to an array of 'cnSkins' skins.
-    , cAnimations  :: Ptr CAnimation -- ^ Pointer to an array of 'cnAnimations' animations.
-    , cnFrames     :: CUInt          -- ^ Number of frames.
-    , cnVerts      :: CUInt          -- ^ Number of vertices per frame.
-    , cnTris       :: CUInt          -- ^ Number of triangles in one frame.
-    , cnTexCoords  :: CUInt          -- ^ Number of texture coordinates in one frame.
-    , cnSkins      :: CUInt          -- ^ Number of skins.
-    , cnAnimations :: CUInt          -- ^ Number of animations.
+-- | A raw triangle holding vertex/normal and texture indices.
+data CTriangle = CTriangle
+    { vertexIndex0  :: !CUShort
+    , vertexIndex1  :: !CUShort
+    , vertexIndex2  :: !CUShort
+    , textureIndex1 :: !CUShort
+    , textureIndex2 :: !CUShort
+    , textureIndex3 :: !CUShort
     }
 
 
-instance Storable CModel where
+instance Storable CTriangle where
+    sizeOf _ = #{size triangle}
+    alignment _ = alignment (undefined :: CUShort)
+    
+    peek ptr = do
+        v0 <- #{peek triangle, vertexIndices[0]} ptr
+        v1 <- #{peek triangle, vertexIndices[1]} ptr
+        v2 <- #{peek triangle, vertexIndices[2]} ptr
+        
+        t0 <- #{peek triangle, textureIndices[0]} ptr
+        t1 <- #{peek triangle, textureIndices[1]} ptr
+        t2 <- #{peek triangle, textureIndices[2]} ptr
+        
+        return $ CTriangle v0 v1 v2 t0 t1 t2
+    
+    poke ptr (CTriangle v0 v1 v2 t0 t1 t2) = do
+        #{poke triangle, vertexIndices[0]} ptr v0
+        #{poke triangle, vertexIndices[1]} ptr v1
+        #{poke triangle, vertexIndices[2]} ptr v2
+        
+        #{poke triangle, textureIndices[0]} ptr t0
+        #{poke triangle, textureIndices[1]} ptr t1
+        #{poke triangle, textureIndices[2]} ptr t2
+
+
+-- | A model skin.
+newtype Skin = Skin { skinName :: B.ByteString }
+
+
+instance Storable Skin where
+    sizeOf (Skin s) = 64
+    alignment _ = 1
+    
+    peek ptr = do
+        s <- B.packCString $ unsafeCoerce ptr
+        return $ Skin s
+    
+    poke ptr (Skin s) = do
+        B.useAsCStringLen s $ \(sptr, len) -> copyArray (unsafeCoerce ptr) sptr len
+
+
+-- | A model animation.
+--
+-- See also: 'animation', 'animationByName', 'numAnimations'.
+data Animation = Animation
+    { name  :: B.ByteString
+    , start :: Int
+    , end   :: Int
+    }
+
+
+instance Storable Animation where
+    sizeOf _    = #{size animation}
+    alignment _ = alignment (undefined :: CUInt)
+    
+    peek ptr = do
+        name  <- B.packCString (unsafeCoerce ptr)
+        start <- #{peek animation, start} ptr
+        end   <- #{peek animation, end}   ptr
+        return $ Animation name start end
+    
+    poke ptr (Animation name start end) = do
+        B.useAsCStringLen name $ \(sptr, len) -> copyArray (unsafeCoerce ptr) sptr len
+        #{poke animation, start} ptr start
+        #{poke animation, end}   ptr end
+
+
+-- | A 3D model.
+data Model = Model
+    { vertices      :: V.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' vertices.
+    , normals       :: V.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' normals.
+    , texCoords     :: V.Vector TexCoord   -- ^ Array of 'numTexCoords' texture coordinates.
+    , triangles     :: V.Vector CTriangle  -- ^ Array of 'numTriangles' triangles.
+    , skins         :: V.Vector Skin       -- ^ Array of 'numSkins' skins.
+    , animations    :: V.Vector Animation  -- ^ Array of 'numAnimations' animations.
+    , numFrames     :: Int                 -- ^ Number of frames.
+    , numVerts      :: Int                 -- ^ Number of vertices (and normals) per frame.
+    , numTriangles  :: Int                 -- ^ Number of triangles in one frame.
+    , numTexCoords  :: Int                 -- ^ Number of texture coordinates in one frame.
+    , numSkins      :: Int                 -- ^ Number of skins.
+    , numAnimations :: Int                 -- ^ Number of animations.
+    }
+
+
+instance Storable Model where
     sizeOf _    = #{size Model}
     alignment _ = alignment (undefined :: CUInt)
-
+    
     peek ptr = do
-        vertices      <- #{peek Model, vertices}      ptr
-        normals       <- #{peek Model, normals}       ptr
-        texCoords     <- #{peek Model, texCoords}     ptr
-        triangles     <- #{peek Model, triangles}     ptr
-        skins         <- #{peek Model, skins}         ptr
-        animations    <- #{peek Model, animations}    ptr
         numFrames     <- #{peek Model, numFrames}     ptr
         numVertices   <- #{peek Model, numVertices}   ptr
         numTriangles  <- #{peek Model, numTriangles}  ptr
         numTexCoords  <- #{peek Model, numTexCoords}  ptr
         numSkins      <- #{peek Model, numSkins}      ptr
         numAnimations <- #{peek Model, numAnimations} ptr
+        pVerts        <- peek (unsafeCoerce ptr) 
+        pNormals      <- peekByteOff ptr sizePtr
+        pTexCoords    <- peekByteOff ptr (2*sizePtr)
+        pTriangles    <- peekByteOff ptr (3*sizePtr)
+        pSkins        <- peekByteOff ptr (4*sizePtr)
+        pAnimations   <- peekByteOff ptr (5*sizePtr)
+        vertices      <- fmap V.fromList $ peekArray (numVertices*numFrames) pVerts
+        normals       <- fmap V.fromList $ peekArray (numVertices*numFrames) pNormals
+        texCoords     <- fmap V.fromList $ peekArray numTexCoords            pTexCoords
+        triangles     <- fmap V.fromList $ peekArray numTriangles            pTriangles
+        skins         <- fmap V.fromList $ peekArray numSkins                pSkins
+        animations    <- fmap V.fromList $ peekArray numAnimations           pAnimations
         return $
-            CModel vertices normals texCoords triangles skins animations
-                   numFrames numVertices numTriangles numTexCoords numSkins numAnimations
-
+            Model vertices normals texCoords triangles skins animations
+                  numFrames numVertices numTriangles numTexCoords numSkins numAnimations
+    
     poke ptr
-        (CModel verts normals texCoords tris skins animations
-         numFrames numVerts numTris numTex numSkins numAnimations) = do
-            #{poke Model, vertices}      ptr verts
-            #{poke Model, normals}       ptr normals
-            #{poke Model, texCoords}     ptr texCoords
-            #{poke Model, triangles}     ptr tris
-            #{poke Model, skins}         ptr skins
-            #{poke Model, animations}    ptr animations
-            #{poke Model, numFrames}     ptr numFrames
-            #{poke Model, numVertices}   ptr numVerts
-            #{poke Model, numTriangles}  ptr numTris
-            #{poke Model, numTexCoords}  ptr numTex
-            #{poke Model, numSkins}      ptr numSkins
-            #{poke Model, numAnimations} ptr numAnimations
+        (Model verts normals texCoords tris skins animations
+         numFrames numVerts numTris numTex numSkins numAnimations) =
+            V.unsafeWith verts $ \pVerts ->
+            V.unsafeWith normals $ \pNormals ->
+            V.unsafeWith texCoords $ \pTexCoords ->
+            V.unsafeWith tris $ \pTris ->
+            V.unsafeWith skins $ \pSkins ->
+            V.unsafeWith animations $ \pAnimations -> do
+                #{poke Model, vertices}      ptr pVerts
+                #{poke Model, normals}       ptr pNormals
+                #{poke Model, texCoords}     ptr pTexCoords
+                #{poke Model, triangles}     ptr pTris
+                #{poke Model, skins}         ptr pSkins
+                #{poke Model, animations}    ptr pAnimations
+                #{poke Model, numFrames}     ptr numFrames
+                #{poke Model, numVertices}   ptr numVerts
+                #{poke Model, numTriangles}  ptr numTris
+                #{poke Model, numTexCoords}  ptr numTex
+                #{poke Model, numSkins}      ptr numSkins
+                #{poke Model, numAnimations} ptr numAnimations
 
 
--- data CAnimation = CAnimation !(Ptr CChar) !CUInt !CUInt
-instance Storable CAnimation where
-    sizeOf _    = #{size animation}
-    alignment _ = alignment (undefined :: CUInt)
-
-    peek ptr = do
-        name  <- B.packCString (unsafeCoerce ptr)
-        start <- #{peek animation, start} ptr
-        end   <- #{peek animation, end}   ptr
-        return $ CAnimation name start end
-
-    poke ptr (CAnimation name start end) = do
-        B.useAsCStringLen name $ \(sptr, len) -> copyArray (unsafeCoerce ptr) sptr len
-        #{poke animation, start} ptr start
-        #{poke animation, end}   ptr end
-
-
--- | A model's animation.
+-- | A model triangle.
 --
--- See also: 'animation', 'animationByName', 'numAnimations'.
-data Animation = Animation
-    { name  :: String
-    , start :: Int
-    , end   :: Int
-    }
-
-
+-- See also: 'triangles''.
 data Triangle = Triangle
     { v0 :: Vec3
     , v1 :: Vec3
@@ -241,87 +288,58 @@ instance Storable Triangle where
         #{poke model_triangle, t2} ptr t2
 
 
--- | A model 'Resource'.
-data Model = Model
-    { modelData   :: CModel
-    , mAnimations :: V.Vector Animation
-    , rkey        :: Resource
-    }
-
-
 foreign import ccall "Model.h model_free"
-    model_free :: Ptr CModel -> IO ()
+    model_free :: Ptr Model -> IO ()
 
 
 foreign import ccall "MD2_load.h MD2_load"
-    md2_load' :: Ptr CChar -> CChar -> CChar -> Ptr CModel -> IO Int
+    md2_load' :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO Int
 
 
 foreign import ccall "OBJ_load.h OBJ_load"
-    obj_load' :: Ptr CChar -> CChar -> CChar -> Ptr CModel -> IO Int
+    obj_load' :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO Int
 
 
-md2_load :: Ptr CChar -> CChar -> CChar -> Ptr CModel -> IO ModelErrorCode
+md2_load :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO ModelErrorCode
 md2_load file clockwise leftHanded model =
     md2_load' file clockwise leftHanded model >>= \code -> return . toEnum $ code
 
 
-obj_load :: Ptr CChar -> CChar -> CChar -> Ptr CModel -> IO ModelErrorCode
+obj_load :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO ModelErrorCode
 obj_load file clockwise leftHanded model =
     obj_load' file clockwise leftHanded model >>= \code -> return . toEnum $ code
 
 
--- | Load the model specified by the given 'FilePath'.
+-- | Load the model specified by the given file.
 loadModel :: FilePath -> Setup Model
 loadModel file = do
     dotPos <- case elemIndex '.' file of
             Nothing -> setupError $ "file name has no extension: " ++ file
             Just p  -> return p
-
+    
     let ext = map toLower . tail . snd $ splitAt dotPos file
-
+    
     result <- setupIO . alloca $ \ptr -> do
         status <- withCString file $ \fileCstr -> do
             case ext of
                 "md2" -> md2_load fileCstr 0 0 ptr
                 "obj" -> obj_load fileCstr 0 0 ptr
                 _     -> return ModelNoSuitableLoader
-
+        
         case status of
-            ModelSuccess                -> peek ptr >>= return . Right
+            ModelSuccess -> do
+                model <- peek ptr
+                model_free ptr
+                return . Right $ model
             ModelReadError              -> return . Left $ "read error"
             ModelMemoryAllocationError  -> return . Left $ "memory allocation error"
             ModelFileNotFound           -> return . Left $ "file not found"
             ModelFileMismatch           -> return . Left $ "file mismatch"
             ModelNoSuitableLoader       -> return . Left $ "no suitable loader for extension " ++ ext
-
+    
     case result of
-        Right model ->
-            let numAnimations = fromIntegral $ cnAnimations model
-            in register (freeModel model) >>=
-                case numAnimations of
-                    0 -> return . Model model V.empty
-                    _ -> \key -> setupIO $ do
-                        canims <- peekArray numAnimations $ cAnimations model
-                        let animations = V.fromList $ fmap fromCAnimation canims
-                        return $ Model model animations key
-
-        Left  err   -> setupError $ "loadModel: " ++ err
-
-
-fromCAnimation :: CAnimation -> Animation
-fromCAnimation (CAnimation cname start end) =
-    Animation (B.unpack cname) (fromIntegral start) (fromIntegral end)
-
-
--- | Release the model.
-releaseModel :: Model -> Setup ()
-releaseModel = release . rkey
-
-
--- | Free the C model.
-freeModel :: CModel -> IO ()
-freeModel model = Foreign.with model model_free
+        Right model -> return model
+        Left err    -> setupError $ "loadModel: " ++ err
 
 
 -- | Return 'True' if the model is animated, 'False' otherwise.
@@ -329,55 +347,21 @@ animated :: Model -> Bool
 animated = (>1) . numFrames
 
 
--- | Return the model's number of frames.
-numFrames :: Model -> Int
-numFrames = fromIntegral . cnFrames . modelData
-
-
--- | Return the model's number of vertices.
-numVertices :: Model -> Int
-numVertices = fromIntegral . cnVerts . modelData
-
-
--- | Return the model's number of triangles.
-numTriangles :: Model -> Int
-numTriangles = fromIntegral . cnTris . modelData
-
-
--- | Return the model's number of texture coordinates.
-numTexCoords :: Model -> Int
-numTexCoords = fromIntegral . cnTexCoords . modelData
-
-
--- | Return the model's number of skins.
-numSkins :: Model -> Int
-numSkins = fromIntegral . cnSkins . modelData
-
-
--- | Return the underlying C model.
-cmodel :: Model -> CModel
-cmodel = modelData
-
-
 -- | Return the model's ith animation.
 animation :: Model -> Int -> Animation
-animation model i = mAnimations model V.! i
+animation model i = animations model V.! i
 
 
 -- | Return the animation specified by the given string.
 animationByName :: Model -> String -> Maybe Animation
-animationByName model anim = V.find ((==) anim . name) $ mAnimations model
-
-
--- | Return the number of animations of the given model.
-numAnimations :: Model -> Int
-numAnimations = V.length . mAnimations
+animationByName model anim =
+    let anim' = B.pack anim in V.find ((==) anim' . name) $ animations model
 
 
 -- | Return a copy of the model's triangles.
-triangles :: Model -> IO [Triangle]
-triangles m@(Model model _ _) =
-    let n = numVertices m * numFrames m
+triangles' :: Model -> IO [Triangle]
+triangles' model =
+    let n = numVerts model * numFrames model
     in  with model $ \modelPtr ->
         allocaArray n $ \arrayPtr -> do
             model_copy_triangles modelPtr arrayPtr
@@ -386,39 +370,35 @@ triangles m@(Model model _ _) =
 
 
 foreign import ccall "Model.h model_copy_triangles"
-    model_copy_triangles :: Ptr CModel -> Ptr Triangle -> IO ()
+    model_copy_triangles :: Ptr Model -> Ptr Triangle -> IO ()
 
 
--- | Transform the model's vertices with the given matrix.
-transformVerts :: M4.Matrix4 -> Model -> IO ()
-transformVerts mat (Model model _ _) =
-    allocaBytes (16*sizeFloat) $ \matPtr ->
-    with model $ \modelPtr -> do
-        poke matPtr mat
-        model_transform_vertices modelPtr matPtr
+-- | Transform the model's vertices.
+transformVerts :: Model -> (Vec3 -> Vec3) -> Model
+transformVerts model f = model { vertices = vertices' }
+    where
+        n = numVerts model * numFrames model
+        vertices' = V.generate n f'
+        f' i = f $ vertices model V.! i 
 
 
--- | Transform the model's normals with the given matrix.
-transformNormals :: M3.Matrix3 -> Model -> IO ()
-transformNormals mat (Model model _ _) =
-    allocaBytes (9*sizeFloat) $ \normalPtr ->
-    with model $ \modelPtr -> do
-        poke normalPtr mat
-        model_transform_normals modelPtr normalPtr
+-- | Transform the model's normals.
+transformNormals :: Model -> (Vec3 -> Vec3) -> Model
+transformNormals model f = model { normals = normals' }
+    where
+        n = numVerts model * numFrames model
+        normals' = V.generate n f'
+        f' i = f $ normals model V.! i 
 
 
-foreign import ccall "Model.h model_transform_vertices"
-    model_transform_vertices :: Ptr CModel -> Ptr M4.Matrix4 -> IO ()
-
-
-foreign import ccall "Model.h model_transform_normals"
-    model_transform_normals :: Ptr CModel -> Ptr M3.Matrix3 -> IO ()
-
-
--- | Transform the model such that its lowest point has y = 0.
-toGround :: Model -> IO ()
-toGround (Model model _ _) = with model model_to_ground
+-- | Translate the model such that its lowest point has y = 0.
+toGround :: Model -> IO Model
+toGround model =
+    let model' = model { vertices = V.generate n $ \i -> vertices model V.! i }
+        n = numVerts model * numFrames model
+    in    
+        with model' model_to_ground >> return model'
 
 
 foreign import ccall "Model.h model_to_ground"
-    model_to_ground :: Ptr CModel -> IO ()
+    model_to_ground :: Ptr Model -> IO ()

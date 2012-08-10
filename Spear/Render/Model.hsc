@@ -51,11 +51,11 @@ instance Storable RenderModel where
 
 
 foreign import ccall "RenderModel.h render_model_from_model_asset"
-    render_model_from_model_asset :: Ptr Assets.CModel -> Ptr RenderModel -> IO Int
+    render_model_from_model_asset :: Ptr Assets.Model -> Ptr RenderModel -> IO Int
 
 
 -- | Convert the given 'Model' to a 'ModelData' instance.
 renderModelFromModel :: Assets.Model -> IO RenderModel
-renderModelFromModel m = with (Assets.cmodel m) $ \mPtr -> alloca $ \mdPtr -> do
+renderModelFromModel m = with m $ \mPtr -> alloca $ \mdPtr -> do
     render_model_from_model_asset mPtr mdPtr
     peek mdPtr

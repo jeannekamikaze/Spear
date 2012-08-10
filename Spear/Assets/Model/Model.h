@@ -84,12 +84,6 @@ extern "C" {
 /// The 'model' pointer itself is not freed.
 void model_free (Model* model);
 
-/// Transform the Model's vertices by the given matrix.
-void model_transform_verts (Model* model, float mat[16]);
-
-/// Transform the Model's normals by the given matrix.
-void model_transform_normals (Model* model, float normal[9]);
-
 /// Translate the Model such that its lowest point has y = 0.
 void model_to_ground (Model* model);
 

@@ -42,15 +42,16 @@ library
     cc-options: -O2 -g -Wno-unused-result
     c-sources: Spear/Assets/Image/Image.c
                Spear/Assets/Image/BMP/BMP_load.c Spear/Assets/Model/Model.c
-               Spear/Assets/Model/MD2/MD2_load.c
-               Spear/Assets/Model/OBJ/OBJ_load.cc Spear/Render/RenderModel.c
+               Spear/Assets/Model/MD2/MD2_load.c Spear/Assets/Model/OBJ/cvector.c
+               Spear/Assets/Model/OBJ/OBJ_load.c Spear/Render/RenderModel.c
                Spear/Sys/Timer/ctimer.c
     extensions: TypeFamilies
     extra-libraries: stdc++
     includes: Spear/Assets/Image/BMP/BMP_load.h
               Spear/Assets/Image/Image.h Spear/Assets/Image/Image_error_code.h
               Spear/Assets/Image/sys_types.h Spear/Assets/Model/MD2/MD2_load.h
-              Spear/Assets/Model/OBJ/OBJ_load.h Spear/Assets/Model/Model.h
+              Spear/Assets/Model/OBJ/OBJ_load.h Spear/Assets/Model/OBJ/cvector.h
+              Spear/Assets/Model/Model.h
               Spear/Assets/Model/Model_error_code.h
               Spear/Assets/Model/sys_types.h Spear/Render/RenderModel.h
               Timer/Timer.h

@@ -9,6 +9,7 @@ module Spear.App.Input
 ,   Input(..)
 ,   DelayedMouseState
     -- * Input state querying
+,   newKeyboard
 ,   getKeyboard
 ,   newMouse
 ,   getMouse

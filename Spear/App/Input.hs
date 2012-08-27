@@ -63,6 +63,17 @@ data Input = Input
     }
 
 
+-- | Return a dummy keyboard.
+--
+-- This function should be called to get an initial keyboard.
+--
+-- The returned keyboard has all of its keys unpressed.
+--
+-- For further keyboard updates, see 'getKeyboard'.
+newKeyboard :: Keyboard
+newKeyboard = const False
+
+
 -- | Get the keyboard.
 getKeyboard :: IO Keyboard
 getKeyboard =

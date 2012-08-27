@@ -99,15 +99,16 @@ getMouse oldMouse =
         prop' xpos _    MouseDX = xpos - property oldMouse MouseX
         prop' _    ypos MouseDY = ypos - property oldMouse MouseY
 
-        buttons  = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
-        getKeystate = fmap (V.fromList . fmap ((==) GLFW.Press)) .
-                      mapM GLFW.getMouseButton .
-                      fmap toGLFWbutton $ buttons
+        buttons = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
+        getButtonState =
+            fmap (V.fromList . fmap ((==) GLFW.Press)) .
+            mapM GLFW.getMouseButton .
+            fmap toGLFWbutton $ buttons
     in do
         Position xpos ypos <- get GLFW.mousePos
-        keystate <- getKeystate
+        buttonState <- getButtonState
         return $ Mouse
-            { button   = getButton keystate
+            { button   = getButton buttonState
             , property = prop' (fromIntegral xpos) (fromIntegral ypos)
             }
 

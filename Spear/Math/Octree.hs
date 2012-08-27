@@ -26,22 +26,22 @@ import qualified Data.Foldable as F
 data Octree e
     = Octree
     {
-        root    :: AABB,
-        ents    :: [e],
-        c1      :: Octree e,
-        c2      :: Octree e,
-        c3      :: Octree e,
-        c4      :: Octree e,
-        c5      :: Octree e,
-        c6      :: Octree e,
-        c7      :: Octree e,
-        c8      :: Octree e
+        root    :: !AABB,
+        ents    :: ![e],
+        c1      :: !(Octree e),
+        c2      :: !(Octree e),
+        c3      :: !(Octree e),
+        c4      :: !(Octree e),
+        c5      :: !(Octree e),
+        c6      :: !(Octree e),
+        c7      :: !(Octree e),
+        c8      :: !(Octree e)
     }
     |
     Leaf
     {
-        root :: AABB,
-        ents :: [e]
+        root :: !AABB,
+        ents :: ![e]
     }
 
 
@@ -180,7 +180,7 @@ extract (Octree root ents c1 c2 c3 c4 c5 c6 c7 c8) = (Octree root [] c1' c2' c3'
 
 
 -- | Applies the given function to the entities in the octree.
--- Entities that break out of their cell are reallocated appropiately.
+-- Entities that break out of their cell are reallocated appropriately.
 map :: (e -> AABB -> CollisionType) -> (e -> e) -> Octree e -> Octree e
 map testAABB f o = let (o', outliers) = map' testAABB f o in insertl testAABB o' outliers
 
@@ -212,7 +212,7 @@ map' testAABB f (Octree root ents c1 c2 c3 c4 c5 c6 c7 c8) =
 
 
 -- | Applies a function to the entity groups in the octree.
--- Entities that break out of their cell are reallocated appropiately.
+-- Entities that break out of their cell are reallocated appropriately.
 gmap :: (e -> AABB -> CollisionType) -> (e -> e -> e) -> Octree e -> Octree e
 gmap testAABB f o = let (o', outliers) = gmap' testAABB f o in insertl testAABB o' outliers
 
@@ -248,6 +248,7 @@ population = F.foldr (\_ acc -> acc+1) 0
 
 
 instance Functor Octree where
+    
     fmap f (Leaf root ents) = Leaf root $ fmap f ents
     
     fmap f (Octree root ents c1 c2 c3 c4 c5 c6 c7 c8) =
@@ -265,6 +266,7 @@ instance Functor Octree where
 
 
 instance F.Foldable Octree where
+    
     foldMap f (Leaf root ents) = mconcat . fmap f $ ents
     
     foldMap f (Octree root ents c1 c2 c3 c4 c5 c6 c7 c8) =

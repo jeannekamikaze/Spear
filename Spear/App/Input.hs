@@ -7,6 +7,7 @@ module Spear.App.Input
 ,   Keyboard
 ,   Mouse(..)
 ,   Input(..)
+,   ButtonDelay
 ,   DelayedMouseState
     -- * Input state querying
 ,   newKeyboard
@@ -50,6 +51,7 @@ data MouseButton = LMB | RMB | MMB
 
 
 data MouseProp = MouseX | MouseY | MouseDX | MouseDY
+    deriving Enum
 
 
 data Mouse = Mouse
@@ -104,24 +106,28 @@ getMouse :: Mouse -> IO Mouse
 getMouse oldMouse =
     let getButton :: V.Vector Bool -> MouseButton -> Bool
         getButton mousestate button = mousestate V.! fromEnum button
-
-        prop' :: Float -> Float -> MouseProp -> Float
-        prop' xpos _    MouseX  = xpos
-        prop' _    ypos MouseY  = ypos
-        prop' xpos _    MouseDX = xpos - property oldMouse MouseX
-        prop' _    ypos MouseDY = ypos - property oldMouse MouseY
-
-        buttons = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
+        
+        getProp :: V.Vector Float -> MouseProp -> Float
+        getProp props prop = props V.! fromEnum prop
+        
+        props xpos ypos = V.fromList
+            [ xpos, ypos
+            , xpos - property oldMouse MouseX
+            , ypos - property oldMouse MouseY
+            ]
+        
         getButtonState =
             fmap (V.fromList . fmap ((==) GLFW.Press)) .
             mapM GLFW.getMouseButton .
             fmap toGLFWbutton $ buttons
+        
+        buttons = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
     in do
         Position xpos ypos <- get GLFW.mousePos
         buttonState <- getButtonState
         return $ Mouse
             { button   = getButton buttonState
-            , property = prop' (fromIntegral xpos) (fromIntegral ypos)
+            , property = getProp $ props (fromIntegral xpos) (fromIntegral ypos)
             }
 
 
@@ -156,24 +162,32 @@ toggledKeyboard prev cur key = cur key && not (prev key)
 
 
 
+-- | Delay configuration for each mouse button.
+type ButtonDelay = MouseButton -> Float
+
+
 -- | Accumulated delays for each mouse button.
-type DelayedMouseState = MouseButton -> Float
+newtype DelayedMouseState = DelayedMouseState (V.Vector Float)
 
 
-delayedMouse :: (MouseButton -> Float) -- ^ Delay configuration for each button.
+delayedMouse :: ButtonDelay -- ^ Delay configuration for each button.
              -> Mouse -- ^ Current mouse state.
              -> Float -- ^ Time elapsed since last udpate.
              -> DelayedMouseState
              -> (Mouse, DelayedMouseState)
 
-delayedMouse delay mouse dt dms =
+delayedMouse delay mouse dt (DelayedMouseState dms) =
     let
-        accum  x  = dms x + dt
+        dms'
+            = V.fromList
+            . fmap ((+dt) . (V.!) dms)
+            $ [0 .. fromEnum (maxBound :: MouseButton)]
+        
+        accum x   = dms' V.! fromEnum x
         active x  = accum x >= delay x
         button' x = active x && button mouse x
-        accum' x  = if button' x then 0 else accum x
     in
-        (mouse { button = button' }, accum')
+        (mouse { button = button' }, DelayedMouseState dms')
 
 
 

@@ -20,6 +20,7 @@ module Spear.App.Input
 ,   toggledMouse
 ,   toggledKeyboard
     -- * Delayed input
+,   newDMS
 ,   delayedMouse
 )
 where
@@ -168,6 +169,10 @@ type ButtonDelay = MouseButton -> Float
 
 -- | Accumulated delays for each mouse button.
 newtype DelayedMouseState = DelayedMouseState (V.Vector Float)
+
+
+newDMS :: DelayedMouseState
+newDMS = DelayedMouseState $ V.replicate (fromEnum (maxBound :: MouseButton)) 0
 
 
 delayedMouse :: ButtonDelay -- ^ Delay configuration for each button.

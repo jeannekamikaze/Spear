@@ -106,7 +106,10 @@ getMouse oldMouse =
     in do
         Position xpos ypos <- get GLFW.mousePos
         keystate <- getKeystate
-        return $ Mouse (getButton keystate) (prop' (fromIntegral xpos) (fromIntegral ypos))
+        return $ Mouse
+            { button   = getButton keystate
+            , property = prop' (fromIntegral xpos) (fromIntegral ypos)
+            }
 
 
 -- | Get input devices.

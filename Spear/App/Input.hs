@@ -8,7 +8,7 @@ module Spear.App.Input
 ,   Mouse(..)
 ,   Input(..)
 ,   ButtonDelay
-,   DelayedMouseState
+,   DelayedMouse
     -- * Input state querying
 ,   newKeyboard
 ,   getKeyboard
@@ -20,7 +20,8 @@ module Spear.App.Input
 ,   toggledMouse
 ,   toggledKeyboard
     -- * Delayed input
-,   newDMS
+,   newDM
+,   updateDM
 ,   delayedMouse
 )
 where
@@ -168,31 +169,31 @@ type ButtonDelay = MouseButton -> Float
 
 
 -- | Accumulated delays for each mouse button.
-newtype DelayedMouseState = DelayedMouseState (V.Vector Float)
+data DelayedMouse = DelayedMouse
+    { delayedMouse :: Mouse
+    , delay :: ButtonDelay
+    , accum :: V.Vector Float
+    }
 
 
-newDMS :: DelayedMouseState
-newDMS = DelayedMouseState $ V.replicate (fromEnum (maxBound :: MouseButton)) 0
+newDM :: ButtonDelay -- ^ Delay configuration for each button.
+      -> DelayedMouse
+newDM delay = DelayedMouse newMouse delay $
+    V.replicate (fromEnum (maxBound :: MouseButton)) 0
 
 
-delayedMouse :: ButtonDelay -- ^ Delay configuration for each button.
-             -> Mouse -- ^ Current mouse state.
-             -> Float -- ^ Time elapsed since last udpate.
-             -> DelayedMouseState
-             -> (Mouse, DelayedMouseState)
+updateDM :: DelayedMouse -- ^ Current mouse state.
+         -> Float -- ^ Time elapsed since last udpate.
+         -> DelayedMouse
 
-delayedMouse delay mouse dt (DelayedMouseState dms) =
+updateDM (DelayedMouse mouse delay accum) dt =
     let
-        dms'
-            = V.fromList
-            . fmap ((+dt) . (V.!) dms)
-            $ [0 .. fromEnum (maxBound :: MouseButton)]
-        
-        accum x   = dms' V.! fromEnum x
-        active x  = accum x >= delay x
+        accum'    = V.map (+dt) accum
+        time x    = accum' V.! fromEnum x
+        active x  = time x >= delay x
         button' x = active x && button mouse x
     in
-        (mouse { button = button' }, DelayedMouseState dms')
+        DelayedMouse mouse { button = button' } delay accum'
 
 
 

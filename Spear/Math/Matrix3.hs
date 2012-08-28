@@ -7,16 +7,18 @@ module Spear.Math.Matrix3
 ,   m20, m21, m22
 ,   col0, col1, col2
 ,   row0, row1, row2
+,   right, forward, position
     -- * Construction
 ,   mat3
 ,   mat3fromVec
+,   transform
 ,   Spear.Math.Matrix3.id
     -- * Transformations
+    -- ** Translation
+,   transl
+,   translv
     -- ** Rotation
-,   rotX
-,   rotY
-,   rotZ
-,   axisAngle
+,   rot
     -- ** Scale
 ,   Spear.Math.Matrix3.scale
 ,   scalev
@@ -26,16 +28,16 @@ module Spear.Math.Matrix3
 ,   reflectZ
     -- * Operations
 ,   transpose
+,   mul
 ,   Spear.Math.Matrix3.zipWith
 ,   Spear.Math.Matrix3.map
-,   mul
 --,   inverse
 )
 where
 
 
-import Spear.Math.Vector3 as Vector3
-import Spear.Math.Vector4 as Vector4
+import Spear.Math.Vector2 as V2
+import Spear.Math.Vector3 as V3
 
 import Foreign.Storable
 
@@ -113,14 +115,19 @@ instance Storable Matrix3 where
         pokeByteOff ptr 24 a20; pokeByteOff ptr 28 a21; pokeByteOff ptr 32 a22;
 
 
-col0 (Matrix3 a00 _   _   a10 _   _   a20 _   _  ) = vec3 a00 a10 a20
-col1 (Matrix3 _   a01 _   _   a11 _   _   a21 _  ) = vec3 a01 a11 a21
-col2 (Matrix3 _   _   a02 _   _   a12 _   _   a22) = vec3 a02 a12 a22
+col0 (Matrix3 a00 _   _   a01 _   _   a02 _   _  ) = vec3 a00 a01 a02
+col1 (Matrix3 _   a10 _   _   a11 _   _   a12 _  ) = vec3 a10 a11 a12
+col2 (Matrix3 _   _   a20 _   _   a21 _   _   a22) = vec3 a20 a21 a22
 
 
-row0 (Matrix3 a00 a01 a02 _   _   _   _   _   _  ) = vec3 a00 a01 a02
-row1 (Matrix3 _   _   _   a10 a11 a12 _   _   _  ) = vec3 a10 a11 a12
-row2 (Matrix3 _   _   _   _   _   _   a20 a21 a22) = vec3 a20 a21 a22
+row0 (Matrix3 a00 a10 a20 _   _   _   _   _   _  ) = vec3 a00 a10 a20
+row1 (Matrix3 _   _   _   a01 a11 a21 _   _   _  ) = vec3 a01 a11 a21
+row2 (Matrix3 _   _   _   _   _   _   a02 a12 a22) = vec3 a02 a12 a22
+
+
+right    (Matrix3 a00 _   _   a01 _   _   _ _ _) = vec2 a00 a01
+forward  (Matrix3 _   a10 _   _   a11 _   _ _ _) = vec2 a10 a11
+position (Matrix3 _   _   a20 _   _   a21 _ _ _) = vec2 a20 a21  
 
 
 -- | Build a 'Matrix3' from the specified values.
@@ -136,25 +143,21 @@ mat3 m00 m01 m02 m10 m11 m12 m20 m21 m22 = Matrix3
 -- | Build a 'Matrix3' from three vectors in 3D.
 mat3fromVec :: Vector3 -> Vector3 -> Vector3 -> Matrix3
 mat3fromVec v0 v1 v2 = Matrix3
-    (Vector3.x v0) (Vector3.x v1) (Vector3.x v2)
-    (Vector3.y v0) (Vector3.y v1) (Vector3.y v2)
-    (Vector3.z v0) (Vector3.z v1) (Vector3.z v2)
- 
-
--- | Zip two 'Matrix3' together with the specified function.
-zipWith :: (Float -> Float -> Float) -> Matrix3 -> Matrix3 -> Matrix3
-zipWith f a b = Matrix3
-    (f (m00 a) (m00 b)) (f (m10 a) (m10 b)) (f (m20 a) (m20 b))
-    (f (m01 a) (m01 b)) (f (m11 a) (m11 b)) (f (m21 a) (m21 b))
-    (f (m02 a) (m02 b)) (f (m12 a) (m12 b)) (f (m22 a) (m22 b))
+    (V3.x v0) (V3.x v1) (V3.x v2)
+    (V3.y v0) (V3.y v1) (V3.y v2)
+    (V3.z v0) (V3.z v1) (V3.z v2)
 
 
--- | Map the specified function to the specified 'Matrix3'.
-map :: (Float -> Float) -> Matrix3 -> Matrix3
-map f m = Matrix3
-    (f . m00 $ m) (f . m10 $ m) (f . m20 $ m)
-    (f . m01 $ m) (f . m11 $ m) (f . m21 $ m)
-    (f . m02 $ m) (f . m12 $ m) (f . m22 $ m)
+-- | Build a transformation matrix.
+transform :: Vector2 -- ^ Right vector
+          -> Vector2 -- ^ Forward vector
+          -> Vector2 -- ^ Position
+          -> Matrix3 -- ^ Transform
+
+transform r f p = mat3
+    (V2.x r) (V2.x f) (V2.x p)
+    (V2.y r) (V2.y f) (V2.y p)
+    0     0     1
 
 
 -- | Return the identity matrix.
@@ -165,62 +168,36 @@ id = mat3
     0   0   1
 
 
--- | Create a rotation matrix rotating about the X axis.
+-- | Create a translation matrix.
+transl :: Float -- ^ Translation on the x axis
+       -> Float -- ^ Translation on the y axis
+       -> Matrix3
+
+transl tx ty = mat3
+    1 0 tx
+    0 1 ty
+    0 0 1
+
+
+-- | Create a translation matrix.
+translv :: Vector2 -> Matrix3
+translv v = mat3
+    1 0 (V2.x v)
+    0 1 (V2.y v)
+    0 0 1
+
+
+-- | Create a rotation matrix rotating counter-clockwise about the Z axis.
+--
 -- The given angle must be in degrees.
-rotX :: Float -> Matrix3
-rotX angle = mat3
-    1   0   0
-    0   c   (-s)
-    0   s   c
+rot :: Float -> Matrix3
+rot angle = mat3
+    c   (-s) 0
+    s   c    0
+    0   0    1
     where
         s = sin . fromDeg $ angle
         c = cos . fromDeg $ angle
-
-
--- | Create a rotation matrix rotating about the Y axis.
--- The given angle must be in degrees.
-rotY :: Float -> Matrix3
-rotY angle = mat3
-    c    0    s
-    0    1    0
-    (-s) 0    c
-    where
-        s = sin . fromDeg $ angle
-        c = cos . fromDeg $ angle
-
-
--- | Create a rotation matrix rotating about the Z axis.
--- The given angle must be in degrees.
-rotZ :: Float -> Matrix3
-rotZ angle = mat3
-    c    (-s)  0
-    s    c     0
-    0    0     1
-    where
-        s = sin . fromDeg $ angle
-        c = cos . fromDeg $ angle
-
-
--- | Create a rotation matrix rotating about the specified axis.
--- The given angle must be in degrees.
-axisAngle :: Vector3 -> Float -> Matrix3
-axisAngle v angle = mat3
-    (c + omc*x^2) (omc*xy-sz) (omc*xz+sy)
-    (omc*xy+sz)   (c+omc*y^2) (omc*yz-sx)
-    (omc*xz-sy)   (omc*yz+sx) (c+omc*z^2)
-    where
-        x = Vector3.x v
-        y = Vector3.y v
-        z = Vector3.z v
-        s   = sin . fromDeg $ angle
-        c   = cos . fromDeg $ angle
-        xy  = x*y
-        xz  = x*z
-        yz  = y*z
-        sx  = s*x
-        sy  = s*y
-        sz  = s*z
-        omc = 1 - c
 
 
 -- | Create a scale matrix.
@@ -238,9 +215,9 @@ scalev v = mat3
     0   sy  0
     0   0   sz
         where
-            sx = Vector3.x v
-            sy = Vector3.y v
-            sz = Vector3.z v
+            sx = V3.x v
+            sy = V3.y v
+            sz = V3.z v
 
 
 -- | Create an X reflection matrix.
@@ -279,10 +256,26 @@ transpose m = mat3
 mul :: Matrix3 -> Vector3 -> Vector3
 mul m v = vec3 x' y' z'
     where
-        v' = vec3 (Vector3.x v) (Vector3.y v) (Vector3.z v)
-        x' = row0 m `Vector3.dot` v'
-        y' = row1 m `Vector3.dot` v'
-        z' = row2 m `Vector3.dot` v'
+        v' = vec3 (V3.x v) (V3.y v) (V3.z v)
+        x' = row0 m `V3.dot` v'
+        y' = row1 m `V3.dot` v'
+        z' = row2 m `V3.dot` v'
+
+
+-- | Zip two 'Matrix3' together with the specified function.
+zipWith :: (Float -> Float -> Float) -> Matrix3 -> Matrix3 -> Matrix3
+zipWith f a b = Matrix3
+    (f (m00 a) (m00 b)) (f (m10 a) (m10 b)) (f (m20 a) (m20 b))
+    (f (m01 a) (m01 b)) (f (m11 a) (m11 b)) (f (m21 a) (m21 b))
+    (f (m02 a) (m02 b)) (f (m12 a) (m12 b)) (f (m22 a) (m22 b))
+
+
+-- | Map the specified function to the specified 'Matrix3'.
+map :: (Float -> Float) -> Matrix3 -> Matrix3
+map f m = Matrix3
+    (f . m00 $ m) (f . m10 $ m) (f . m20 $ m)
+    (f . m01 $ m) (f . m11 $ m) (f . m21 $ m)
+    (f . m02 $ m) (f . m12 $ m) (f . m22 $ m)
 
 
 -- | Invert the given 'Matrix3'.

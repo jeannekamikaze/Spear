@@ -1,4 +1,4 @@
-module Spear.Math.Spatial
+module Spear.Math.Spatial3
 where
 
 
@@ -6,7 +6,7 @@ import Spear.Math.Vector3
 import Spear.Math.Matrix4 as M
 
 
-class Spatial s where
+class Spatial3 s where
     -- | Move the 'Spatial'.
     move :: Vector3 -> s -> s
     
@@ -51,11 +51,6 @@ class Spatial s where
     
     -- | Set the 'Spatial''s position.
     setPos :: Vector3 -> s -> s
-    setPos p s = setTransform t' s
-        where t' = M.transform r u f p
-              r  = Spear.Math.Spatial.right s
-              u  = Spear.Math.Spatial.up s
-              f  = Spear.Math.Spatial.fwd s 
     
     -- | Make the 'Spatial' look at the given point.
     lookAt :: Vector3 -> s -> s
@@ -85,8 +80,5 @@ class Spatial s where
             px = (x pt) + radius*cy*sx
             py = (y pt) + radius*sy
             pz = (z pt) + radius*cx*cy
-            r = Spear.Math.Spatial.right s
-            u = Spear.Math.Spatial.up s
-            f = Spear.Math.Spatial.fwd s
         in
-            setTransform (M.transform u r f (vec3 px py pz)) s
+            setPos (vec3 px py pz) s

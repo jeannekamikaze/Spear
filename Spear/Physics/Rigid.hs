@@ -10,9 +10,9 @@ module Spear.Physics.Rigid
 where
 
 
-import qualified Spear.Math.Matrix4 as M4
-import Spear.Math.Spatial
-import Spear.Math.Vector3 as V3
+import qualified Spear.Math.Matrix3 as M3
+import Spear.Math.Spatial2
+import Spear.Math.Vector2
 import Spear.Physics.Types
 
 import Data.List (foldl')
@@ -20,55 +20,49 @@ import Control.Monad.State
 
 
 data RigidBody = RigidBody
-    { mass         :: !Float
-    , position     :: !Vector3
-    , velocity     :: !Vector3
-    , acceleration :: !Vector3
+    { mass         :: {-# UNPACK #-} !Float
+    , position     :: {-# UNPACK #-} !Vector2
+    , velocity     :: {-# UNPACK #-} !Vector2
+    , acceleration :: {-# UNPACK #-} !Vector2
     }
 
 
-instance Spatial RigidBody where
+instance Spatial2 RigidBody where
     
     move v body = body { position = v + position body }
     
-    moveFwd     speed body = body { position = position body + scale (-speed) unitZ }
+    moveFwd     speed body = body { position = position body + scale speed unity }
     
-    moveBack    speed body = body { position = position body + scale speed unitZ }
+    moveBack    speed body = body { position = position body + scale (-speed) unity }
     
-    strafeLeft  speed body = body { position = position body + scale (-speed) unitX }
+    strafeLeft  speed body = body { position = position body + scale (-speed) unitx }
     
-    strafeRight speed body = body { position = position body + scale speed unitX }
+    strafeRight speed body = body { position = position body + scale speed unitx }
     
-    pitch angle = id
-    
-    yaw angle = id
-    
-    roll angle = id
+    rotate angle = id
     
     pos = position
     
-    fwd _ = unitZ
+    fwd _ = unity
     
-    up _ = unitY
+    right _ = unitx
     
-    right _ = unitX
+    transform body = M3.transform unitx unity $ position body
     
-    transform body = M4.transform unitX unitY unitZ $ position body
-    
-    setTransform transf body = body { position = M4.position transf }
+    setTransform transf body = body { position = M3.position transf }
     
     setPos p body = body { position = p }
 
 
 -- | Build a 'RigidBody'.
 rigidBody :: Mass -> Position -> RigidBody
-rigidBody m x = RigidBody m x V3.zero V3.zero
+rigidBody m x = RigidBody m x zero zero
 
 
 -- | Update the given 'RigidBody'.
 update :: [Force] -> Dt -> RigidBody -> RigidBody
 update forces dt body =
-    let netforce = foldl' (+) V3.zero forces
+    let netforce = foldl' (+) zero forces
         m  = mass body
         r1 = position body
         v1 = velocity body
@@ -92,8 +86,8 @@ setAcceleration a body = body { acceleration = a }
 
 
 -- test
-gravity = vec3 0 (-10) 0
-b0 = rigidBody 50 $ vec3 0 1000 0
+gravity = vec2 0 (-10)
+b0 = rigidBody 50 $ vec2 0 1000
 
 
 debug :: IO ()
@@ -110,7 +104,7 @@ debug' = do
     step $ update [gravity*50] 1
     step $ update [gravity*50] 1
     lift . putStrLn $ "Jumping"
-    step $ update [gravity*50, vec3 0 9000 0] 1
+    step $ update [gravity*50, vec2 0 9000] 1
     lift . putStrLn $ "Falling..."
     step $ update [gravity*50] 1
     step $ update [gravity*50] 1
@@ -131,4 +125,4 @@ show' body =
     ", acceleration " ++ (showVec $ acceleration body)
 
 
-showVec v = (show $ x v) ++ ", " ++ (show $ y v) ++ ", " ++ (show $ z v)
+showVec v = (show $ x v) ++ ", " ++ (show $ y v)

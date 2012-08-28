@@ -3,7 +3,7 @@ where
 
 
 import qualified Spear.Math.Matrix4 as M
-import qualified Spear.Math.Spatial as S
+import qualified Spear.Math.Spatial3 as S
 import Spear.Math.Vector3
 
 
@@ -51,7 +51,7 @@ ortho l r b t n f right up fwd pos =
     }
 
 
-instance S.Spatial Camera where
+instance S.Spatial3 Camera where
     move        v cam = cam { transform = M.translv v * transform cam }
     moveFwd     f cam = cam { transform = M.translv (scale f $ S.fwd cam) * transform cam }
     moveBack    f cam = cam { transform = M.translv (scale (-f) $ S.fwd cam) * transform cam }
@@ -66,4 +66,6 @@ instance S.Spatial Camera where
     right = M.right    . transform
     transform (Camera _ t) = t
     setTransform t (Camera proj _) = Camera proj t
+    setPos pos (Camera proj t) = Camera proj $
+        M.transform (M.right t) (M.up t) (M.forward t) pos
 

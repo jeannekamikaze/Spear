@@ -6,7 +6,7 @@ where
 
 
 import qualified Spear.Math.Matrix4 as M
-import qualified Spear.Math.Spatial as S
+import qualified Spear.Math.Spatial3 as S
 import Spear.Math.Vector3
 import qualified Spear.Math.Vector4 as V4
 
@@ -32,7 +32,7 @@ data Light
     }
 
 
-instance S.Spatial Light where
+instance S.Spatial3 Light where
     move _ l@DirectionalLight {} = l
     move v l = l { transform = M.translv v * transform l}
     
@@ -80,3 +80,8 @@ instance S.Spatial Light where
     
     setTransform _ l@DirectionalLight {} = l
     setTransform t l = l { Spear.Scene.Light.transform = t }
+    
+    setPos _ l@DirectionalLight {} = l
+    setPos pos l =
+        let t = Spear.Scene.Light.transform l
+        in l { transform = M.transform (M.right t) (M.up t) (M.forward t) pos }

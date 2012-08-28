@@ -26,7 +26,7 @@ library
                      Spear.GLSL.Uniform Spear.GLSL.VAO Spear.Math.Camera
                      Spear.Math.Entity Spear.Math.Matrix3 Spear.Math.Matrix4
                      Spear.Math.MatrixUtils Spear.Math.Plane Spear.Math.Quaternion
-                     Spear.Math.Spatial Spear.Math.Vector3 Spear.Math.Vector4
+                     Spear.Math.Vector3 Spear.Math.Vector4
                      Spear.Physics Spear.Physics.Rigid Spear.Render.AnimatedModel
                      Spear.Render.Material Spear.Render.Model Spear.Render.Program
                      Spear.Render.Renderable Spear.Render.StaticModel
@@ -35,6 +35,7 @@ library
                      Spear.Setup Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
                      Spear.Updatable Spear.Math.Vector2 Spear.Math.Quad Spear.Math.Ray
                      Spear.Math.Segment Spear.Math.Utils
+                     Spear.Math.Spatial2 Spear.Math.Spatial3
     exposed: True
     buildable: True
     build-tools: hsc2hs -any

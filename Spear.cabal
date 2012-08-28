@@ -6,7 +6,7 @@ license: BSD3
 license-file: LICENSE
 maintainer: jeannekamikaze@gmail.com
 homepage: http://spear.shellblade.net
-synopsis: A 3D game framework.
+synopsis: A 2.5D game framework.
 category: Game
 author: Marc Sunet
 data-dir: ""
@@ -16,24 +16,24 @@ library
                    StateVar -any, base -any, bytestring -any, directory -any,
                    mtl -any, transformers -any, resourcet -any, parsec >=3.1.3,
                    containers -any, vector -any, array -any
-    exposed-modules: Spear.Physics.Types Spear.App
+    exposed-modules: Spear.Math.QuadTree Spear.Physics.Types Spear.App
                      Spear.App.Application Spear.App.Input Spear.Assets.Image
                      Spear.Assets.Model Spear.Collision Spear.Math.AABB
                      Spear.Collision.Collision Spear.Collision.Collisioner
-                     Spear.Math.Sphere Spear.Math.Triangle
-                     Spear.Collision.Types Spear.Game Spear.GLSL Spear.GLSL.Buffer
-                     Spear.GLSL.Error Spear.GLSL.Management Spear.GLSL.Texture
-                     Spear.GLSL.Uniform Spear.GLSL.VAO Spear.Math.Camera
-                     Spear.Math.Entity Spear.Math.Matrix3 Spear.Math.Matrix4
-                     Spear.Math.MatrixUtils Spear.Math.Octree Spear.Math.Plane
-                     Spear.Math.Quaternion Spear.Math.Spatial Spear.Math.Vector3
-                     Spear.Math.Vector4 Spear.Physics Spear.Physics.Rigid
-                     Spear.Render.AnimatedModel Spear.Render.Material Spear.Render.Model
-                     Spear.Render.Program Spear.Render.Renderable
-                     Spear.Render.StaticModel Spear.Render.Texture Spear.Scene.Graph
-                     Spear.Scene.Light Spear.Scene.Loader Spear.Scene.Scene
-                     Spear.Scene.SceneResources Spear.Setup Spear.Sys.Timer
-                     Spear.Sys.Store Spear.Sys.Store.ID Spear.Updatable Spear.Math.Vector2
+                     Spear.Math.Circle Spear.Math.Triangle Spear.Collision.Types
+                     Spear.Game Spear.GLSL Spear.GLSL.Buffer Spear.GLSL.Error
+                     Spear.GLSL.Management Spear.GLSL.Texture Spear.GLSL.Uniform
+                     Spear.GLSL.VAO Spear.Math.Camera Spear.Math.Entity
+                     Spear.Math.Matrix3 Spear.Math.Matrix4 Spear.Math.MatrixUtils
+                     Spear.Math.Plane Spear.Math.Quaternion Spear.Math.Spatial
+                     Spear.Math.Vector3 Spear.Math.Vector4 Spear.Physics
+                     Spear.Physics.Rigid Spear.Render.AnimatedModel
+                     Spear.Render.Material Spear.Render.Model Spear.Render.Program
+                     Spear.Render.Renderable Spear.Render.StaticModel
+                     Spear.Render.Texture Spear.Scene.Graph Spear.Scene.Light
+                     Spear.Scene.Loader Spear.Scene.Scene Spear.Scene.SceneResources
+                     Spear.Setup Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
+                     Spear.Updatable Spear.Math.Vector2
     exposed: True
     buildable: True
     build-tools: hsc2hs -any

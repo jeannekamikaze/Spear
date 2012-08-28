@@ -1,4 +1,7 @@
 module Spear.Scene.Scene
+where
+
+{-module Spear.Scene.Scene
 (
     -- * Data types
     Scene
@@ -150,3 +153,4 @@ collide' col scene@ListScene {} =
 render :: (obj -> Game s ()) -> Scene obj -> Game s ()
 render rend (scene@ListScene {})   = Prelude.mapM_ rend $ objects scene
 render rend (scene@OctreeScene {}) = F.mapM_ rend $ world scene
+-}

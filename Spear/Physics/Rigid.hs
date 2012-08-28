@@ -20,10 +20,10 @@ import Control.Monad.State
 
 
 data RigidBody = RigidBody
-    { mass         :: Float
-    , position     :: Vector3
-    , velocity     :: Vector3
-    , acceleration :: Vector3
+    { mass         :: !Float
+    , position     :: !Vector3
+    , velocity     :: !Vector3
+    , acceleration :: !Vector3
     }
 
 

@@ -1,8 +1,8 @@
-module Spear.Collision.Sphere
+module Spear.Math.Sphere
 (
     Sphere(..)
 ,   sphere
-,   contains
+,   spherept
 )
 where
 
@@ -12,10 +12,9 @@ import Spear.Math.Vector3 as Vector
 
 -- | A bounding volume.
 data Sphere = Sphere
-    { center :: !Vector3
-    , radius :: !Float
+    { center :: {-# UNPACK #-} !Vector3
+    , radius :: {-# UNPACK #-} !Float
     }
-    deriving Eq
 
 
 -- | Create a 'Sphere' from the given points.
@@ -32,5 +31,5 @@ sphere (x:xs) = Sphere c r
 
 
 -- | Return 'True' if the given 'Sphere' contains the given point, 'False' otherwise.         
-contains :: Sphere -> Vector3 -> Bool
-(Sphere center radius) `contains` p = radius*radius >= normSq (p - center)
+spherept :: Sphere -> Vector3 -> Bool
+(Sphere center radius) `spherept` p = radius*radius >= normSq (p - center)

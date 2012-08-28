@@ -13,7 +13,7 @@ where
 
 
 import Control.Monad.Error
-import qualified Control.Monad.Resource as R
+import qualified Control.Monad.Trans.Resource as R
 import qualified Control.Monad.Trans.Class as MT (lift)
 
 

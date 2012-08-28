@@ -11,9 +11,9 @@ module Spear.Math.Octree
 )
 where
 
-import Spear.Collision.AABB as AABB
 import Spear.Collision.Types
-import Spear.Math.Vector3 as Vector
+import Spear.Math.AABB
+import Spear.Math.Vector3
 
 import Control.Applicative ((<*>))
 import Data.List
@@ -93,7 +93,7 @@ clone (Octree root ents c1 c2 c3 c4 c5 c6 c7 c8) = Octree root [] c1' c2' c3' c4
         
         
 keep :: (e -> AABB -> CollisionType) -> AABB -> e -> Bool
-keep testAABB aabb e = test == FullyContainedBy || test == Equal
+keep testAABB aabb e = test == FullyContainedBy
     where test = e `testAABB` aabb
 
 

@@ -10,11 +10,11 @@ module Spear.Collision.Collisioner
 where
 
 
-import Spear.Math.Vector3 as Vector
-import Spear.Collision.AABB as Box
-import Spear.Collision.Sphere as Sphere
 import Spear.Collision.Collision as C
 import Spear.Collision.Types
+import Spear.Math.AABB
+import Spear.Math.Sphere
+import Spear.Math.Vector3
 
 
 -- | A collisioner component.
@@ -41,7 +41,7 @@ buildAABB cols = aabb $ Spear.Collision.Collisioner.generatePoints cols
 
 
 -- | Create the minimal 'AABB' collisioner fully containing the specified 'BSphere'.
-boxFromSphere :: Sphere.Sphere -> Collisioner
+boxFromSphere :: Sphere -> Collisioner
 boxFromSphere = AABBCol . aabbFromSphere
 
 

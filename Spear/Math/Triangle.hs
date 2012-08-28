@@ -1,4 +1,4 @@
-module Spear.Collision.Triangle
+module Spear.Math.Triangle
 (
     Triangle(..)
 )
@@ -12,9 +12,9 @@ import Foreign.Storable
 
 
 data Triangle = Triangle
-    { p0 :: Vector3
-    , p1 :: Vector3
-    , p2 :: Vector3
+    { p0 :: {-# UNPACK #-} !Vector3
+    , p1 :: {-# UNPACK #-} !Vector3
+    , p2 :: {-# UNPACK #-} !Vector3
     }
 
 

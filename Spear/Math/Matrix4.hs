@@ -54,10 +54,10 @@ import Foreign.Storable
 
 -- | Represents a 4x4 column major matrix.
 data Matrix4 = Matrix4
-    { m00 :: !Float, m10 :: !Float, m20 :: !Float, m30 :: !Float
-    , m01 :: !Float, m11 :: !Float, m21 :: !Float, m31 :: !Float
-    , m02 :: !Float, m12 :: !Float, m22 :: !Float, m32 :: !Float
-    , m03 :: !Float, m13 :: !Float, m23 :: !Float, m33 :: !Float
+    { m00 :: {-# UNPACK #-} !Float, m10 :: {-# UNPACK #-} !Float, m20 :: {-# UNPACK #-} !Float, m30 :: {-# UNPACK #-} !Float
+    , m01 :: {-# UNPACK #-} !Float, m11 :: {-# UNPACK #-} !Float, m21 :: {-# UNPACK #-} !Float, m31 :: {-# UNPACK #-} !Float
+    , m02 :: {-# UNPACK #-} !Float, m12 :: {-# UNPACK #-} !Float, m22 :: {-# UNPACK #-} !Float, m32 :: {-# UNPACK #-} !Float
+    , m03 :: {-# UNPACK #-} !Float, m13 :: {-# UNPACK #-} !Float, m23 :: {-# UNPACK #-} !Float, m33 :: {-# UNPACK #-} !Float
     }
 
 

@@ -14,14 +14,13 @@ data-dir: ""
 library
     build-depends: GLFW -any, OpenGL -any, OpenGLRaw -any,
                    StateVar -any, base -any, bytestring -any, directory -any,
-                   mtl -any, transformers -any, resource-simple -any, parsec >=3.1.3,
+                   mtl -any, transformers -any, resourcet -any, parsec >=3.1.3,
                    containers -any, vector -any, array -any
-    exposed-modules: Spear.Math.Triangle
-                     Spear.Physics.Types Spear.Physics.World Spear.App
+    exposed-modules: Spear.Physics.Types Spear.App
                      Spear.App.Application Spear.App.Input Spear.Assets.Image
-                     Spear.Assets.Model Spear.Collision Spear.Collision.AABB
+                     Spear.Assets.Model Spear.Collision Spear.Math.AABB
                      Spear.Collision.Collision Spear.Collision.Collisioner
-                     Spear.Collision.Sphere Spear.Collision.Triangle
+                     Spear.Math.Sphere Spear.Math.Triangle
                      Spear.Collision.Types Spear.Game Spear.GLSL Spear.GLSL.Buffer
                      Spear.GLSL.Error Spear.GLSL.Management Spear.GLSL.Texture
                      Spear.GLSL.Uniform Spear.GLSL.VAO Spear.Math.Camera
@@ -34,8 +33,7 @@ library
                      Spear.Render.StaticModel Spear.Render.Texture Spear.Scene.Graph
                      Spear.Scene.Light Spear.Scene.Loader Spear.Scene.Scene
                      Spear.Scene.SceneResources Spear.Setup Spear.Sys.Timer
-                     Spear.Sys.Store Spear.Sys.Store.ID
-                     Spear.Updatable
+                     Spear.Sys.Store Spear.Sys.Store.ID Spear.Updatable Spear.Math.Vector2
     exposed: True
     buildable: True
     build-tools: hsc2hs -any
@@ -51,8 +49,7 @@ library
               Spear/Assets/Image/Image.h Spear/Assets/Image/Image_error_code.h
               Spear/Assets/Image/sys_types.h Spear/Assets/Model/MD2/MD2_load.h
               Spear/Assets/Model/OBJ/OBJ_load.h Spear/Assets/Model/OBJ/cvector.h
-              Spear/Assets/Model/Model.h
-              Spear/Assets/Model/Model_error_code.h
+              Spear/Assets/Model/Model.h Spear/Assets/Model/Model_error_code.h
               Spear/Assets/Model/sys_types.h Spear/Render/RenderModel.h
               Timer/Timer.h
     include-dirs: Spear/Assets/Image Spear/Assets/Model Spear/Render

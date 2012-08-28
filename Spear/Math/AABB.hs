@@ -1,8 +1,8 @@
-module Spear.Collision.AABB
+module Spear.Math.AABB
 (
     AABB(..)
 ,   aabb
-,   contains
+,   aabbpt
 )
 where
 
@@ -11,11 +11,7 @@ import Spear.Math.Vector3 as Vector
 
 
 -- | An axis-aligned bounding box.
-data AABB = AABB
-    { min :: !Vector3
-    , max :: !Vector3
-    }
-    deriving Eq
+data AABB = AABB {-# UNPACK #-} !Vector3 {-# UNPACK #-} !Vector3
 
 
 -- | Create a 'AABB' from the given points.
@@ -28,5 +24,5 @@ aabb (x:xs) = foldr update (AABB x x) xs
 
 
 -- | Return 'True' if the given 'AABB' contains the given point, 'False' otherwise.         
-contains :: AABB -> Vector3 -> Bool
-(AABB min max) `contains` v = v >= min && v <= max
+aabbpt :: AABB -> Vector3 -> Bool
+(AABB min max) `aabbpt` v = v >= min && v <= max

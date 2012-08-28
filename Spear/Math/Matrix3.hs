@@ -42,9 +42,9 @@ import Foreign.Storable
 
 -- | Represents a 3x3 column major matrix.
 data Matrix3 = Matrix3
-    { m00 :: !Float, m10 :: !Float, m20 :: !Float
-    , m01 :: !Float, m11 :: !Float, m21 :: !Float
-    , m02 :: !Float, m12 :: !Float, m22 :: !Float
+    { m00 :: {-# UNPACK #-} !Float, m10 :: {-# UNPACK #-} !Float, m20 :: {-# UNPACK #-} !Float
+    , m01 :: {-# UNPACK #-} !Float, m11 :: {-# UNPACK #-} !Float, m21 :: {-# UNPACK #-} !Float
+    , m02 :: {-# UNPACK #-} !Float, m12 :: {-# UNPACK #-} !Float, m22 :: {-# UNPACK #-} !Float
     }
 
 

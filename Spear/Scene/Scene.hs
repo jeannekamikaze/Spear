@@ -21,9 +21,9 @@ module Spear.Scene.Scene
 where
 
 
-import Spear.Collision.AABB
 import Spear.Collision.Types
 import Spear.Game (Game)
+import Spear.Math.AABB
 import Spear.Math.Octree as Octree
 
 import Control.Applicative ((<*>))
@@ -35,12 +35,12 @@ import qualified Data.List as L (delete, filter, find)
 
 data Scene obj =
     ListScene
-    { objects        :: [obj]
+    { objects :: ![obj]
     }
     |
     OctreeScene
-    { collideAABB    :: obj -> AABB -> CollisionType
-    , world          :: Octree obj
+    { collideAABB :: obj -> AABB -> CollisionType
+    , world       :: !(Octree obj)
     }
 
 

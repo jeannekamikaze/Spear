@@ -6,9 +6,9 @@ module Spear.Collision.Collision
 where
 
 
-import Spear.Collision.AABB as AABB
-import Spear.Collision.Sphere as Sphere
 import Spear.Collision.Types
+import Spear.Math.AABB
+import Spear.Math.Sphere
 import Spear.Math.Plane
 import Spear.Math.Vector3
 
@@ -22,11 +22,10 @@ class Collisionable a where
 instance Collisionable AABB where
     
     collideBox box1@(AABB min1 max1) box2@(AABB min2 max2)
-        | box1 == box2  = Equal
         | min1 > max2   = NoCollision
         | max1 < min2   = NoCollision
-        | box1 `AABB.contains` min2 && box1 `AABB.contains` max2 = FullyContains
-        | box2 `AABB.contains` min1 && box2 `AABB.contains` max1 = FullyContainedBy
+        | box1 `aabbpt` min2 && box1 `aabbpt` max2 = FullyContains
+        | box2 `aabbpt` min1 && box2 `aabbpt` max1 = FullyContainedBy
         | (x max1) < (x min2) = NoCollision
         | (x min1) > (x max2) = NoCollision
         | (y max1) < (y min2) = NoCollision
@@ -60,7 +59,6 @@ instance Collisionable Sphere where
         x -> x
     
     collideSphere s1@(Sphere c1 r1) s2@(Sphere c2 r2)
-        | s1 == s2 = Equal
         | distance_centers <= sub_radii = if (r1 > r2) then FullyContains else FullyContainedBy
         | distance_centers <= sum_radii = Collision
         | otherwise = NoCollision

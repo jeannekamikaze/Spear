@@ -16,8 +16,6 @@ module Spear.Math.Vector3
     -- * Operations
 ,   Spear.Math.Vector3.min
 ,   Spear.Math.Vector3.max
-,   Spear.Math.Vector3.zipWith
-,   Spear.Math.Vector3.map
 ,   dot
 ,   cross
 ,   normSq
@@ -33,7 +31,11 @@ import Foreign.Storable
 
 
 -- | Represents a vector in 3D.
-data Vector3 = Vector3 !Float !Float !Float deriving (Eq, Show)
+data Vector3 = Vector3
+    {-# UNPACK #-} !Float
+    {-# UNPACK #-} !Float
+    {-# UNPACK #-} !Float
+    deriving (Eq, Show)
 
 
 instance Num Vector3 where
@@ -89,8 +91,8 @@ instance Storable Vector3 where
         pokeByteOff ptr 0 ax
         pokeByteOff ptr (1*sizeFloat) ay
         pokeByteOff ptr (2*sizeFloat) az
-    
-    
+
+
 x (Vector3 ax _  _ ) = ax
 y (Vector3 _  ay _ ) = ay
 z (Vector3 _  _  az) = az
@@ -155,26 +157,6 @@ min (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.min ax bx) (Prelude
 -- | Create a vector with components set to the maximum of each of the given vectors'.
 max :: Vector3 -> Vector3 -> Vector3
 max (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz)
-
-
--- | Zip two vectors with the given function.
-zipWith :: (Float -> Float -> Float) -> Vector3 -> Vector3 -> Vector3
-zipWith f (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (f ax bx) (f ay by) (f az bz)
-
-
--- | Folds a vector from the left.
-{-foldl :: (UV.Unbox b) => (a -> b -> a) -> a -> Vector3 b -> a
-foldl f acc (Vector3 v) = UV.foldl f acc v
-
-
--- | Folds a vector from the right.
-foldr :: (UV.Unbox b) => (b -> a -> a) -> a -> Vector3 b -> a
-foldr f acc (Vector3 v) = UV.foldr f acc v-}
-
-
--- | Map the given function over the given vector.
-map :: (Float -> Float) -> Vector3 -> Vector3
-map f (Vector3 ax ay az) = Vector3 (f ax) (f ay) (f az)
 
 
 -- | Compute the given vectors' dot product.

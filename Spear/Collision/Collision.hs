@@ -57,7 +57,6 @@ instance Collisionable Circle where
             distance_centers = normSq $ c1 - c2
             sum_radii    = (r1 + r2)^2
             sub_radii    = (r1 - r2)^2
-    
 
 
 aabbPoints :: AABB -> [Vector2]
@@ -73,7 +72,7 @@ aabbPoints (AABB min max) = [p1,p2,p3,p4,p5,p6,p7,p8]
         p8 = vec2 (x max) (y max)
 
 
--- | Create the minimal AABB fully containing the specified Sphere.
+-- | Create the minimal box fully containing the specified circle.
 aabbFromCircle :: Circle -> AABB
 aabbFromCircle (Circle c r) = AABB bot top
     where

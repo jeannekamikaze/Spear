@@ -25,12 +25,12 @@ data Collisioner
     | CircleCol { getSphere :: !Circle }
 
 
--- | Create a 'Collisioner' from the specified 'AABB'.  
+-- | Create a 'Collisioner' from the specified box.  
 aabbCollisioner :: AABB -> Collisioner
 aabbCollisioner = AABBCol
 
 
--- | Create a 'Collisioner' from the specified 'BSphere'.
+-- | Create a 'Collisioner' from the specified circle.
 sphereCollisioner :: Circle -> Collisioner
 sphereCollisioner = CircleCol
 
@@ -40,7 +40,7 @@ buildAABB :: [Collisioner] -> AABB
 buildAABB cols = aabb $ generatePoints cols
 
 
--- | Create the minimal 'AABB' collisioner fully containing the specified 'BSphere'.
+-- | Create the minimal 'AABB' collisioner fully containing the specified circle.
 boxFromSphere :: Circle -> Collisioner
 boxFromSphere = AABBCol . aabbFromCircle
 

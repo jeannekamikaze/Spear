@@ -90,6 +90,9 @@ void model_to_ground (Model* model);
 /// Copy the triangles of the given frame from the Model into the given array.
 void model_copy_triangles (Model* model, unsigned frame, model_triangle* tris);
 
+/// Compute the model's 2d AABBs.
+void model_compute_boxes (Model* model, float* points);
+
 #ifdef __cplusplus
 }
 #endif

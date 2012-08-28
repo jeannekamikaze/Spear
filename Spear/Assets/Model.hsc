@@ -3,9 +3,11 @@
 module Spear.Assets.Model
 (
     -- * Data types
-    Vec3(..)
+    Vec2(..)
+,   Vec3(..)
 ,   TexCoord(..)
 ,   CTriangle(..)
+,   Box(..)
 ,   Skin(..)
 ,   Animation(..)
 ,   Triangle(..)
@@ -21,6 +23,7 @@ module Spear.Assets.Model
 ,   transformVerts
 ,   transformNormals
 ,   toGround
+,   modelBoxes
 )
 where
 
@@ -31,7 +34,8 @@ import Spear.Setup
 import qualified Data.ByteString.Char8 as B
 import Data.Char (toLower)
 import Data.List (splitAt, elemIndex)
-import qualified Data.Vector.Storable as V
+import qualified Data.Vector as V
+import qualified Data.Vector.Storable as S
 import Foreign.Ptr
 import Foreign.Storable
 import Foreign.C.Types
@@ -61,8 +65,26 @@ sizeFloat = #{size float}
 sizePtr   = #{size int*}
 
 
+-- | A 2D vector.
+data Vec2 = Vec2 {-# UNPACK #-} !Float {-# UNPACK #-} !Float
+
+
+instance Storable Vec2 where
+    sizeOf _ = 2*sizeFloat
+    alignment _ = alignment (undefined :: CFloat)
+    
+    peek ptr = do
+        f0 <- peekByteOff ptr 0
+        f1 <- peekByteOff ptr sizeFloat
+        return $ Vec2 f0 f1
+    
+    poke ptr (Vec2 f0 f1) = do
+        pokeByteOff ptr 0         f0
+        pokeByteOff ptr sizeFloat f1
+
+
 -- | A 3D vector.
-data Vec3 = Vec3 !Float !Float !Float
+data Vec3 = Vec3 {-# UNPACK #-} !Float {-# UNPACK #-} !Float {-# UNPACK #-} !Float
 
 
 instance Storable Vec3 where
@@ -82,7 +104,7 @@ instance Storable Vec3 where
 
 
 -- | A 2D texture coordinate.
-data TexCoord = TexCoord !Float !Float
+data TexCoord = TexCoord {-# UNPACK #-} !Float {-# UNPACK #-} !Float
 
 
 instance Storable TexCoord where
@@ -101,12 +123,12 @@ instance Storable TexCoord where
 
 -- | A raw triangle holding vertex/normal and texture indices.
 data CTriangle = CTriangle
-    { vertexIndex0  :: !CUShort
-    , vertexIndex1  :: !CUShort
-    , vertexIndex2  :: !CUShort
-    , textureIndex1 :: !CUShort
-    , textureIndex2 :: !CUShort
-    , textureIndex3 :: !CUShort
+    { vertexIndex0  :: {-# UNPACK #-} !CUShort
+    , vertexIndex1  :: {-# UNPACK #-} !CUShort
+    , vertexIndex2  :: {-# UNPACK #-} !CUShort
+    , textureIndex1 :: {-# UNPACK #-} !CUShort
+    , textureIndex2 :: {-# UNPACK #-} !CUShort
+    , textureIndex3 :: {-# UNPACK #-} !CUShort
     }
 
 
@@ -133,6 +155,28 @@ instance Storable CTriangle where
         #{poke triangle, textureIndices[0]} ptr t0
         #{poke triangle, textureIndices[1]} ptr t1
         #{poke triangle, textureIndices[2]} ptr t2
+
+
+-- | A 2D axis-aligned bounding box.
+data Box = Box {-# UNPACK #-} !Vec2 {-# UNPACK #-} !Vec2
+
+
+instance Storable Box where
+    sizeOf _ = 4 * sizeFloat
+    alignment _ = alignment (undefined :: CFloat)
+    
+    peek ptr = do
+        f0 <- peekByteOff ptr 0
+        f1 <- peekByteOff ptr sizeFloat
+        f2 <- peekByteOff ptr $ 2*sizeFloat
+        f3 <- peekByteOff ptr $ 3*sizeFloat
+        return $ Box (Vec2 f0 f1) (Vec2 f2 f3)
+    
+    poke ptr (Box (Vec2 f0 f1) (Vec2 f2 f3)) = do
+        pokeByteOff ptr 0             f0
+        pokeByteOff ptr sizeFloat     f1
+        pokeByteOff ptr (2*sizeFloat) f2
+        pokeByteOff ptr (3*sizeFloat) f3
 
 
 -- | A model skin.
@@ -179,12 +223,12 @@ instance Storable Animation where
 
 -- | A 3D model.
 data Model = Model
-    { vertices      :: V.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' vertices.
-    , normals       :: V.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' normals.
-    , texCoords     :: V.Vector TexCoord   -- ^ Array of 'numTexCoords' texture coordinates.
-    , triangles     :: V.Vector CTriangle  -- ^ Array of 'numTriangles' triangles.
-    , skins         :: V.Vector Skin       -- ^ Array of 'numSkins' skins.
-    , animations    :: V.Vector Animation  -- ^ Array of 'numAnimations' animations.
+    { vertices      :: S.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' vertices.
+    , normals       :: S.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' normals.
+    , texCoords     :: S.Vector TexCoord   -- ^ Array of 'numTexCoords' texture coordinates.
+    , triangles     :: S.Vector CTriangle  -- ^ Array of 'numTriangles' triangles.
+    , skins         :: S.Vector Skin       -- ^ Array of 'numSkins' skins.
+    , animations    :: S.Vector Animation  -- ^ Array of 'numAnimations' animations.
     , numFrames     :: Int                 -- ^ Number of frames.
     , numVerts      :: Int                 -- ^ Number of vertices (and normals) per frame.
     , numTriangles  :: Int                 -- ^ Number of triangles in one frame.
@@ -211,12 +255,12 @@ instance Storable Model where
         pTriangles    <- peekByteOff ptr (3*sizePtr)
         pSkins        <- peekByteOff ptr (4*sizePtr)
         pAnimations   <- peekByteOff ptr (5*sizePtr)
-        vertices      <- fmap V.fromList $ peekArray (numVertices*numFrames) pVerts
-        normals       <- fmap V.fromList $ peekArray (numVertices*numFrames) pNormals
-        texCoords     <- fmap V.fromList $ peekArray numTexCoords            pTexCoords
-        triangles     <- fmap V.fromList $ peekArray numTriangles            pTriangles
-        skins         <- fmap V.fromList $ peekArray numSkins                pSkins
-        animations    <- fmap V.fromList $ peekArray numAnimations           pAnimations
+        vertices      <- fmap S.fromList $ peekArray (numVertices*numFrames) pVerts
+        normals       <- fmap S.fromList $ peekArray (numVertices*numFrames) pNormals
+        texCoords     <- fmap S.fromList $ peekArray numTexCoords            pTexCoords
+        triangles     <- fmap S.fromList $ peekArray numTriangles            pTriangles
+        skins         <- fmap S.fromList $ peekArray numSkins                pSkins
+        animations    <- fmap S.fromList $ peekArray numAnimations           pAnimations
         return $
             Model vertices normals texCoords triangles skins animations
                   numFrames numVertices numTriangles numTexCoords numSkins numAnimations
@@ -224,12 +268,12 @@ instance Storable Model where
     poke ptr
         (Model verts normals texCoords tris skins animations
          numFrames numVerts numTris numTex numSkins numAnimations) =
-            V.unsafeWith verts $ \pVerts ->
-            V.unsafeWith normals $ \pNormals ->
-            V.unsafeWith texCoords $ \pTexCoords ->
-            V.unsafeWith tris $ \pTris ->
-            V.unsafeWith skins $ \pSkins ->
-            V.unsafeWith animations $ \pAnimations -> do
+            S.unsafeWith verts $ \pVerts ->
+            S.unsafeWith normals $ \pNormals ->
+            S.unsafeWith texCoords $ \pTexCoords ->
+            S.unsafeWith tris $ \pTris ->
+            S.unsafeWith skins $ \pSkins ->
+            S.unsafeWith animations $ \pAnimations -> do
                 #{poke Model, vertices}      ptr pVerts
                 #{poke Model, normals}       ptr pNormals
                 #{poke Model, texCoords}     ptr pTexCoords
@@ -349,13 +393,13 @@ animated = (>1) . numFrames
 
 -- | Return the model's ith animation.
 animation :: Model -> Int -> Animation
-animation model i = animations model V.! i
+animation model i = animations model S.! i
 
 
 -- | Return the animation specified by the given string.
 animationByName :: Model -> String -> Maybe Animation
 animationByName model anim =
-    let anim' = B.pack anim in V.find ((==) anim' . name) $ animations model
+    let anim' = B.pack anim in S.find ((==) anim' . name) $ animations model
 
 
 -- | Return a copy of the model's triangles.
@@ -378,8 +422,8 @@ transformVerts :: Model -> (Vec3 -> Vec3) -> Model
 transformVerts model f = model { vertices = vertices' }
     where
         n = numVerts model * numFrames model
-        vertices' = V.generate n f'
-        f' i = f $ vertices model V.! i 
+        vertices' = S.generate n f'
+        f' i = f $ vertices model S.! i 
 
 
 -- | Transform the model's normals.
@@ -387,14 +431,14 @@ transformNormals :: Model -> (Vec3 -> Vec3) -> Model
 transformNormals model f = model { normals = normals' }
     where
         n = numVerts model * numFrames model
-        normals' = V.generate n f'
-        f' i = f $ normals model V.! i 
+        normals' = S.generate n f'
+        f' i = f $ normals model S.! i 
 
 
 -- | Translate the model such that its lowest point has y = 0.
 toGround :: Model -> IO Model
 toGround model =
-    let model' = model { vertices = V.generate n $ \i -> vertices model V.! i }
+    let model' = model { vertices = S.generate n $ \i -> vertices model S.! i }
         n = numVerts model * numFrames model
     in    
         with model' model_to_ground >> return model'
@@ -402,3 +446,28 @@ toGround model =
 
 foreign import ccall "Model.h model_to_ground"
     model_to_ground :: Ptr Model -> IO ()
+
+
+-- | Get the model's 2D bounding boxes.
+modelBoxes :: Model -> IO (V.Vector Box)
+modelBoxes model =
+    with model $ \modelPtr ->
+    allocaArray (numVerts model * numFrames model) $ \pointsPtr -> do
+    model_compute_boxes modelPtr pointsPtr
+    let n = numFrames model
+        getBoxes = peekBoxes pointsPtr n 0 0 $ return []
+        peekBoxes ptr n cur off l
+            | cur == n = l
+            | otherwise = do
+                f0 <- peekByteOff ptr off
+                f1 <- peekByteOff ptr $ off + sizeFloat
+                f2 <- peekByteOff ptr $ off + 2*sizeFloat
+                f3 <- peekByteOff ptr $ off + 3*sizeFloat
+                peekBoxes ptr n (cur+1) (off + 4*sizeFloat) $
+                    fmap ((f3:) . (f2:) . (f1:) . (f0:)) l
+    fmap (V.fromList . reverse) getBoxes
+    
+
+
+foreign import ccall "Model.h model_compute_boxes"
+    model_compute_boxes :: Ptr Model -> Ptr Vec2 -> IO ()

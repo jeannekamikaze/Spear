@@ -18,6 +18,7 @@ import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Setup as Setup
 
+import qualified Data.Vector as V
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -27,6 +28,7 @@ data StaticModelResource = StaticModelResource
     , nVertices :: Int
     , material  :: Material
     , texture   :: Texture
+    , boxes     :: V.Vector Box
     , rkey      :: Resource
     }
 
@@ -61,6 +63,7 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
     RenderModel elements _ numVertices <- setupIO . renderModelFromModel $ model
     elementBuf <- newBuffer
     vao        <- newVAO
+    boxes      <- setupIO $ modelBoxes model
     
     setupIO $ do
         
@@ -85,9 +88,9 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
         setupIO $ putStrLn "Releasing static model resource"
         releaseVAO vao
         releaseBuffer elementBuf
-        --sequence_ . fmap releaseBuffer $ [elementBuf, indexBuf]
     
-    return $ StaticModelResource vao (unsafeCoerce numVertices) material texture rkey
+    return $ StaticModelResource
+        vao (unsafeCoerce numVertices) material texture boxes rkey
 
 
 -- | Release the given 'StaticModelResource'.

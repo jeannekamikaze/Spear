@@ -79,3 +79,30 @@ void model_copy_triangles (Model* model, unsigned frame, model_triangle* tris)
         tris->t2 = t[tri->textureIndices[2]];
     }
 }
+
+
+void model_box (Model* model, float* points)
+{
+    vec3* v = model->vertices;
+        
+    unsigned f;
+    for (f = 0; f < model->numFrames; ++f)
+    {
+        float xmin = v->x;
+        float xmax = v->x;
+        float ymin = v->y;
+        float ymax = v->y;
+        
+        unsigned i;
+        for (i = 0; i < model->numVertices; ++i, ++v)
+        {
+            xmin = fmin (xmin, v->x);
+            ymin = fmin (ymin, v->y);
+            xmax = fmax (xmax, v->x);
+            ymax = fmax (ymax, v->y);
+        }
+        
+        *points++ = xmin; *points++ = ymin;
+        *points++ = xmax; *points++ = ymax;
+    }
+}

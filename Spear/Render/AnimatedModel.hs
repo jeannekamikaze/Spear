@@ -9,6 +9,7 @@ module Spear.Render.AnimatedModel
 ,   currentAnimation
 ,   bind
 ,   render
+,   update
 )
 where
 
@@ -18,10 +19,10 @@ import Spear.Render.Model
 import Spear.GLSL
 import Spear.Render.Material
 import Spear.Render.Program
-import Spear.Updatable
 import Spear.Setup as Setup
 
 import Control.Applicative ((<$>), (<*>))
+import qualified Data.Vector as V
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -36,6 +37,7 @@ data AnimatedModelResource = AnimatedModelResource
     , nVertices :: Int
     , material  :: Material
     , texture   :: Texture
+    , boxes     :: V.Vector Box
     , rkey      :: Resource
     }
 
@@ -89,6 +91,7 @@ animatedModelResource
         RenderModel elements numFrames numVertices <- setupIO . renderModelFromModel $ model
         elementBuf <- newBuffer
         vao        <- newVAO
+        boxes      <- setupIO $ modelBoxes model
         
         setupIO $ do
         
@@ -119,7 +122,8 @@ animatedModelResource
             releaseBuffer elementBuf        
         
         return $ AnimatedModelResource
-            model vao (unsafeCoerce numFrames) (unsafeCoerce numVertices) material texture rkey
+            model vao (unsafeCoerce numFrames) (unsafeCoerce numVertices)
+            material texture boxes rkey
 
 
 -- | Release the given 'AnimatedModelResource'.
@@ -132,16 +136,17 @@ animatedModelRenderer :: AnimatedModelResource -> AnimatedModelRenderer
 animatedModelRenderer modelResource = AnimatedModelRenderer modelResource 0 0 0 0 0
 
 
-instance Updatable AnimatedModelRenderer where
-    
-    update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp) =
-        AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp'
-            where f = fp + dt
-                  nextFrame = f >= 1.0
-                  fp' = if nextFrame then f - 1.0 else f
-                  curFrame' = if nextFrame
-                              then let x = curFrame + 1 in if x > endFrame then startFrame else x
-                              else curFrame
+-- | Update the 'AnimatedModelRenderer'.
+update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp) =
+    AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp'
+        where f = fp + dt
+              nextFrame = f >= 1.0
+              fp' = if nextFrame then f - 1.0 else f
+              curFrame' = if nextFrame
+                          then
+                            let x = curFrame + 1
+                            in if x > endFrame then startFrame else x
+                          else curFrame
 
 
 -- | Set the active animation to the given one.

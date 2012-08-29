@@ -32,7 +32,7 @@ rpgTransform h mat =
     let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
         u = V3.unity
         f = let f' = M3.forward mat in vec3 (V2.x f') 0 (V2.y f')
-        t = (vec3 0 h 0) + let t' = M3.position mat in -(vec3 (V2.x t') 0 (-V2.y t'))
+        t = (vec3 0 h 0) + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')
     in mat4
         (V3.x r) (V3.x u) (V3.x f) (V3.x t)
         (V3.y r) (V3.y u) (V3.y f) (V3.y t)

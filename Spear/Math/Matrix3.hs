@@ -7,7 +7,7 @@ module Spear.Math.Matrix3
 ,   m20, m21, m22
 ,   col0, col1, col2
 ,   row0, row1, row2
-,   right, forward, position
+,   right, up, forward, position
     -- * Construction
 ,   mat3
 ,   mat3fromVec
@@ -29,9 +29,9 @@ module Spear.Math.Matrix3
     -- * Operations
 ,   transpose
 ,   mul
+,   inverseTransform
 ,   Spear.Math.Matrix3.zipWith
 ,   Spear.Math.Matrix3.map
---,   inverse
 )
 where
 
@@ -126,6 +126,7 @@ row2 (Matrix3 _   _   _   _   _   _   a02 a12 a22) = vec3 a02 a12 a22
 
 
 right    (Matrix3 a00 _   _   a01 _   _   _ _ _) = vec2 a00 a01
+up       (Matrix3 _   a10 _   _   a11 _   _ _ _) = vec2 a10 a11
 forward  (Matrix3 _   a10 _   _   a11 _   _ _ _) = vec2 a10 a11
 position (Matrix3 _   _   a20 _   _   a21 _ _ _) = vec2 a20 a21  
 
@@ -278,9 +279,16 @@ map f m = Matrix3
     (f . m02 $ m) (f . m12 $ m) (f . m22 $ m)
 
 
--- | Invert the given 'Matrix3'.
-{-inverse :: Matrix3 -> Matrix3
-inverse mat = -}
+-- | Compute the inverse transform of the given transformation matrix.
+inverseTransform :: Matrix3 -> Matrix3
+inverseTransform mat =
+    let r = right mat
+        f = forward mat
+        t = -(position mat)
+    in mat3
+        (V2.x r) (V2.y r) (t `V2.dot` r)
+        (V2.x f) (V2.y f) (t `V2.dot` f)
+        0        0        1
 
 
 fromDeg :: (Floating a) => a -> a

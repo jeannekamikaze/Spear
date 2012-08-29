@@ -1,7 +1,4 @@
 module Spear.Scene.Scene
-where
-
-{-module Spear.Scene.Scene
 (
     -- * Data types
     Scene
@@ -9,7 +6,6 @@ where
 ,   listScene
     -- * Insertion and deletion
 ,   add
-,   addl
 ,   remove
 ,   Spear.Scene.Scene.filter
     -- * Queries
@@ -27,7 +23,7 @@ where
 import Spear.Collision.Types
 import Spear.Game (Game)
 import Spear.Math.AABB
-import Spear.Math.Octree as Octree
+import Spear.Math.QuadTree as QT
 
 import Control.Applicative ((<*>))
 import Control.Monad (foldM)
@@ -41,9 +37,9 @@ data Scene obj =
     { objects :: ![obj]
     }
     |
-    OctreeScene
+    QuadTreeScene
     { collideAABB :: obj -> AABB -> CollisionType
-    , world       :: !(Octree obj)
+    , world       :: !(QuadTree obj)
     }
 
 
@@ -57,16 +53,10 @@ listScene = ListScene
 --octreeScene collide getAABB objs = OctreeScene [] collide $ makeOctree
 
 
--- | Add a game object to the given 'Scene'.
-add :: Scene obj -> obj -> Scene obj
-add (scene@ListScene {})   o = scene { objects = o : objects scene }
-add (scene@OctreeScene {}) o = scene { world = insert (collideAABB scene) (world scene) o }
-
-
 -- | Add a list of game objects to the given 'Scene'.
-addl :: Scene obj -> [obj] -> Scene obj
-addl (scene@ListScene {})   l = scene { objects = l ++ objects scene }
-addl (scene@OctreeScene {}) l = scene { world = insertl (collideAABB scene) (world scene) l }
+add :: Scene obj -> [obj] -> Scene obj
+add (scene@ListScene {})   l = scene { objects = l ++ objects scene }
+add (scene@QuadTreeScene {}) l = scene { world = QT.insert (collideAABB scene) (world scene) l }
 
 
 -- | Remove a game object from the given 'Scene'.
@@ -91,7 +81,7 @@ type Update obj = obj -> obj
 -- | Update the given scene.
 update :: (obj -> obj) -> Scene obj -> Scene obj
 update updt (scene@ListScene {})   = scene { objects = fmap updt $ objects scene }
-update updt (scene@OctreeScene {}) = scene { world   = Octree.map (collideAABB scene) updt $ world scene }
+update updt (scene@QuadTreeScene {}) = scene { world   = QT.map (collideAABB scene) updt $ world scene }
 
 
 -- | Update the given scene.
@@ -116,7 +106,7 @@ collide col scene@ListScene {} =
     in
         scene { objects = objs' }
 
-collide col scene@OctreeScene {} =
+collide col scene@QuadTreeScene {} =
     scene { world = gmap (collideAABB scene) col $ world scene }
 
 
@@ -152,5 +142,4 @@ collide' col scene@ListScene {} =
 -- | Render the given 'Scene'.
 render :: (obj -> Game s ()) -> Scene obj -> Game s ()
 render rend (scene@ListScene {})   = Prelude.mapM_ rend $ objects scene
-render rend (scene@OctreeScene {}) = F.mapM_ rend $ world scene
--}
+render rend (scene@QuadTreeScene {}) = F.mapM_ rend $ world scene

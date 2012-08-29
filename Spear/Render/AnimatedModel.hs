@@ -150,13 +150,12 @@ animatedModelRenderer animSpeed modelResource =
 -- | Update the 'AnimatedModelRenderer'.
 update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s) =
     AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp' s
-        where f = fp + dt
+        where f = fp + dt * s
               nextFrame = f >= 1.0
               fp' = if nextFrame then f - 1.0 else f
               curFrame' = if nextFrame
-                          then
-                            let x = curFrame + 1
-                            in if x > endFrame then startFrame else x
+                          then let x = curFrame + 1
+                               in if x > endFrame then startFrame else x
                           else curFrame
 
 

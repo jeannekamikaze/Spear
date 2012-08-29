@@ -21,11 +21,12 @@ where
 import Spear.Assets.Model as Model
 import Spear.Collision.Collisioner
 import qualified Spear.GLSL as GLSL
-import qualified Spear.Math.Matrix3 as M3
+import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
+import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
-import Spear.Math.Vector4
+import Spear.Math.Vector4 as V4
 import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
@@ -310,21 +311,25 @@ newLight _ = return ()
 -- Object Loading --
 --------------------
 
-loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix4 -> Setup GameObject
+loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Setup GameObject
 loadGO style sceneRes props transf = do
     modelName <- asString . mandatory "model" $ props
     case getAnimatedModel sceneRes modelName of
-        Just model -> return $ goNew style (Right model) (AABBCol $ AM.box 0 model) 
-        Nothing -> case getStaticModel sceneRes modelName of
-                Just model -> return $ goNew style (Left model) (AABBCol $ SM.box 0 model)
-                Nothing -> setupError $ "model " ++ modelName ++ " not found" 
+        Just model ->
+            return $ goNew style (Right model) (AABBCol $ AM.box 0 model) transf
+        Nothing ->
+            case getStaticModel sceneRes modelName of
+                Just model ->
+                    return $ goNew style (Left model) (AABBCol $ SM.box 0 model) transf
+                Nothing ->
+                    setupError $ "model " ++ modelName ++ " not found" 
 
 
 type CreateGameObject m a
     = String -- ^ The object's name.
     -> SceneResources
     -> [Property]
-    -> Matrix4 -- ^ The object's transform.
+    -> Matrix3 -- ^ The object's transform.
     -> m a
 
 
@@ -349,27 +354,22 @@ newObject' :: Monad m => CreateGameObject m a -> SceneResources -> String -> [Pr
 newObject' newGO sceneRes nid props = do
     -- Optional properties.
     let goType   = (asString $ value "type"     props) `unspecified` "unknown"
-        position = (asVec3   $ value "position" props) `unspecified` vec3 0 0 0
-        rotation = (asVec3   $ value "rotation" props) `unspecified` vec3 0 0 0
-        right'   = (asVec3   $ value "right"    props) `unspecified` vec3 1 0 0
-        up'      = (asVec3   $ value "up"       props) `unspecified` vec3 0 1 0
-        forward' =  asVec3   $ value "forward"  props
-        scale    = (asVec3   $ value "scale"    props) `unspecified` vec3 1 1 1
+        position = (asVec2   $ value "position" props) `unspecified` vec2 0 0
+        rotation = (asVec2   $ value "rotation" props) `unspecified` vec2 0 0
+        right'   = (asVec2   $ value "right"    props) `unspecified` vec2 1 0
+        up'      =  asVec2   $ value "up"       props
+        scale    = (asVec2   $ value "scale"    props) `unspecified` vec2 1 1
     
-    -- Compute the object's vectors if a forward vector has been specified.
-    let (right, up, forward) = vectors forward'
+    -- Compute the object's vectors if an up/forward vector has been specified.
+    let (right, up) = vectors up'
     
-    newGO goType sceneRes props (M4.transform right up forward position)
+    newGO goType sceneRes props (M3.transform right up position)
 
 
-vectors :: Maybe Vector3 -> (Vector3, Vector3, Vector3)
-vectors forward = case forward of
-    Nothing -> (V3.unitx, V3.unity, V3.unitz)
-    Just f  ->
-        let r = f `cross` V3.unity
-            u = r `cross` f
-        in
-            (r, u, f)
+vectors :: Maybe Vector2 -> (Vector2, Vector2)
+vectors up = case up of
+    Nothing -> (V2.unitx, V2.unity)
+    Just u  -> (perp u, u)
 
 
 
@@ -408,16 +408,22 @@ asFloat :: Functor f => f [String] -> f Float
 asFloat = fmap (read . concat)
 
 
-asVec4 :: Functor f => f [String] -> f Vector4
-asVec4 val = fmap toVec4 val
-    where toVec4 (x:y:z:w:_) = vec4 (read x) (read y) (read z) (read w)
-          toVec4 (x:[])      = let x' = read x in vec4 x' x' x' x'
+asVec2 :: Functor f => f [String] -> f Vector2
+asVec2 val = fmap toVec2 val
+    where toVec2 (x:y:_) = vec2 (read x) (read y)
+          toVec2 (x:[])    = let x' = read x in vec2 x' x'
 
 
 asVec3 :: Functor f => f [String] -> f Vector3
 asVec3 val = fmap toVec3 val
     where toVec3 (x:y:z:_) = vec3 (read x) (read y) (read z)
           toVec3 (x:[])    = let x' = read x in vec3 x' x' x'
+
+
+asVec4 :: Functor f => f [String] -> f Vector4
+asVec4 val = fmap toVec4 val
+    where toVec4 (x:y:z:w:_) = vec4 (read x) (read y) (read z) (read w)
+          toVec4 (x:[])      = let x' = read x in vec4 x' x' x' x'
 
 
 asRotation :: Functor f => f [String] -> f Rotation

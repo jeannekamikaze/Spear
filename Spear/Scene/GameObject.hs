@@ -112,13 +112,14 @@ instance S2.Spatial2 GameObject where
 goNew :: GameStyle
       -> Either StaticModelResource AnimatedModelResource
       -> Collisioner
+      -> M3.Matrix3
       -> GameObject
 
-goNew style (Left smr)  col =
-    goUpdate' style (Left  $ SM.staticModelRenderer smr)   col M3.id 0
+goNew style (Left smr) col transf =
+    goUpdate' style (Left  $ SM.staticModelRenderer smr) col transf 0
 
-goNew style (Right amr) col =
-    goUpdate' style (Right $ AM.animatedModelRenderer amr) col M3.id 0
+goNew style (Right amr) col transf =
+    goUpdate' style (Right $ AM.animatedModelRenderer amr) col transf 0
 
 
 goUpdate' :: GameStyle

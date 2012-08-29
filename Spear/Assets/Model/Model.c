@@ -81,7 +81,7 @@ void model_copy_triangles (Model* model, unsigned frame, model_triangle* tris)
 }
 
 
-void model_box (Model* model, float* points)
+void model_compute_boxes (Model* model, float* points)
 {
     vec3* v = model->vertices;
         

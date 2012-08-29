@@ -2,10 +2,12 @@ module Spear.Scene.GameObject
 (
     GameObject
 ,   GameStyle(..)
+,   AnimationSpeed
     -- * Construction
 ,   goNew
     -- * Manipulation
 ,   goUpdate
+,   Spear.Scene.GameObject.setAnimationSpeed
 ,   goAABB
     -- * Rendering
 ,   goRender
@@ -188,6 +190,13 @@ goCollide :: [GameObject] -> GameObject -> [GameObject]
 goCollide gos go = foldl' collide' [] gos
     where
         collide' gos target = target:gos
+
+
+-- | Set the game object's animation speed.
+setAnimationSpeed :: AnimationSpeed -> GameObject -> GameObject
+setAnimationSpeed s go = case renderer go of
+    Left _ -> go
+    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
 
 
 -- | Get the game object's bounding box.

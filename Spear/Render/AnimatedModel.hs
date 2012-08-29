@@ -10,6 +10,7 @@ module Spear.Render.AnimatedModel
 ,   bind
 ,   render
 ,   update
+,   box
 )
 where
 
@@ -17,6 +18,8 @@ where
 import Spear.Assets.Model
 import Spear.Render.Model
 import Spear.GLSL
+import Spear.Math.AABB
+import Spear.Math.Vector2 (vec2)
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Setup as Setup
@@ -186,3 +189,10 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp) =
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         glUniform1f (fpLoc uniforms) (unsafeCoerce fp)
         drawArrays gl_TRIANGLES (n*curFrame) n
+
+
+-- | Get the model's ith bounding box.
+box :: Int -> AnimatedModelResource -> AABB
+box i model =
+    let (Box (Vec2 xmin ymin) (Vec2 xmax ymax)) = boxes model V.! i
+    in AABB (vec2 xmin ymin) (vec2 xmax ymax)

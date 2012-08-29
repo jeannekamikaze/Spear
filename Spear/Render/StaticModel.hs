@@ -7,6 +7,7 @@ module Spear.Render.StaticModel
 ,   Spear.Render.StaticModel.release
 ,   bind
 ,   render
+,   box
 )
 where
 
@@ -14,6 +15,8 @@ where
 import Spear.Assets.Model
 import Spear.Render.Model
 import Spear.GLSL
+import Spear.Math.AABB
+import Spear.Math.Vector2 (vec2)
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Setup as Setup
@@ -124,3 +127,10 @@ render uniforms (StaticModelRenderer model) =
         uniformVec4 (ksLoc uniforms) ks
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         drawArrays gl_TRIANGLES 0 $ nVertices model
+
+
+-- | Get the model's ith bounding box.
+box :: Int -> StaticModelResource -> AABB
+box i model =
+    let (Box (Vec2 xmin ymin) (Vec2 xmax ymax)) = boxes model V.! i
+    in AABB (vec2 xmin ymin) (vec2 xmax ymax)

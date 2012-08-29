@@ -160,15 +160,7 @@ position (Matrix4 _   _   _   a30 _   _   _   a31 _   _   _   a32 _   _   _   _)
 
 
 -- | Build a matrix from the specified values.
-mat4 :: Float -> Float -> Float -> Float ->
-        Float -> Float -> Float -> Float ->
-        Float -> Float -> Float -> Float ->
-        Float -> Float -> Float -> Float -> Matrix4
-mat4 m00 m10 m20 m30 m01 m11 m21 m31 m02 m12 m22 m32 m03 m13 m23 m33 = Matrix4
-    m00 m10 m20 m30
-    m01 m11 m21 m31
-    m02 m12 m22 m32
-    m03 m13 m23 m33
+mat4 = Matrix4
 
 
 -- | Build a matrix from four vectors in 4D.

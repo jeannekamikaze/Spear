@@ -17,6 +17,7 @@ where
 
 import Spear.Collision.Collision
 import Spear.Collision.Collisioner as Col
+import Spear.GLSL.Management
 import Spear.GLSL.Uniform
 import Spear.Math.AABB
 import qualified Spear.Math.Camera as Cam
@@ -148,8 +149,8 @@ goRender sprog aprog cam go =
         mat = S2.transform go
         style = gameStyle go
     in case renderer go of
-        Left smr  -> goRender' style spu mat cam (SM.bind spu smr) (SM.render spu smr)
-        Right amr -> goRender' style apu mat cam (AM.bind apu amr) (AM.render apu amr)
+        Left smr  -> goRender' style sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
+        Right amr -> goRender' style aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
 
 
 type Bind = IO ()
@@ -157,21 +158,23 @@ type Bind = IO ()
 type Render = IO ()
 
 
-goRender' :: ProgramUniforms u
+goRender' :: (ProgramUniforms u, Program p)
           => GameStyle
+          -> p
           -> u
           -> M3.Matrix3
           -> Cam.Camera
           -> Bind
           -> Render
           -> IO ()
-goRender' style uniforms model cam bindRenderer render =
+goRender' style prog uniforms model cam bindRenderer render =
     let view  = M4.inverseTransform $ Cam.transform cam
         modelview = case style of
             RPG -> view * rpgTransform 0 model
             PLT -> view * pltTransform model
         normalmat = fastNormalMatrix modelview
     in do
+        useProgram . program $ prog
         uniformMat4 (projLoc uniforms) $ Cam.projection cam
         uniformMat4 (modelviewLoc uniforms) modelview
         uniformMat3 (normalmatLoc uniforms) normalmat

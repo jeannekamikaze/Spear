@@ -452,7 +452,7 @@ foreign import ccall "Model.h model_to_ground"
 modelBoxes :: Model -> IO (V.Vector Box)
 modelBoxes model =
     with model $ \modelPtr ->
-    allocaArray (numVerts model * numFrames model) $ \pointsPtr -> do
+    allocaArray (numVerts model * numFrames model * 4) $ \pointsPtr -> do
     model_compute_boxes modelPtr pointsPtr
     let n = numFrames model
         getBoxes = peekBoxes pointsPtr n 0 0 $ return []

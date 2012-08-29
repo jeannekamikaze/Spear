@@ -2,11 +2,14 @@ module Spear.Render.AnimatedModel
 (
     AnimatedModelResource
 ,   AnimatedModelRenderer
+,   AnimationSpeed
 ,   animatedModelResource
 ,   animatedModelRenderer
 ,   Spear.Render.AnimatedModel.release
 ,   setAnimation
 ,   currentAnimation
+,   animationSpeed
+,   setAnimationSpeed
 ,   bind
 ,   render
 ,   update
@@ -28,6 +31,9 @@ import Control.Applicative ((<$>), (<*>))
 import qualified Data.Vector as V
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
+
+
+type AnimationSpeed = Float
 
 
 -- | An animated model resource.
@@ -64,12 +70,13 @@ instance Ord AnimatedModelResource where
 -- state changes by sorting 'AnimatedModelRenderer's by their underlying
 -- 'AnimatedModelResource' when rendering the scene.
 data AnimatedModelRenderer = AnimatedModelRenderer
-    { modelResource :: AnimatedModelResource
-    , currentAnim   :: Int
-    , frameStart    :: Int
-    , frameEnd      :: Int
-    , currentFrame  :: Int
-    , frameProgress :: Float
+    { modelResource  :: AnimatedModelResource
+    , currentAnim    :: Int
+    , frameStart     :: Int
+    , frameEnd       :: Int
+    , currentFrame   :: Int
+    , frameProgress  :: Float
+    , animationSpeed :: Float
     }
 
 
@@ -135,13 +142,14 @@ release = Setup.release . rkey
 
 
 -- | Create an 'AnimatedModelRenderer' from the given 'AnimatedModelResource'.
-animatedModelRenderer :: AnimatedModelResource -> AnimatedModelRenderer
-animatedModelRenderer modelResource = AnimatedModelRenderer modelResource 0 0 0 0 0
+animatedModelRenderer :: AnimationSpeed -> AnimatedModelResource -> AnimatedModelRenderer
+animatedModelRenderer animSpeed modelResource =
+    AnimatedModelRenderer modelResource 0 0 0 0 0 animSpeed
 
 
 -- | Update the 'AnimatedModelRenderer'.
-update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp) =
-    AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp'
+update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s) =
+    AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp' s
         where f = fp + dt
               nextFrame = f >= 1.0
               fp' = if nextFrame then f - 1.0 else f
@@ -166,6 +174,11 @@ currentAnimation :: Enum a => AnimatedModelRenderer -> a
 currentAnimation = toEnum . currentAnim
 
 
+-- | Set the renderer's animation speed.
+setAnimationSpeed :: AnimationSpeed -> AnimatedModelRenderer -> AnimatedModelRenderer
+setAnimationSpeed s r = r { animationSpeed = s }
+
+
 -- | Bind the given 'AnimatedModelRenderer' to prepare it for rendering.
 bind :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
 bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend =
@@ -179,7 +192,7 @@ bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend
 
 -- | Render the model described by the given 'AnimatedModelRenderer'.
 render :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
-render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp) =
+render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
     let n = nVertices model
         (Material _ ka kd ks shi) = material model
     in do

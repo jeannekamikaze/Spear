@@ -119,7 +119,7 @@ goNew style (Left smr) col transf =
     goUpdate' style (Left  $ SM.staticModelRenderer smr) col transf 0
 
 goNew style (Right amr) col transf =
-    goUpdate' style (Right $ AM.animatedModelRenderer amr) col transf 0
+    goUpdate' style (Right $ AM.animatedModelRenderer 1 amr) col transf 0
 
 
 goUpdate' :: GameStyle

@@ -2,12 +2,14 @@ module Spear.Scene.GameObject
 (
     GameObject
 ,   GameStyle(..)
-,   AnimationSpeed
+,   AM.AnimationSpeed
     -- * Construction
 ,   goNew
     -- * Manipulation
 ,   goUpdate
-,   Spear.Scene.GameObject.setAnimationSpeed
+,   currentAnimation
+,   setAnimation
+,   setAnimationSpeed
 ,   goAABB
     -- * Rendering
 ,   goRender
@@ -29,7 +31,7 @@ import Spear.Math.MatrixUtils
 import qualified Spear.Math.Spatial2 as S2
 import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
-import Spear.Render.AnimatedModel as AM
+import qualified Spear.Render.AnimatedModel as AM
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
 
@@ -45,10 +47,9 @@ data GameStyle
 -- | An object in the game scene.
 data GameObject = GameObject
     { gameStyle   :: GameStyle
-    , renderer    :: !(Either StaticModelRenderer AnimatedModelRenderer)
+    , renderer    :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
     , collisioner :: !Collisioner
     , transform   :: M3.Matrix3
-    , goUpdate    :: Float -> GameObject
     }
 
 
@@ -112,36 +113,56 @@ instance S2.Spatial2 GameObject where
 
 -- | Create a new game object.
 goNew :: GameStyle
-      -> Either StaticModelResource AnimatedModelResource
+      -> Either StaticModelResource AM.AnimatedModelResource
       -> Collisioner
       -> M3.Matrix3
       -> GameObject
 
 goNew style (Left smr) col transf =
-    goUpdate' style (Left  $ SM.staticModelRenderer smr) col transf 0
+    GameObject style (Left $ SM.staticModelRenderer smr) col transf
 
 goNew style (Right amr) col transf =
-    goUpdate' style (Right $ AM.animatedModelRenderer 1 amr) col transf 0
+    GameObject style (Right $ AM.animatedModelRenderer 1 amr) col transf
 
 
-goUpdate' :: GameStyle
-          -> Either StaticModelRenderer AnimatedModelRenderer
-          -> Collisioner
-          -> M3.Matrix3
-          -> Float
-          -> GameObject
-goUpdate' style rend col mat dt =
-    let rend' = case rend of
+goUpdate :: Float -> GameObject -> GameObject
+goUpdate dt go =
+    let rend = renderer go
+        rend' = case rend of
             Left _  -> rend
             Right amr -> Right $ AM.update dt amr
-    in
-        GameObject
-        { gameStyle = style
-        , renderer = rend
-        , collisioner = col
-        , transform = mat
-        , goUpdate = goUpdate' style rend' col mat
-        }
+    in go
+       { renderer = rend'
+       }
+
+
+-- | Get the game object's current animation.
+currentAnimation :: Enum a => GameObject -> a
+currentAnimation go = case renderer go of
+    Left _ -> toEnum 0
+    Right amr -> AM.currentAnimation amr 
+
+
+-- | Set the game object's current animation.
+setAnimation :: Enum a => a -> GameObject -> GameObject
+setAnimation a go = case renderer go of
+    Left _ -> go
+    Right amr -> go { renderer = Right $ AM.setAnimation a amr }
+
+
+-- | Set the game object's animation speed.
+setAnimationSpeed :: AM.AnimationSpeed -> GameObject -> GameObject
+setAnimationSpeed s go = case renderer go of
+    Left _ -> go
+    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
+
+
+-- | Get the game object's bounding box.
+goAABB :: GameObject -> AABB
+goAABB go =
+    case collisioner go of
+        (AABBCol box) -> box
+        (CircleCol circle) -> aabbFromCircle circle
 
 
 -- | Render the game object.
@@ -190,18 +211,3 @@ goCollide :: [GameObject] -> GameObject -> [GameObject]
 goCollide gos go = foldl' collide' [] gos
     where
         collide' gos target = target:gos
-
-
--- | Set the game object's animation speed.
-setAnimationSpeed :: AnimationSpeed -> GameObject -> GameObject
-setAnimationSpeed s go = case renderer go of
-    Left _ -> go
-    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
-
-
--- | Get the game object's bounding box.
-goAABB :: GameObject -> AABB
-goAABB go =
-    case collisioner go of
-        (AABBCol box) -> box
-        (CircleCol circle) -> aabbFromCircle circle

@@ -6,6 +6,7 @@ module Spear.Collision.Collisioner
 ,   sphereCollisioner
 ,   buildAABB
 ,   collide
+,   move
 )
 where
 
@@ -20,9 +21,9 @@ import Spear.Math.Vector2
 -- | A collisioner component.
 data Collisioner
     -- | An axis-aligned bounding box.
-    = AABBCol { getBox :: !AABB }
+    = AABBCol { getBox :: {-# UNPACK #-} !AABB }
     -- | A bounding sphere.
-    | CircleCol { getSphere :: !Circle }
+    | CircleCol { getCircle :: {-# UNPACK #-} !Circle }
 
 
 -- | Create a 'Collisioner' from the specified box.  
@@ -73,3 +74,9 @@ collide (AABBCol box1) (AABBCol box2)    = collideBox    box1 box2
 collide (CircleCol s1) (CircleCol s2)    = collideSphere s1 s2
 collide (AABBCol box) (CircleCol sphere) = collideBox    box sphere
 collide (CircleCol sphere) (AABBCol box) = collideSphere sphere box
+
+
+-- | Move the collisioner.
+move :: Vector2 -> Collisioner -> Collisioner
+move v (AABBCol (AABB min max)) = AABBCol (AABB (min+v) (max+v))
+move v (CircleCol (Circle c r)) = CircleCol (Circle (c+v) r)

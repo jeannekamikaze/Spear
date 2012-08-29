@@ -23,6 +23,7 @@ instance S.Spatial2 Entity where
     rotate      a ent = ent { transform = transform ent * M.rot a }
     pos   = M.position . transform
     fwd   = M.forward  . transform
+    up    = M.up       . transform
     right = M.right    . transform
     transform (Entity t) = t
     setTransform t (Entity _) = Entity t

@@ -45,6 +45,8 @@ instance Spatial2 RigidBody where
     
     fwd _ = unity
     
+    up _ = unity
+    
     right _ = unitx
     
     transform body = M3.transform unitx unity $ position body

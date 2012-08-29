@@ -32,7 +32,10 @@ class Spatial2 s where
     
     -- | Get the spatial's forward vector.
     fwd :: s -> Vector2
-        
+    
+    -- | Get the spatial's up vector.
+    up :: s -> Vector2
+    
     -- | Get the spatial's right vector.
     right :: s -> Vector2
     

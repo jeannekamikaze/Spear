@@ -32,7 +32,7 @@ import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
 import Spear.Render.Texture
-import Spear.Scene.GameObject
+import Spear.Scene.GameObject as GO
 import Spear.Scene.Graph
 import Spear.Scene.Light
 import Spear.Scene.SceneResources
@@ -314,7 +314,8 @@ newLight _ = return ()
 loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Setup GameObject
 loadGO style sceneRes props transf = do
     modelName <- asString . mandatory "model" $ props
-    case getAnimatedModel sceneRes modelName of
+    let animSpeed = asFloat  . value "animation-speed" $ props
+    go <- case getAnimatedModel sceneRes modelName of
         Just model ->
             return $ goNew style (Right model) (AABBCol $ AM.box 0 model) transf
         Nothing ->
@@ -322,7 +323,10 @@ loadGO style sceneRes props transf = do
                 Just model ->
                     return $ goNew style (Left model) (AABBCol $ SM.box 0 model) transf
                 Nothing ->
-                    setupError $ "model " ++ modelName ++ " not found" 
+                    setupError $ "model " ++ modelName ++ " not found"
+    return $ case animSpeed of
+        Nothing -> go
+        Just s  -> GO.setAnimationSpeed s go
 
 
 type CreateGameObject m a

@@ -201,7 +201,7 @@ lookAt :: Vector3 -- ^ Eye position.
 
 lookAt pos target =
         let fwd = Vector3.normalise $ target - pos
-            r    = fwd `cross` Vector3.unitY
+            r    = fwd `cross` Vector3.unity
             u    = r `cross` fwd
         in
             transform r u (-fwd) pos
@@ -422,13 +422,6 @@ inverseTransform mat = mat4fromVec u v w p where
     tdotu = t `Vector4.dot` col0 mat
     tdotv = t `Vector4.dot` col1 mat
     tdotw = t `Vector4.dot` col2 mat
-
-
--- | Invert the given matrix.
-{-inverse :: Matrix4 -> Matrix4
-inverse mat = mat4 i0 i1 i2 i3 i4 i5 i6 i7 i8 i9 i10 i11 i12 i13 i14 i15
-    where
-        i0 = -}
 
 
 -- | Transform the given vector in 3D space with the given matrix.

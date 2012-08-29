@@ -6,9 +6,9 @@ module Spear.Math.Vector3
 ,   y
 ,   z
     -- * Construction
-,   unitX
-,   unitY
-,   unitZ
+,   unitx
+,   unity
+,   unitz
 ,   zero
 ,   fromList
 ,   vec3
@@ -99,18 +99,18 @@ z (Vector3 _  _  az) = az
 
 
 -- | Unit vector along the X axis.
-unitX :: Vector3
-unitX = Vector3 1 0 0
+unitx :: Vector3
+unitx = Vector3 1 0 0
 
 
 -- | Unit vector along the Y axis.
-unitY :: Vector3
-unitY = Vector3 0 1 0
+unity :: Vector3
+unity = Vector3 0 1 0
 
 
 -- | Unit vector along the Z axis.
-unitZ :: Vector3
-unitZ = Vector3 0 0 1
+unitz :: Vector3
+unitz = Vector3 0 0 1
 
 
 -- | Zero vector.

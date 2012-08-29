@@ -57,7 +57,7 @@ class Spatial3 s where
     lookAt pt s =
         let position = pos s
             fwd      = normalise $ pt - position
-            r        = fwd `cross` unitY
+            r        = fwd `cross` unity
             u        = r `cross` fwd
         in
             setTransform (M.transform r u (-fwd) position) s

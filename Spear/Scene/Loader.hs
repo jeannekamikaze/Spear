@@ -351,9 +351,9 @@ newObject' newGO sceneRes nid props = do
 
 vectors :: Maybe Vector3 -> (Vector3, Vector3, Vector3)
 vectors forward = case forward of
-    Nothing -> (V3.unitX, V3.unitY, V3.unitZ)
+    Nothing -> (V3.unitx, V3.unity, V3.unitz)
     Just f  ->
-        let r = f `cross` V3.unitY
+        let r = f `cross` V3.unity
             u = r `cross` f
         in
             (r, u, f)

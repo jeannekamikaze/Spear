@@ -188,10 +188,12 @@ updateDM :: DelayedMouse -- ^ Current mouse state.
 
 updateDM (DelayedMouse mouse delay accum) dt =
     let
-        accum'    = V.map (+dt) accum
-        time x    = accum' V.! fromEnum x
-        active x  = time x >= delay x
-        button' x = active x && button mouse x
+        time b     = dt + accum' V.! fromEnum b
+        active b   = time b >= delay b
+        button' b  = active b && button mouse b
+        accum'     = accum V.// fmap newDelay [0 .. fromEnum (maxBound :: MouseButton)]
+        newDelay x = let b = toEnum x
+                     in (x, if button' b then 0 else time b) 
     in
         DelayedMouse mouse { button = button' } delay accum'
 

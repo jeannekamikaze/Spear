@@ -5,6 +5,7 @@ module Spear.Scene.Loader
 ,   loadScene
 ,   validate
 ,   resourceMap
+,   loadGO
 ,   loadObjects
 ,   value
 ,   unspecified
@@ -18,19 +19,21 @@ where
 
 
 import Spear.Assets.Model as Model
+import Spear.Collision.Collisioner
 import qualified Spear.GLSL as GLSL
 import qualified Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
 import Spear.Math.Vector3 as V3
 import Spear.Math.Vector4
-import Spear.Render.AnimatedModel
+import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
-import Spear.Render.StaticModel
+import Spear.Render.StaticModel as SM
 import Spear.Render.Texture
-import Spear.Scene.Light
+import Spear.Scene.GameObject
 import Spear.Scene.Graph
+import Spear.Scene.Light
 import Spear.Scene.SceneResources
 import Spear.Setup
 
@@ -306,6 +309,16 @@ newLight _ = return ()
 --------------------
 -- Object Loading --
 --------------------
+
+loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix4 -> Setup GameObject
+loadGO style sceneRes props transf = do
+    modelName <- asString . mandatory "model" $ props
+    case getAnimatedModel sceneRes modelName of
+        Just model -> return $ goNew style (Right model) (AABBCol $ AM.box 0 model) 
+        Nothing -> case getStaticModel sceneRes modelName of
+                Just model -> return $ goNew style (Left model) (AABBCol $ SM.box 0 model)
+                Nothing -> setupError $ "model " ++ modelName ++ " not found" 
+
 
 type CreateGameObject m a
     = String -- ^ The object's name.

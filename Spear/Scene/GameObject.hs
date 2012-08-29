@@ -1,6 +1,7 @@
 module Spear.Scene.GameObject
 (
     GameObject
+,   GameStyle
     -- * Construction
 ,   goNew
     -- * Manipulation

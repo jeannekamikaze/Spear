@@ -131,17 +131,11 @@ forward  (Matrix3 _   a10 _   _   a11 _   _ _ _) = vec2 a10 a11
 position (Matrix3 _   _   a20 _   _   a21 _ _ _) = vec2 a20 a21  
 
 
--- | Build a 'Matrix3' from the specified values.
-mat3 :: Float -> Float -> Float ->
-        Float -> Float -> Float ->
-        Float -> Float -> Float -> Matrix3
-mat3 m00 m01 m02 m10 m11 m12 m20 m21 m22 = Matrix3
-    m00 m10 m20
-    m01 m11 m21
-    m02 m12 m22
+-- | Build a matrix from the specified values.
+mat3 = Matrix3
 
 
--- | Build a 'Matrix3' from three vectors in 3D.
+-- | Build a matrix from three vectors in 3D.
 mat3fromVec :: Vector3 -> Vector3 -> Vector3 -> Matrix3
 mat3fromVec v0 v1 v2 = Matrix3
     (V3.x v0) (V3.x v1) (V3.x v2)
@@ -158,7 +152,7 @@ transform :: Vector2 -- ^ Right vector
 transform r f p = mat3
     (V2.x r) (V2.x f) (V2.x p)
     (V2.y r) (V2.y f) (V2.y p)
-    0     0     1
+    0        0        1
 
 
 -- | Return the identity matrix.

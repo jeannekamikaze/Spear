@@ -348,7 +348,7 @@ newObject newGO sceneRes (SceneLeaf nid props) = [newObject' newGO sceneRes nid 
 newObject' :: Monad m => CreateGameObject m a -> SceneResources -> String -> [Property] -> m a
 newObject' newGO sceneRes nid props = do
     -- Optional properties.
-    let name     = (asString $ value "name"     props) `unspecified` "unknown"
+    let goType   = (asString $ value "type"     props) `unspecified` "unknown"
         position = (asVec3   $ value "position" props) `unspecified` vec3 0 0 0
         rotation = (asVec3   $ value "rotation" props) `unspecified` vec3 0 0 0
         right'   = (asVec3   $ value "right"    props) `unspecified` vec3 1 0 0
@@ -359,7 +359,7 @@ newObject' newGO sceneRes nid props = do
     -- Compute the object's vectors if a forward vector has been specified.
     let (right, up, forward) = vectors forward'
     
-    newGO name sceneRes props (M4.transform right up forward position)
+    newGO goType sceneRes props (M4.transform right up forward position)
 
 
 vectors :: Maybe Vector3 -> (Vector3, Vector3, Vector3)

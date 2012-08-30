@@ -65,6 +65,7 @@ setup (w, h) displayBits windowMode (major, minor) onResize' = do
         GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
         
         windowSizeCallback $= (onResize onResize')
+        onResize' (Size (fromIntegral w) (fromIntegral h))
         
         initialiseTimingSubsystem
     

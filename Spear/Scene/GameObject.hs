@@ -16,6 +16,7 @@ module Spear.Scene.GameObject
 ,   setAnimation
 ,   setAnimationSpeed
 ,   withCollisioners
+,   setCollisioners
     -- * Rendering
 ,   goRender
     -- * Collision
@@ -168,6 +169,11 @@ numCollisioners = length . collisioners
 -- | Manipulate the game object's collisioners.
 withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
 withCollisioners go f = go { collisioners = f $ collisioners go }
+
+
+-- | Set the game object's collisioners.
+setCollisioners :: GameObject -> [Collisioner] -> GameObject
+setCollisioners go cols = go { collisioners = cols }
 
 
 -- | Get the game object's ith bounding box.

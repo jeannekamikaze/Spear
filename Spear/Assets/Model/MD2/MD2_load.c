@@ -81,9 +81,6 @@ static void normalise (vec3* v)
 }
 
 
-// Left handed cross product.
-// a x b = c.
-// (0,1,0) x (1,0,0) = (0,0,-1).
 static void cross (const vec3* a, const vec3* b, vec3* c)
 {
     c->x = a->y * b->z - a->z * b->y;

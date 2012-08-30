@@ -22,19 +22,17 @@ library
                      Spear.Math.AABB Spear.Collision.Collision
                      Spear.Collision.Collisioner Spear.Math.Circle Spear.Math.Triangle
                      Spear.Collision.Types Spear.Game Spear.GLSL Spear.Math.Camera
-                     Spear.Math.Entity
-                     Spear.Math.Matrix3 Spear.Math.Matrix4 Spear.Math.MatrixUtils
-                     Spear.Math.Plane Spear.Math.Quaternion Spear.Math.Vector3
-                     Spear.Math.Vector4 Spear.Physics Spear.Physics.Rigid
-                     Spear.Render.AnimatedModel Spear.Render.Material Spear.Render.Model
-                     Spear.Render.Program Spear.Render.Renderable
+                     Spear.Math.Entity Spear.Math.Matrix3 Spear.Math.Matrix4
+                     Spear.Math.MatrixUtils Spear.Math.Plane Spear.Math.Quaternion
+                     Spear.Math.Vector3 Spear.Math.Vector4 Spear.Physics
+                     Spear.Physics.Rigid Spear.Render.AnimatedModel
+                     Spear.Render.Material Spear.Render.Model Spear.Render.Program
                      Spear.Render.StaticModel Spear.Render.Texture Spear.Scene.Graph
                      Spear.Scene.Light Spear.Scene.Loader Spear.Scene.Scene
                      Spear.Scene.SceneResources Spear.Setup Spear.Sys.Timer
-                     Spear.Sys.Store Spear.Sys.Store.ID Spear.Updatable
-                     Spear.Math.Vector2 Spear.Math.Quad Spear.Math.Ray
-                     Spear.Math.Segment Spear.Math.Utils Spear.Math.Spatial2
-                     Spear.Math.Spatial3
+                     Spear.Sys.Store Spear.Sys.Store.ID Spear.Math.Vector2
+                     Spear.Math.Quad Spear.Math.Ray Spear.Math.Segment Spear.Math.Utils
+                     Spear.Math.Spatial2 Spear.Math.Spatial3
     exposed: True
     buildable: True
     build-tools: hsc2hs -any

@@ -6,6 +6,7 @@ module Spear.Scene.GameObject
     -- * Construction
 ,   goNew
     -- * Accessors
+,   renderer
 ,   currentAnimation
 ,   numCollisioners
 ,   goAABB

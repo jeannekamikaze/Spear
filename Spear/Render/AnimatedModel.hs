@@ -14,6 +14,7 @@ module Spear.Render.AnimatedModel
 ,   render
 ,   update
 ,   box
+,   modelRes
 )
 where
 
@@ -206,3 +207,8 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
 -- | Get the model's ith bounding box.
 box :: Int -> AnimatedModelResource -> Box
 box i model = boxes model V.! i
+
+
+-- | Get the renderer's model resource.
+modelRes :: AnimatedModelRenderer -> AnimatedModelResource
+modelRes = modelResource

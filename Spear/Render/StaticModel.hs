@@ -8,6 +8,7 @@ module Spear.Render.StaticModel
 ,   bind
 ,   render
 ,   box
+,   modelRes
 )
 where
 
@@ -132,3 +133,8 @@ render uniforms (StaticModelRenderer model) =
 -- | Get the model's ith bounding box.
 box :: Int -> StaticModelResource -> Box
 box i model = boxes model V.! i
+
+
+-- | Get the renderer's model resource.
+modelRes :: StaticModelRenderer -> StaticModelResource
+modelRes = model

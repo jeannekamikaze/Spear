@@ -10,6 +10,7 @@ module Spear.Scene.GameObject
 ,   currentAnimation
 ,   numCollisioners
 ,   goAABB
+,   goAABBs
     -- * Manipulation
 ,   goUpdate
 ,   setAnimation
@@ -176,6 +177,11 @@ goAABB i go = goAABB' $ (collisioners go) !! i
 goAABB' col = case col of
     (AABBCol box) -> box
     (CircleCol circle) -> aabbFromCircle circle
+
+
+-- | Get the game object's bounding boxes.
+goAABBs :: GameObject -> [AABB]
+goAABBs = fmap goAABB' . collisioners
 
 
 -- | Render the game object.

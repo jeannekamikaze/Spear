@@ -1,10 +1,10 @@
 Version of workspace file format:
                1
 Time of storage:
-               "Thu Aug 30 20:57:58 CEST 2012"
+               "Thu Aug 30 22:00:11 CEST 2012"
 Name of the workspace:
                "Spear"
 File paths of contained packages:
                ["demos/simple-scene/simple-scene.cabal","Spear.cabal"]
 Maybe file path of an active package:
-               Just "Spear.cabal"
+               Just "demos/simple-scene/simple-scene.cabal"

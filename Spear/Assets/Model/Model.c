@@ -92,17 +92,21 @@ void model_compute_boxes (Model* model, float* points)
         float xmax = v->x;
         float ymin = v->y;
         float ymax = v->y;
+        float zmin = v->z;
+        float zmax = v->z;
         
         unsigned i;
         for (i = 0; i < model->numVertices; ++i, ++v)
         {
             xmin = fmin (xmin, v->x);
             ymin = fmin (ymin, v->y);
+            zmin = fmin (zmin, v->z);
             xmax = fmax (xmax, v->x);
             ymax = fmax (ymax, v->y);
+            zmax = fmax (zmax, v->z);
         }
         
-        *points++ = xmin; *points++ = ymin;
-        *points++ = xmax; *points++ = ymax;
+        *points++ = xmin; *points++ = ymin; *points++ = zmin;
+        *points++ = xmax; *points++ = ymax; *points++ = zmax;
     }
 }

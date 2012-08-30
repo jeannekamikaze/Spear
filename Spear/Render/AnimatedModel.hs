@@ -204,7 +204,5 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
 
 
 -- | Get the model's ith bounding box.
-box :: Int -> AnimatedModelResource -> AABB
-box i model =
-    let (Box (Vec2 xmin ymin) (Vec2 xmax ymax)) = boxes model V.! i
-    in AABB (vec2 xmin ymin) (vec2 xmax ymax)
+box :: Int -> AnimatedModelResource -> Box
+box i model = boxes model V.! i

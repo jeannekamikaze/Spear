@@ -130,7 +130,5 @@ render uniforms (StaticModelRenderer model) =
 
 
 -- | Get the model's ith bounding box.
-box :: Int -> StaticModelResource -> AABB
-box i model =
-    let (Box (Vec2 xmin ymin) (Vec2 xmax ymax)) = boxes model V.! i
-    in AABB (vec2 xmin ymin) (vec2 xmax ymax)
+box :: Int -> StaticModelResource -> Box
+box i model = boxes model V.! i

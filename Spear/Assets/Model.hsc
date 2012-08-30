@@ -157,26 +157,30 @@ instance Storable CTriangle where
         #{poke triangle, textureIndices[2]} ptr t2
 
 
--- | A 2D axis-aligned bounding box.
-data Box = Box {-# UNPACK #-} !Vec2 {-# UNPACK #-} !Vec2
+-- | A 3D axis-aligned bounding box.
+data Box = Box {-# UNPACK #-} !Vec3 {-# UNPACK #-} !Vec3
 
 
 instance Storable Box where
-    sizeOf _ = 4 * sizeFloat
+    sizeOf _ = 6 * sizeFloat
     alignment _ = alignment (undefined :: CFloat)
     
     peek ptr = do
-        f0 <- peekByteOff ptr 0
-        f1 <- peekByteOff ptr sizeFloat
-        f2 <- peekByteOff ptr $ 2*sizeFloat
-        f3 <- peekByteOff ptr $ 3*sizeFloat
-        return $ Box (Vec2 f0 f1) (Vec2 f2 f3)
+        xmin <- peekByteOff ptr 0
+        ymin <- peekByteOff ptr sizeFloat
+        zmin <- peekByteOff ptr $ 2*sizeFloat
+        xmax <- peekByteOff ptr $ 3*sizeFloat
+        ymax <- peekByteOff ptr $ 4*sizeFloat
+        zmax <- peekByteOff ptr $ 5*sizeFloat
+        return $ Box (Vec3 xmin ymin zmin) (Vec3 xmax ymax zmax)
     
-    poke ptr (Box (Vec2 f0 f1) (Vec2 f2 f3)) = do
-        pokeByteOff ptr 0             f0
-        pokeByteOff ptr sizeFloat     f1
-        pokeByteOff ptr (2*sizeFloat) f2
-        pokeByteOff ptr (3*sizeFloat) f3
+    poke ptr (Box (Vec3 xmin ymin zmin) (Vec3 xmax ymax zmax)) = do
+        pokeByteOff ptr 0             xmin
+        pokeByteOff ptr sizeFloat     ymin
+        pokeByteOff ptr (2*sizeFloat) zmin
+        pokeByteOff ptr (3*sizeFloat) xmax
+        pokeByteOff ptr (4*sizeFloat) ymax
+        pokeByteOff ptr (5*sizeFloat) zmax
 
 
 -- | A model skin.
@@ -448,11 +452,11 @@ foreign import ccall "Model.h model_to_ground"
     model_to_ground :: Ptr Model -> IO ()
 
 
--- | Get the model's 2D bounding boxes.
+-- | Get the model's 3D bounding boxes.
 modelBoxes :: Model -> IO (V.Vector Box)
 modelBoxes model =
     with model $ \modelPtr ->
-    allocaArray (numVerts model * numFrames model * 4) $ \pointsPtr -> do
+    allocaArray (numVerts model * numFrames model * 6) $ \pointsPtr -> do
     model_compute_boxes modelPtr pointsPtr
     let n = numFrames model
         getBoxes = peekBoxes pointsPtr n 0 0 $ return []

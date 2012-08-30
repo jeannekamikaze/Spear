@@ -61,6 +61,7 @@ module Spear.GLSL
     -- ** Manipulation
 ,   bindBuffer
 ,   bufferData
+,   bufferDatal
 ,   withGLBuffer
 
     -- * Textures
@@ -580,8 +581,23 @@ bindBuffer buf target = glBindBuffer (fromTarget target) $ getBuffer buf
 
 
 -- | Set the buffer's data.
-bufferData :: TargetBuffer -> Int -> Ptr a -> BufferUsage -> IO ()
+bufferData :: TargetBuffer
+           -> Int -- ^ Buffer size in bytes.
+           -> Ptr a
+           -> BufferUsage
+           -> IO ()
 bufferData target n bufData usage = glBufferData (fromTarget target) (unsafeCoerce n) bufData (fromUsage usage)
+
+
+-- | Set the buffer's data.
+bufferDatal :: Storable a
+            => TargetBuffer
+            -> Int -- ^ The size in bytes of an element in the data list.
+            -> [a] -- ^ The data list.
+            -> BufferUsage
+            -> IO ()
+bufferDatal target n bufData usage = withArray bufData $
+    \ptr -> bufferData target (n * length bufData) ptr usage
 
 
 -- | Apply the given function the buffer's id.

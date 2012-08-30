@@ -26,6 +26,7 @@ module Spear.GLSL
 ,   fragLocation
 ,   uniformLocation
     -- ** Uniforms
+,   uniformVec2
 ,   uniformVec3
 ,   uniformVec4
 ,   uniformMat3
@@ -88,6 +89,7 @@ where
 import Spear.Assets.Image
 import Spear.Math.Matrix3 (Matrix3)
 import Spear.Math.Matrix4 (Matrix4)
+import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
 import Spear.Math.Vector4 as V4
 import Spear.Setup
@@ -360,6 +362,13 @@ readSource' file = do
     setCurrentDirectory dir
     
     return code
+
+
+-- | Load a 2D vector.
+uniformVec2 :: GLint -> Vector2 -> IO ()
+uniformVec2 loc v = glUniform2f loc x' y'
+    where x' = unsafeCoerce $ V2.x v
+          y' = unsafeCoerce $ V2.y v
 
 
 -- | Load a 3D vector.

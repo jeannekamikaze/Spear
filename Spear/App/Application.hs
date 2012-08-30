@@ -5,6 +5,10 @@ module Spear.App.Application
 ,   Context
 ,   SpearWindow
 ,   Update
+,   Size(..)
+,   DisplayBits(..)
+,   WindowMode(..)
+,   Opened(..)
     -- * Setup
 ,   setup
 ,   quit
@@ -12,6 +16,9 @@ module Spear.App.Application
     -- * Main loop
 ,   run
 ,   runCapped
+    -- * Helpers
+,   swapBuffers
+,   getParam
 )
 where
 
@@ -42,8 +49,9 @@ newtype SpearWindow = SpearWindow { rkey :: Resource }
 
 
 -- | Set up an application 'SpearWindow'.
-setup :: Dimensions -> [DisplayBits] -> WindowMode -> Context -> Setup SpearWindow
-setup (w, h) displayBits windowMode (major, minor) = do
+setup :: Dimensions -> [DisplayBits] -> WindowMode -> Context
+      -> WindowSizeCallback -> Setup SpearWindow
+setup (w, h) displayBits windowMode (major, minor) onResize' = do
     glfwInit
     
     setupIO $ do
@@ -55,6 +63,8 @@ setup (w, h) displayBits windowMode (major, minor) = do
         result <- openWindow dimensions displayBits windowMode
         windowTitle $= "Spear Game Framework"
         GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
+        
+        windowSizeCallback $= (onResize onResize')
         
         initialiseTimingSubsystem
     
@@ -119,4 +129,9 @@ runCapped' ddt timer update = do
             let dt = getDelta t''
             when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
             runCapped' ddt timer' update
-            
+
+
+onResize :: WindowSizeCallback -> Size -> IO ()
+onResize callback s@(Size w h) = do
+    GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
+    callback s

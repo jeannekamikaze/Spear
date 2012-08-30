@@ -1,7 +1,8 @@
 module Spear.GLSL
 (
+    module Graphics.Rendering.OpenGL.Raw.Core31
     -- * General Management
-    GLSLShader
+,   GLSLShader
 ,   GLSLProgram
 ,   ShaderType(..)
     -- ** Programs
@@ -65,7 +66,6 @@ module Spear.GLSL
     -- * Textures
 ,   Texture
 ,   SettableStateVar
-,   GLenum
 ,   ($)
     -- ** Creation and destruction
 ,   newTexture

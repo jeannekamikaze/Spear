@@ -19,8 +19,6 @@ static void safe_free (void* ptr)
 }
 
 
-// Cross product.
-// (0,1,0) x (1,0,0) = (0,0,-1).
 static void cross (vec3 a, vec3 b, vec3* c)
 {
     c->x = a.y * b.z - a.z * b.y;
@@ -40,7 +38,7 @@ static void vec3_sub (vec3 a, vec3 b, vec3* out)
 static void compute_normal (char clockwise, vec3 p1, vec3 p2, vec3 p3, vec3* n)
 {
     vec3 v1, v2;
-    if (clockwise)
+    if (!clockwise)
     {
         vec3_sub (p3, p2, &v1);
         vec3_sub (p1, p2, &v2);

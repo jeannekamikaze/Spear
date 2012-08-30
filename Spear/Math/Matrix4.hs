@@ -46,8 +46,8 @@ module Spear.Math.Matrix4
 where
 
 
-import Spear.Math.Vector3 as Vector3
-import Spear.Math.Vector4 as Vector4
+import Spear.Math.Vector3 as V3
+import Spear.Math.Vector4 as V4
 
 import Foreign.Storable
 
@@ -166,10 +166,10 @@ mat4 = Matrix4
 -- | Build a matrix from four vectors in 4D.
 mat4fromVec :: Vector4 -> Vector4 -> Vector4 -> Vector4 -> Matrix4
 mat4fromVec v0 v1 v2 v3 = Matrix4
-    (Vector4.x v0) (Vector4.x v1) (Vector4.x v2) (Vector4.x v3)
-    (Vector4.y v0) (Vector4.y v1) (Vector4.y v2) (Vector4.y v3)
-    (Vector4.z v0) (Vector4.z v1) (Vector4.z v2) (Vector4.z v3)
-    (Vector4.w v0) (Vector4.w v1) (Vector4.w v2) (Vector4.w v3)
+    (V4.x v0) (V4.x v1) (V4.x v2) (V4.x v3)
+    (V4.y v0) (V4.y v1) (V4.y v2) (V4.y v3)
+    (V4.z v0) (V4.z v1) (V4.z v2) (V4.z v3)
+    (V4.w v0) (V4.w v1) (V4.w v2) (V4.w v3)
 
 
 -- | Build a transformation 'Matrix4' from the given vectors.
@@ -180,9 +180,9 @@ transform :: Vector3 -- ^ Right vector.
           -> Matrix4
 
 transform right up fwd pos = mat4
-    (Vector3.x right) (Vector3.x up) (Vector3.x fwd) (Vector3.x pos)
-    (Vector3.y right) (Vector3.y up) (Vector3.y fwd) (Vector3.y pos)
-    (Vector3.z right) (Vector3.z up) (Vector3.z fwd) (Vector3.z pos)
+    (V3.x right) (V3.x up) (V3.x fwd) (V3.x pos)
+    (V3.y right) (V3.y up) (V3.y fwd) (V3.y pos)
+    (V3.z right) (V3.z up) (V3.z fwd) (V3.z pos)
     0                 0              0               1
 
 
@@ -192,8 +192,8 @@ lookAt :: Vector3 -- ^ Eye position.
        -> Matrix4
 
 lookAt pos target =
-        let fwd = Vector3.normalise $ target - pos
-            r    = fwd `cross` Vector3.unity
+        let fwd = V3.normalise $ target - pos
+            r    = fwd `cross` V3.unity
             u    = r `cross` fwd
         in
             transform r u (-fwd) pos
@@ -238,9 +238,9 @@ transl x y z = mat4
 -- | Create a translation matrix.
 translv :: Vector3 -> Matrix4
 translv v = mat4
-    1    0    0    (Vector3.x v)
-    0    1    0    (Vector3.y v)
-    0    0    1    (Vector3.z v)
+    1    0    0    (V3.x v)
+    0    1    0    (V3.y v)
+    0    0    1    (V3.z v)
     0    0    0    1
 
 
@@ -292,9 +292,9 @@ axisAngle v angle = mat4
     (omc*xz-sy)   (omc*yz+sx) (c+omc*z^2) 0
      0             0           0          1
     where
-        x = Vector3.x v
-        y = Vector3.y v
-        z = Vector3.z v
+        x = V3.x v
+        y = V3.y v
+        z = V3.z v
         s   = sin . toRAD $ angle
         c   = cos . toRAD $ angle
         xy  = x*y
@@ -323,9 +323,9 @@ scalev v = mat4
     0   0   sz  0
     0   0   0   1
         where
-            sx = Vector3.x v
-            sy = Vector3.y v
-            sz = Vector3.z v
+            sx = V3.x v
+            sy = V3.y v
+            sz = V3.z v
 
 
 -- | Create an X reflection matrix.
@@ -402,28 +402,28 @@ transpose m = mat4
 
 -- | Invert the given transformation matrix.
 inverseTransform :: Matrix4 -> Matrix4
-inverseTransform mat = mat4fromVec u v w p where
-    v0 = row0 mat
-    v1 = row1 mat
-    v2 = row2 mat
-    u  = vec4 (Vector4.x v0) (Vector4.y v0) (Vector4.z v0) 0
-    v  = vec4 (Vector4.x v1) (Vector4.y v1) (Vector4.z v1) 0
-    w  = vec4 (Vector4.x v2) (Vector4.y v2) (Vector4.z v2) 0
-    p  = vec4 tdotu tdotv tdotw 1
-    t  = -(col3 mat)
-    tdotu = t `Vector4.dot` col0 mat
-    tdotv = t `Vector4.dot` col1 mat
-    tdotw = t `Vector4.dot` col2 mat
+inverseTransform mat =
+    let
+        r = right mat
+        u = up mat
+        f = forward mat
+        t = position mat
+    in
+        mat4
+            (V3.x r) (V3.y r) (V3.z r) (-t `V3.dot` r)
+            (V3.x u) (V3.y u) (V3.z u) (-t `V3.dot` u)
+            (V3.x f) (V3.y f) (V3.z f) (-t `V3.dot` f)
+            0        0        0        1
 
 
 -- | Transform the given vector in 3D space with the given matrix.
 mul :: Float -> Matrix4 -> Vector3 -> Vector3
 mul w m v = vec3 x' y' z'
     where
-        v' = vec4 (Vector3.x v) (Vector3.y v) (Vector3.z v) w
-        x' = row0 m `Vector4.dot` v'
-        y' = row1 m `Vector4.dot` v'
-        z' = row2 m `Vector4.dot` v'
+        v' = vec4 (V3.x v) (V3.y v) (V3.z v) w
+        x' = row0 m `V4.dot` v'
+        y' = row1 m `V4.dot` v'
+        z' = row2 m `V4.dot` v'
 
 
 -- | Transform the given point vector in 3D space with the given matrix.

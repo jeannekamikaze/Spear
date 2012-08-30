@@ -8,6 +8,7 @@ module Spear.Setup
 ,   runSetup_
 ,   setupError
 ,   setupIO
+,   assertMaybe
 )
 where
 
@@ -50,3 +51,9 @@ setupError = MT.lift . throwError
 -- | Lift the given IO action into the 'Setup' monad.
 setupIO :: IO a -> Setup a
 setupIO = MT.lift . MT.lift
+
+
+-- | Throw the given error string if given 'Nothing'.
+assertMaybe :: Maybe a -> String -> Setup ()
+assertMaybe Nothing err = setupError err
+assertMaybe _ _ = return ()

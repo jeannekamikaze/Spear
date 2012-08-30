@@ -54,6 +54,6 @@ setupIO = MT.lift . MT.lift
 
 
 -- | Throw the given error string if given 'Nothing'.
-assertMaybe :: Maybe a -> String -> Setup ()
+assertMaybe :: Maybe a -> String -> Setup a
 assertMaybe Nothing err = setupError err
-assertMaybe _ _ = return ()
+assertMaybe (Just x) _ = return x

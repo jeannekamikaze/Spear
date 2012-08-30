@@ -317,11 +317,11 @@ loadGO style sceneRes props transf = do
     let animSpeed = asFloat  . value "animation-speed" $ props
     go <- case getAnimatedModel sceneRes modelName of
         Just model ->
-            return $ goNew style (Right model) (AABBCol $ AM.box 0 model) transf
+            return $ goNew style (Right model) [] transf
         Nothing ->
             case getStaticModel sceneRes modelName of
                 Just model ->
-                    return $ goNew style (Left model) (AABBCol $ SM.box 0 model) transf
+                    return $ goNew style (Left model) [] transf
                 Nothing ->
                     setupError $ "model " ++ modelName ++ " not found"
     return $ case animSpeed of

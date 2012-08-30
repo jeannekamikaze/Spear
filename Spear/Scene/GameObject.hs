@@ -5,12 +5,15 @@ module Spear.Scene.GameObject
 ,   AM.AnimationSpeed
     -- * Construction
 ,   goNew
+    -- * Accessors
+,   currentAnimation
+,   numCollisioners
+,   goAABB
     -- * Manipulation
 ,   goUpdate
-,   currentAnimation
 ,   setAnimation
 ,   setAnimationSpeed
-,   goAABB
+,   withCollisioners
     -- * Rendering
 ,   goRender
     -- * Collision
@@ -46,17 +49,17 @@ data GameStyle
 
 -- | An object in the game scene.
 data GameObject = GameObject
-    { gameStyle   :: GameStyle
-    , renderer    :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
-    , collisioner :: !Collisioner
-    , transform   :: M3.Matrix3
+    { gameStyle    :: !GameStyle
+    , renderer     :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
+    , collisioners :: ![Collisioner]
+    , transform    :: !M3.Matrix3
     }
 
 
 instance S2.Spatial2 GameObject where
     
     move v go = go
-        { collisioner = Col.move v $ collisioner go
+        { collisioners = fmap (Col.move v) $ collisioners go
         , transform  = M3.translv v * transform go
         }
     
@@ -64,7 +67,7 @@ instance S2.Spatial2 GameObject where
         let m = transform go
             v = V2.scale s $ M3.forward m
         in go
-            { collisioner = Col.move v $ collisioner go
+            { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
     
@@ -72,7 +75,7 @@ instance S2.Spatial2 GameObject where
         let m = transform go
             v = V2.scale (-s) $ M3.forward m
         in go
-            { collisioner = Col.move v $ collisioner go
+            { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
     
@@ -80,7 +83,7 @@ instance S2.Spatial2 GameObject where
         let m = transform go
             v = V2.scale (-s) $ M3.right m
         in go
-            { collisioner = Col.move v $ collisioner go
+            { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
     
@@ -88,7 +91,7 @@ instance S2.Spatial2 GameObject where
         let m = transform go
             v = V2.scale s $ M3.right m
         in go
-            { collisioner = Col.move v $ collisioner go
+            { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
     
@@ -114,15 +117,15 @@ instance S2.Spatial2 GameObject where
 -- | Create a new game object.
 goNew :: GameStyle
       -> Either StaticModelResource AM.AnimatedModelResource
-      -> Collisioner
+      -> [Collisioner]
       -> M3.Matrix3
       -> GameObject
 
-goNew style (Left smr) col transf =
-    GameObject style (Left $ SM.staticModelRenderer smr) col transf
+goNew style (Left smr) cols transf =
+    GameObject style (Left $ SM.staticModelRenderer smr) cols transf
 
-goNew style (Right amr) col transf =
-    GameObject style (Right $ AM.animatedModelRenderer 1 amr) col transf
+goNew style (Right amr) cols transf =
+    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf
 
 
 goUpdate :: Float -> GameObject -> GameObject
@@ -157,12 +160,23 @@ setAnimationSpeed s go = case renderer go of
     Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
 
 
--- | Get the game object's bounding box.
-goAABB :: GameObject -> AABB
-goAABB go =
-    case collisioner go of
-        (AABBCol box) -> box
-        (CircleCol circle) -> aabbFromCircle circle
+-- | Return the game object's number of collisioners.
+numCollisioners :: GameObject -> Int
+numCollisioners = length . collisioners
+
+
+-- | Manipulate the game object's collisioners.
+withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
+withCollisioners go f = go { collisioners = f $ collisioners go }
+
+
+-- | Get the game object's ith bounding box.
+goAABB :: Int -> GameObject -> AABB
+goAABB i go = goAABB' $ (collisioners go) !! i
+
+goAABB' col = case col of
+    (AABBCol box) -> box
+    (CircleCol circle) -> aabbFromCircle circle
 
 
 -- | Render the game object.

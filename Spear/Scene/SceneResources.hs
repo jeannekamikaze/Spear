@@ -1,10 +1,14 @@
 module Spear.Scene.SceneResources
 (
+    -- * Data types
     SceneResources(..)
 ,   StaticProgram(..)
 ,   AnimatedProgram(..)
+    -- * Construction
 ,   emptySceneResources
+    -- * Accessors
 ,   getShader
+,   getCustomProgram
 ,   getStaticProgram
 ,   getAnimatedProgram
 ,   getTexture
@@ -28,6 +32,7 @@ import Data.Map as M
 
 data SceneResources = SceneResources
     { shaders          :: Map String GLSLShader
+    , customPrograms   :: Map String GLSLProgram
     , staticPrograms   :: Map String StaticProgram
     , animatedPrograms :: Map String AnimatedProgram
     , textures         :: Map String Texture
@@ -38,34 +43,40 @@ data SceneResources = SceneResources
 
 
 -- | Build an empty instance of 'SceneResources'.
-emptySceneResources = SceneResources M.empty M.empty M.empty M.empty M.empty M.empty []
+emptySceneResources =
+    SceneResources M.empty M.empty M.empty M.empty M.empty M.empty M.empty []
 
 
--- | Get the 'GLSLShader' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the shader specified by the given string.
 getShader :: SceneResources -> String -> Maybe GLSLShader
 getShader res key = M.lookup key $ shaders res
 
 
--- | Get the 'StaticProgram' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the custom program specified by the given string.
+getCustomProgram :: SceneResources -> String -> Maybe GLSLProgram
+getCustomProgram res key = M.lookup key $ customPrograms res
+
+
+-- | Get the static program specified by the given string.
 getStaticProgram :: SceneResources -> String -> Maybe StaticProgram
 getStaticProgram res key = M.lookup key $ staticPrograms res
 
 
--- | Get the 'AnimatedProgram' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the animated program specified by the given string.
 getAnimatedProgram :: SceneResources -> String -> Maybe AnimatedProgram
 getAnimatedProgram res key = M.lookup key $ animatedPrograms res
 
 
--- | Get the 'Texture' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the texture specified by the given string.
 getTexture :: SceneResources -> String -> Maybe Texture
 getTexture res key = M.lookup key $ textures res
 
 
--- | Get the 'StaticModelResource' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the static model resource specified by the given string.
 getStaticModel :: SceneResources -> String -> Maybe StaticModelResource
 getStaticModel res key = M.lookup key $ staticModels res
 
 
--- | Get the 'AnimatedModelResource' specified by the given 'String' from the given 'SceneResources'.
+-- | Get the animated model resource specified by the given string.
 getAnimatedModel :: SceneResources -> String -> Maybe AnimatedModelResource
 getAnimatedModel res key = M.lookup key $ animatedModels res

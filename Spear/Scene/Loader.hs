@@ -107,28 +107,32 @@ loadResource key field modifyResources load = do
             return resource
 
 
-addShader name shader =
-    modify $ \sceneData -> sceneData { shaders = M.insert name shader $ shaders sceneData }
+addShader name shader = modify $ \sceneData ->
+    sceneData { shaders = M.insert name shader $ shaders sceneData }
 
 
-addStaticProgram name prog =
-    modify $ \sceneData -> sceneData { staticPrograms = M.insert name prog $ staticPrograms sceneData }
+addCustomProgram name prog = modify $ \sceneData ->
+    sceneData { customPrograms = M.insert name prog $ customPrograms sceneData }
 
 
-addAnimatedProgram name prog =
-    modify $ \sceneData -> sceneData { animatedPrograms = M.insert name prog $ animatedPrograms sceneData }
+addStaticProgram name prog = modify $ \sceneData ->
+    sceneData { staticPrograms = M.insert name prog $ staticPrograms sceneData }
 
 
-addTexture name tex =
-    modify $ \sceneData -> sceneData { textures = M.insert name tex $ textures sceneData }
+addAnimatedProgram name prog = modify $ \sceneData ->
+    sceneData { animatedPrograms = M.insert name prog $ animatedPrograms sceneData }
 
 
-addStaticModel name model =
-    modify $ \sceneData -> sceneData { staticModels = M.insert name model $ staticModels sceneData }
+addTexture name tex = modify $ \sceneData ->
+    sceneData { textures = M.insert name tex $ textures sceneData }
 
 
-addAnimatedModel name model =
-    modify $ \sceneData -> sceneData { animatedModels = M.insert name model $ animatedModels sceneData }
+addStaticModel name model = modify $
+    \sceneData -> sceneData { staticModels = M.insert name model $ staticModels sceneData }
+
+
+addAnimatedModel name model = modify $
+    \sceneData -> sceneData { animatedModels = M.insert name model $ animatedModels sceneData }
 
 
 -- Get the given resource from the data pool.
@@ -237,33 +241,33 @@ newShaderProgram (SceneLeaf _ props) = do
     (fsName, fragShader) <- Spear.Scene.Loader.loadShader GLSL.FragmentShader props
     name       <- asString $ mandatory' "name" props
     stype      <- asString $ mandatory' "type" props
-    texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
-    ambient    <- asString $ mandatory' "ambient"    props
-    diffuse    <- asString $ mandatory' "diffuse"    props
-    specular   <- asString $ mandatory' "specular"   props
-    shininess  <- asString $ mandatory' "shininess"  props
-    texture    <- asString $ mandatory' "texture"    props
-    modelview  <- asString $ mandatory' "modelview"  props
-    normalmat  <- asString $ mandatory' "normalmat"  props
-    projection <- asString $ mandatory' "projection" props
     prog       <- loaderSetup $ GLSL.newProgram [vertShader, fragShader]
     
-    let getUniformLoc name =
-            loaderSetup $ (setupIO . SV.get $ GLSL.uniformLocation prog name) `GLSL.assertGL` name
-    
-    ka    <- getUniformLoc ambient
-    kd    <- getUniformLoc diffuse
-    ks    <- getUniformLoc specular
-    shi   <- getUniformLoc shininess
-    tex   <- getUniformLoc texture
-    mview <- getUniformLoc modelview
-    nmat  <- getUniformLoc normalmat
-    proj  <- getUniformLoc projection
+    let getUniformLoc name = loaderSetup $ (setupIO . SV.get $ GLSL.uniformLocation prog name) `GLSL.assertGL` name
     
     case stype of
         "static" -> do
+            ambient    <- asString $ mandatory' "ambient"    props
+            diffuse    <- asString $ mandatory' "diffuse"    props
+            specular   <- asString $ mandatory' "specular"   props
+            shininess  <- asString $ mandatory' "shininess"  props
+            texture    <- asString $ mandatory' "texture"    props
+            modelview  <- asString $ mandatory' "modelview"  props
+            normalmat  <- asString $ mandatory' "normalmat"  props
+            projection <- asString $ mandatory' "projection" props
+            
+            ka    <- getUniformLoc ambient
+            kd    <- getUniformLoc diffuse
+            ks    <- getUniformLoc specular
+            shi   <- getUniformLoc shininess
+            tex   <- getUniformLoc texture
+            mview <- getUniformLoc modelview
+            nmat  <- getUniformLoc normalmat
+            proj  <- getUniformLoc projection
+            
             vertChan  <- fmap read $ asString $ mandatory' "vertex-channel" props
             normChan  <- fmap read $ asString $ mandatory' "normal-channel" props
+            texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
             
             let channels = StaticProgramChannels vertChan normChan texChan
                 uniforms = StaticProgramUniforms ka kd ks shi tex mview nmat proj
@@ -273,10 +277,29 @@ newShaderProgram (SceneLeaf _ props) = do
             return ()
         
         "animated" -> do
+            ambient    <- asString $ mandatory' "ambient"    props
+            diffuse    <- asString $ mandatory' "diffuse"    props
+            specular   <- asString $ mandatory' "specular"   props
+            shininess  <- asString $ mandatory' "shininess"  props
+            texture    <- asString $ mandatory' "texture"    props
+            modelview  <- asString $ mandatory' "modelview"  props
+            normalmat  <- asString $ mandatory' "normalmat"  props
+            projection <- asString $ mandatory' "projection" props
+            
+            ka    <- getUniformLoc ambient
+            kd    <- getUniformLoc diffuse
+            ks    <- getUniformLoc specular
+            shi   <- getUniformLoc shininess
+            tex   <- getUniformLoc texture
+            mview <- getUniformLoc modelview
+            nmat  <- getUniformLoc normalmat
+            proj  <- getUniformLoc projection
+            
             vertChan1  <- fmap read $ asString $ mandatory' "vertex-channel1" props
             vertChan2  <- fmap read $ asString $ mandatory' "vertex-channel2" props
             normChan1  <- fmap read $ asString $ mandatory' "normal-channel1" props
             normChan2  <- fmap read $ asString $ mandatory' "normal-channel2" props
+            texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
             fp <- asString $ mandatory' "fp" props
             p  <- getUniformLoc fp
             
@@ -286,6 +309,13 @@ newShaderProgram (SceneLeaf _ props) = do
             loadResource name animatedPrograms addAnimatedProgram $
                 return $ AnimatedProgram prog channels uniforms
             return ()
+        
+        _ -> do
+            loadResource name customPrograms addCustomProgram $ return prog
+            return ()
+
+
+
 
 
 loadShader :: GLSL.ShaderType -> [Property] -> Loader (String, GLSL.GLSLShader)

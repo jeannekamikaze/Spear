@@ -9,7 +9,7 @@ module Spear.Math.QuadTree
 )
 where
 
-import Spear.Collision.Types
+import Spear.Collision
 import Spear.Math.AABB
 import Spear.Math.Vector2
 

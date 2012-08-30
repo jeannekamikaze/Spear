@@ -23,8 +23,7 @@ module Spear.Scene.GameObject
 where
 
 
-import Spear.Collision.Collision
-import Spear.Collision.Collisioner as Col
+import Spear.Collision as Col
 import Spear.GLSL
 import Spear.Math.AABB
 import qualified Spear.Math.Camera as Cam

@@ -19,7 +19,7 @@ where
 
 
 import Spear.Assets.Model as Model
-import Spear.Collision.Collisioner
+import Spear.Collision
 import qualified Spear.GLSL as GLSL
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4

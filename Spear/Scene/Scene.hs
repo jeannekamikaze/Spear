@@ -13,14 +13,14 @@ module Spear.Scene.Scene
     -- * Update and render
 ,   update
 ,   updateM
-,   collide
+,   Spear.Scene.Scene.collide
 ,   collideM
 ,   render
 )
 where
 
 
-import Spear.Collision.Types
+import Spear.Collision
 import Spear.Game (Game)
 import Spear.Math.AABB
 import Spear.Math.QuadTree as QT

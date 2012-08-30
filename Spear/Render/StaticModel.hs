@@ -1,14 +1,18 @@
 module Spear.Render.StaticModel
 (
+    -- * Data types
     StaticModelResource
 ,   StaticModelRenderer
+    -- * Construction and destruction
 ,   staticModelResource
 ,   staticModelRenderer
 ,   Spear.Render.StaticModel.release
-,   bind
-,   render
+    -- * Manipulation
 ,   box
 ,   modelRes
+    -- * Rendering
+,   bind
+,   render
 )
 where
 
@@ -107,6 +111,16 @@ staticModelRenderer :: StaticModelResource -> StaticModelRenderer
 staticModelRenderer = StaticModelRenderer
 
 
+-- | Get the model's ith bounding box.
+box :: Int -> StaticModelResource -> Box
+box i model = boxes model V.! i
+
+
+-- | Get the renderer's model resource.
+modelRes :: StaticModelRenderer -> StaticModelResource
+modelRes = model
+
+
 -- | Bind the given 'StaticModelRenderer' to prepare it for rendering.
 bind :: StaticProgramUniforms -> StaticModelRenderer -> IO ()
 bind (StaticProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _) (StaticModelRenderer model) =
@@ -128,13 +142,3 @@ render uniforms (StaticModelRenderer model) =
         uniformVec4 (ksLoc uniforms) ks
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         drawArrays gl_TRIANGLES 0 $ nVertices model
-
-
--- | Get the model's ith bounding box.
-box :: Int -> StaticModelResource -> Box
-box i model = boxes model V.! i
-
-
--- | Get the renderer's model resource.
-modelRes :: StaticModelRenderer -> StaticModelResource
-modelRes = model

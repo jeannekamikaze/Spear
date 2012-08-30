@@ -1,20 +1,24 @@
 module Spear.Render.AnimatedModel
 (
+    -- * Data types
     AnimatedModelResource
 ,   AnimatedModelRenderer
 ,   AnimationSpeed
+    -- * Construction and destruction
 ,   animatedModelResource
 ,   animatedModelRenderer
 ,   Spear.Render.AnimatedModel.release
+    -- * Manipulation
+,   update
 ,   setAnimation
 ,   currentAnimation
 ,   animationSpeed
 ,   setAnimationSpeed
-,   bind
-,   render
-,   update
 ,   box
 ,   modelRes
+    -- * Rendering
+,   bind
+,   render
 )
 where
 
@@ -179,6 +183,16 @@ setAnimationSpeed :: AnimationSpeed -> AnimatedModelRenderer -> AnimatedModelRen
 setAnimationSpeed s r = r { animationSpeed = s }
 
 
+-- | Get the model's ith bounding box.
+box :: Int -> AnimatedModelResource -> Box
+box i model = boxes model V.! i
+
+
+-- | Get the renderer's model resource.
+modelRes :: AnimatedModelRenderer -> AnimatedModelResource
+modelRes = modelResource
+
+
 -- | Bind the given 'AnimatedModelRenderer' to prepare it for rendering.
 bind :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
 bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend =
@@ -202,13 +216,3 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         glUniform1f (fpLoc uniforms) (unsafeCoerce fp)
         drawArrays gl_TRIANGLES (n*curFrame) n
-
-
--- | Get the model's ith bounding box.
-box :: Int -> AnimatedModelResource -> Box
-box i model = boxes model V.! i
-
-
--- | Get the renderer's model resource.
-modelRes :: AnimatedModelRenderer -> AnimatedModelResource
-modelRes = modelResource

@@ -12,7 +12,7 @@ module Spear.Render.Program
 where
 
 
-import Spear.GLSL.Management (GLSLProgram)
+import Spear.GLSL (GLSLProgram)
 
 
 import Graphics.Rendering.OpenGL.Raw.Core31

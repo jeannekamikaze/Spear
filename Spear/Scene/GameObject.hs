@@ -25,8 +25,7 @@ where
 
 import Spear.Collision.Collision
 import Spear.Collision.Collisioner as Col
-import Spear.GLSL.Management
-import Spear.GLSL.Uniform
+import Spear.GLSL
 import Spear.Math.AABB
 import qualified Spear.Math.Camera as Cam
 import qualified Spear.Math.Matrix3 as M3

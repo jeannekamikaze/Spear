@@ -7,7 +7,7 @@ where
 
 import Spear.Setup
 import Spear.Assets.Image
-import Spear.GLSL.Texture
+import Spear.GLSL
 import Data.StateVar (($=))
 import Graphics.Rendering.OpenGL.Raw.Core31
 

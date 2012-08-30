@@ -31,7 +31,6 @@ import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
-import Spear.Render.Texture
 import Spear.Scene.GameObject as GO
 import Spear.Scene.Graph
 import Spear.Scene.Light
@@ -227,7 +226,9 @@ rotateModel (Rotation x y z order) model =
 
 
 loadTexture :: FilePath -> Loader GLSL.Texture
-loadTexture file = loadResource file textures addTexture $ loadTextureImage file gl_LINEAR gl_LINEAR
+loadTexture file =
+    loadResource file textures addTexture $
+        GLSL.loadTextureImage file gl_LINEAR gl_LINEAR
 
 
 newShaderProgram :: SceneGraph -> Loader ()

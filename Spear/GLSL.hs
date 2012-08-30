@@ -68,6 +68,7 @@ module Spear.GLSL
 ,   ($)
     -- ** Creation and destruction
 ,   newTexture
+,   loadTextureImage
 ,   releaseTexture
     -- ** Manipulation
 ,   bindTexture
@@ -84,6 +85,7 @@ module Spear.GLSL
 where
 
 
+import Spear.Assets.Image
 import Spear.Math.Matrix3 (Matrix3)
 import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector3 as V3
@@ -623,6 +625,28 @@ deleteTexture :: GLuint -> IO ()
 deleteTexture tex = do
     putStrLn $ "Releasing texture " ++ show tex
     with tex $ glDeleteTextures 1
+
+
+-- | Load the 'Texture' specified by the given file.
+loadTextureImage :: FilePath
+                 -> GLenum          -- ^ Texture's min filter.
+                 -> GLenum          -- ^ Texture's mag filter.
+                 -> Setup Texture
+loadTextureImage file minFilter magFilter = do
+    image <- loadImage file
+    tex   <- newTexture
+    setupIO $ do
+        let w    = width  image
+            h    = height image
+            pix  = pixels image
+            rgb  = fromIntegral . fromEnum $ gl_RGB
+        
+        bindTexture tex
+        loadTextureData gl_TEXTURE_2D 0 rgb w h 0 gl_RGB gl_UNSIGNED_BYTE pix
+        texParami gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $= minFilter
+        texParami gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $= magFilter
+    
+    return tex
 
 
 -- | Bind the texture.

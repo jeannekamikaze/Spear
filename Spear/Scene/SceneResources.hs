@@ -21,7 +21,6 @@ import Spear.Render.AnimatedModel
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel
-import Spear.Render.Texture
 import Spear.Scene.Light
 
 import Data.Map as M

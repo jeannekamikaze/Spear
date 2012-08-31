@@ -463,12 +463,16 @@ modelBoxes model =
         peekBoxes ptr n cur off l
             | cur == n = l
             | otherwise = do
-                f0 <- peekByteOff ptr off
-                f1 <- peekByteOff ptr $ off + sizeFloat
-                f2 <- peekByteOff ptr $ off + 2*sizeFloat
-                f3 <- peekByteOff ptr $ off + 3*sizeFloat
-                peekBoxes ptr n (cur+1) (off + 4*sizeFloat) $
-                    fmap ((f3:) . (f2:) . (f1:) . (f0:)) l
+                xmin <- peekByteOff ptr off
+                ymin <- peekByteOff ptr $ off + sizeFloat
+                zmin <- peekByteOff ptr $ off + 2*sizeFloat
+                xmax <- peekByteOff ptr $ off + 3*sizeFloat
+                ymax <- peekByteOff ptr $ off + 4*sizeFloat
+                zmax <- peekByteOff ptr $ off + 5*sizeFloat
+                let pmin = Vec3 xmin ymin zmin
+                    pmax = Vec3 xmax ymax zmax
+                    box  = Box pmin pmax
+                peekBoxes ptr n (cur+1) (off + 6*sizeFloat) $ fmap (box:) l
     fmap (V.fromList . reverse) getBoxes
     
 

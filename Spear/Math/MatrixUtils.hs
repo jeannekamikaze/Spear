@@ -1,6 +1,7 @@
 module Spear.Math.MatrixUtils
 (
-    fastNormalMatrix
+    Rotation(..)
+,   fastNormalMatrix
 ,   rpgTransform
 ,   pltTransform
 ,   rpgInverse
@@ -15,6 +16,9 @@ import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
 
 
+data Rotation = Yaw | Pitch | Roll deriving Eq
+
+
 -- | Compute the normal matrix of the given matrix.
 fastNormalMatrix :: Matrix4 -> Matrix3
 fastNormalMatrix m =
@@ -26,13 +30,26 @@ fastNormalMatrix m =
 
 
 -- | Maps the given 2D transformation matrix to a 3D transformation matrix.
-rpgTransform :: Float -- ^ The height above the ground.
-             -> Matrix3 -> Matrix4
-rpgTransform h mat =
-    let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
+rpgTransform
+    :: Float    -- ^ The height above the ground.
+    -> Float    -- ^ Angle of rotation.
+    -> Rotation -- ^ How the 2D rotation should be interpreted in 3D.
+    -> Matrix3
+    -> Matrix4
+rpgTransform h a rtype mat =
+    {-let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
         u = V3.unity
         f = let f' = M3.forward mat in vec3 (V2.x f') 0 (V2.y f')
-        t = (vec3 0 h 0) + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')
+        t = (vec3 0 h 0) + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')-}
+    let rot = case rtype of
+            Yaw   -> rotY
+            Pitch -> rotX
+            Roll  -> rotZ
+        mat' = rot a
+        r = M4.right mat'
+        u = M4.up mat'
+        f = M4.forward mat'
+        t = vec3 0 h 0 + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')
     in mat4
         (V3.x r) (V3.x u) (V3.x f) (V3.x t)
         (V3.y r) (V3.y u) (V3.y f) (V3.y t)
@@ -61,18 +78,13 @@ pltTransform mat =
 -- The XY plane in 2D translates to the X(-Z) plane in 3D.
 --
 -- Use this in games such as RPGs and RTSs.
-rpgInverse :: Float -- ^ Height above the ground.
-           -> Matrix3 -> Matrix4
-rpgInverse h mat =
-    let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
-        u = V3.unity
-        f = let f' = M3.forward mat in vec3 (V2.x f') 0 (-V2.y f')
-        t = (vec3 0 h 0) + let t' = M3.position mat in -(vec3 (V2.x t') 0 (-V2.y t'))
-    in mat4
-        (V3.x r) (V3.y r) (V3.z r) (t `V3.dot` r)
-        (V3.x u) (V3.y u) (V3.z u) (t `V3.dot` u)
-        (V3.x f) (V3.y f) (V3.z f) (t `V3.dot` f)
-        0        0        0        1
+rpgInverse
+    :: Float    -- ^ The height above the ground.
+    -> Float    -- ^ Angle of rotation.
+    -> Rotation -- ^ How the 2D rotation should be interpreted in 3D.
+    -> Matrix3
+    -> Matrix4
+rpgInverse h a rot = M4.inverseTransform . rpgTransform h a rot
 
 
 -- | Compute the inverse transform of the given transformation matrix.
@@ -83,13 +95,4 @@ rpgInverse h mat =
 -- 
 -- Use this in games like platformers and space invaders style games.
 pltInverse :: Matrix3 -> Matrix4
-pltInverse mat =
-    let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
-        u = let u' = M3.up mat in vec3 (V2.x u') (V2.y u') 0
-        f = V3.unitz
-        t = let t' = M3.position mat in vec3 (V2.x t') (V2.y t') 0
-    in mat4
-        (V3.x r) (V3.y r) (V3.z r) (t `V3.dot` r)
-        (V3.x u) (V3.y u) (V3.z u) (t `V3.dot` u)
-        (V3.x f) (V3.y f) (V3.z f) (t `V3.dot` f)
-        0        0        0        1
+pltInverse = M4.inverseTransform . pltTransform

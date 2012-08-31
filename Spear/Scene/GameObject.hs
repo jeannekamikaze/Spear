@@ -3,14 +3,16 @@ module Spear.Scene.GameObject
     GameObject
 ,   GameStyle(..)
 ,   AM.AnimationSpeed
+,   Rotation(..)
     -- * Construction
 ,   goNew
     -- * Accessors
-,   renderer
 ,   currentAnimation
-,   numCollisioners
 ,   goAABB
 ,   goAABBs
+,   go3Dtransform
+,   numCollisioners
+,   renderer
     -- * Manipulation
 ,   goUpdate
 ,   setAnimation
@@ -39,6 +41,7 @@ import qualified Spear.Render.AnimatedModel as AM
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
 
+import Data.Fixed (mod')
 import Data.List (foldl')
 
 
@@ -51,9 +54,11 @@ data GameStyle
 -- | An object in the game scene.
 data GameObject = GameObject
     { gameStyle    :: !GameStyle
+    , rotation     :: !Rotation
     , renderer     :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
     , collisioners :: ![Collisioner]
     , transform    :: !M3.Matrix3
+    , angle        :: Float
     }
 
 
@@ -96,7 +101,11 @@ instance S2.Spatial2 GameObject where
             , transform = M3.translv v * m
             }
     
-    rotate angle go = go { transform = transform go * M3.rot angle }
+    rotate a go =
+        go
+        { transform = transform go * M3.rot a
+        , angle = (angle go + a) `mod'` 360 
+        }
     
     pos go = M3.position . transform $ go
     
@@ -113,20 +122,31 @@ instance S2.Spatial2 GameObject where
     setPos pos go =
         let m = transform go
         in go { transform = M3.transform (M3.right m) (M3.forward m) pos }
+    
+    lookAt p go =
+        let position = S2.pos go
+            fwd      = V2.normalise $ p - position
+            r        = perp fwd
+        in
+            go
+            { transform = M3.transform r fwd position
+            , angle = acos $ r `V2.dot` V2.unitx
+            }
 
 
 -- | Create a new game object.
 goNew :: GameStyle
+      -> Rotation
       -> Either StaticModelResource AM.AnimatedModelResource
       -> [Collisioner]
       -> M3.Matrix3
       -> GameObject
 
-goNew style (Left smr) cols transf =
-    GameObject style (Left $ SM.staticModelRenderer smr) cols transf
+goNew style rtype (Left smr) cols transf =
+    GameObject style rtype (Left $ SM.staticModelRenderer smr) cols transf 0
 
-goNew style (Right amr) cols transf =
-    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf
+goNew style rtype (Right amr) cols transf =
+    GameObject style rtype (Right $ AM.animatedModelRenderer 1 amr) cols transf 0
 
 
 goUpdate :: Float -> GameObject -> GameObject
@@ -190,6 +210,11 @@ goAABBs :: GameObject -> [AABB]
 goAABBs = fmap goAABB' . collisioners
 
 
+-- | Get the game object's 3D transform.
+go3Dtransform :: GameObject -> M4.Matrix4
+go3Dtransform go = rpgTransform 0 (angle go) (rotation go) . S2.transform $ go
+
+
 -- | Render the game object.
 goRender :: StaticProgram -> AnimatedProgram -> Cam.Camera -> GameObject -> IO ()
 goRender sprog aprog cam go =
@@ -197,9 +222,13 @@ goRender sprog aprog cam go =
         apu = animatedProgramUniforms aprog
         mat = S2.transform go
         style = gameStyle go
+        rtype = rotation go
+        a   = angle go
     in case renderer go of
-        Left smr  -> goRender' style sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
-        Right amr -> goRender' style aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
+        Left smr  ->
+            goRender' style a rtype sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
+        Right amr ->
+            goRender' style a rtype aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
 
 
 type Bind = IO ()
@@ -209,6 +238,8 @@ type Render = IO ()
 
 goRender' :: (ProgramUniforms u, Program p)
           => GameStyle
+          -> Float
+          -> Rotation
           -> p
           -> u
           -> M3.Matrix3
@@ -216,10 +247,10 @@ goRender' :: (ProgramUniforms u, Program p)
           -> Bind
           -> Render
           -> IO ()
-goRender' style prog uniforms model cam bindRenderer render =
+goRender' style a rtype prog uniforms model cam bindRenderer render =
     let view  = M4.inverseTransform $ Cam.transform cam
         modelview = case style of
-            RPG -> view * rpgTransform 0 model
+            RPG -> view * rpgTransform 0 a rtype model
             PLT -> view * pltTransform model
         normalmat = fastNormalMatrix modelview
     in do

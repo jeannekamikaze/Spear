@@ -8,14 +8,18 @@ module Spear.Render.AnimatedModel
 ,   animatedModelResource
 ,   animatedModelRenderer
 ,   Spear.Render.AnimatedModel.release
+    -- * Accessors
+,   animationSpeed
+,   box
+,   currentAnimation
+,   currentFrame
+,   frameProgress
+,   modelRes
+,   nextFrame
     -- * Manipulation
 ,   update
 ,   setAnimation
-,   currentAnimation
-,   animationSpeed
 ,   setAnimationSpeed
-,   box
-,   modelRes
     -- * Rendering
 ,   bind
 ,   render
@@ -79,9 +83,9 @@ data AnimatedModelRenderer = AnimatedModelRenderer
     , currentAnim    :: Int
     , frameStart     :: Int
     , frameEnd       :: Int
-    , currentFrame   :: Int
-    , frameProgress  :: Float
-    , animationSpeed :: Float
+    , currentFrame   :: Int -- ^ Get the renderer's current frame.
+    , frameProgress  :: Float -- ^ Get the renderer's frame progress.
+    , animationSpeed :: Float -- ^ Get the renderer's animation speed.
     }
 
 
@@ -164,6 +168,31 @@ update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s
                           else curFrame
 
 
+-- | Get the model's ith bounding box.
+box :: Int -> AnimatedModelResource -> Box
+box i model = boxes model V.! i
+
+
+-- | Get the renderer's current animation.
+currentAnimation :: Enum a => AnimatedModelRenderer -> a
+currentAnimation = toEnum . currentAnim
+
+
+-- | Get the renderer's model resource.
+modelRes :: AnimatedModelRenderer -> AnimatedModelResource
+modelRes = modelResource
+
+
+-- | Get the renderer's next frame.
+nextFrame :: AnimatedModelRenderer -> Int
+nextFrame rend =
+    let curFrame = currentFrame rend
+    in
+        if curFrame == frameEnd rend
+        then frameStart rend
+        else curFrame + 1
+
+
 -- | Set the active animation to the given one.
 setAnimation :: Enum a => a -> AnimatedModelRenderer -> AnimatedModelRenderer
 setAnimation anim modelRend =
@@ -173,24 +202,9 @@ setAnimation anim modelRend =
         modelRend { currentAnim = anim', frameStart = f1, frameEnd = f2, currentFrame = f1 }
 
 
--- | Get the renderer's current animation.
-currentAnimation :: Enum a => AnimatedModelRenderer -> a
-currentAnimation = toEnum . currentAnim
-
-
 -- | Set the renderer's animation speed.
 setAnimationSpeed :: AnimationSpeed -> AnimatedModelRenderer -> AnimatedModelRenderer
 setAnimationSpeed s r = r { animationSpeed = s }
-
-
--- | Get the model's ith bounding box.
-box :: Int -> AnimatedModelResource -> Box
-box i model = boxes model V.! i
-
-
--- | Get the renderer's model resource.
-modelRes :: AnimatedModelRenderer -> AnimatedModelResource
-modelRes = modelResource
 
 
 -- | Bind the given 'AnimatedModelRenderer' to prepare it for rendering.

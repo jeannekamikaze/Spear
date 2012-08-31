@@ -1,8 +1,7 @@
 module Spear.GLSL
 (
-    module Graphics.Rendering.OpenGL.Raw.Core31
     -- * General Management
-,   GLSLShader
+    GLSLShader
 ,   GLSLProgram
 ,   ShaderType(..)
     -- ** Programs
@@ -83,6 +82,10 @@ module Spear.GLSL
 ,   getGLError
 ,   printGLError
 ,   assertGL
+    -- * OpenGL
+,   module Graphics.Rendering.OpenGL.Raw.Core31
+,   Ptr
+,   nullPtr
 )
 where
 
@@ -476,23 +479,40 @@ bindVAO = glBindVertexArray . getVAO
 -- | Enable the given vertex attribute of the bound vao.
 --
 -- See also 'bindVAO'.
-enableVAOAttrib :: GLuint -> IO ()
+enableVAOAttrib :: GLuint -- ^ Attribute index.
+                -> IO ()
 enableVAOAttrib = glEnableVertexAttribArray
 
 
 -- | Bind the bound buffer to the given point.
-attribVAOPointer :: GLuint -> GLint -> GLenum -> Bool -> GLsizei -> Int -> IO ()
+attribVAOPointer
+    :: GLuint  -- ^ The index of the generic vertex attribute to be modified.
+    -> GLint   -- ^ The number of components per generic vertex attribute. Must be 1,2,3,4.
+    -> GLenum  -- ^ The type of each component in the array.
+    -> Bool    -- ^ Whether fixed-point data values should be normalized.
+    -> GLsizei -- ^ Stride. Byte offset between consecutive generic vertex attributes.
+    -> Int     -- ^ Offset to the first component in the array.
+    -> IO ()
 attribVAOPointer idx ncomp dattype normalise stride off =
     glVertexAttribPointer idx ncomp dattype (unsafeCoerce normalise) stride (unsafeCoerce off)
 
 
 -- | Draw the bound vao.
-drawArrays :: GLenum -> Int -> Int -> IO ()
+drawArrays
+    :: GLenum -- ^ The kind of primitives to render.
+    -> Int    -- ^ Starting index in the enabled arrays.
+    -> Int    -- ^ The number of indices to be rendered.
+    -> IO ()
 drawArrays mode first count = glDrawArrays mode (unsafeCoerce first) (unsafeCoerce count)
 
 
 -- | Draw the bound vao, indexed mode.
-drawElements :: GLenum -> Int -> GLenum -> Ptr a -> IO ()
+drawElements
+    :: GLenum -- ^ The kind of primitives to render.
+    -> Int    -- ^ The number of elements to be rendered.
+    -> GLenum -- ^ The type of the index values. Must be one of gl_UNSIGNED_BYTE, gl_UNSIGNED_SHORT, or gl_UNSIGNED_INT. 
+    -> Ptr a  -- ^ Pointer to the location where indices are stored, or offset into the index array when there is a bound ElementArrayBuffer.
+    -> IO ()
 drawElements mode count t idxs = glDrawElements mode (unsafeCoerce count) t idxs
 
 

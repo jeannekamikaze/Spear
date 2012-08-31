@@ -488,7 +488,7 @@ enableVAOAttrib = glEnableVertexAttribArray
 attribVAOPointer
     :: GLuint  -- ^ The index of the generic vertex attribute to be modified.
     -> GLint   -- ^ The number of components per generic vertex attribute. Must be 1,2,3,4.
-    -> GLenum  -- ^ The type of each component in the array.
+    -> GLenum  -- ^ The data type of each component in the array.
     -> Bool    -- ^ Whether fixed-point data values should be normalized.
     -> GLsizei -- ^ Stride. Byte offset between consecutive generic vertex attributes.
     -> Int     -- ^ Offset to the first component in the array.

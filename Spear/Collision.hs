@@ -32,7 +32,9 @@ data CollisionType = NoCollision | Collision | FullyContains | FullyContainedBy
 
 class Collisionable a where
     collideBox    :: AABB   -> a -> CollisionType
-    collideSphere :: Circle -> a -> CollisionType
+    collideCircle :: Circle -> a -> CollisionType
+    getBox        :: a -> AABB
+    getCircle     :: a -> Circle
 
 
 instance Collisionable AABB where
@@ -48,7 +50,7 @@ instance Collisionable AABB where
         | (y min1) > (y max2) = NoCollision
         | otherwise           = Collision
     
-    collideSphere sphere@(Circle c r) aabb@(AABB min max)
+    collideCircle sphere@(Circle c r) aabb@(AABB min max)
         | test == FullyContains || test == FullyContainedBy = test
         | normSq (c - boxC) > (l + r)^2 = NoCollision
         | otherwise = Collision
@@ -57,16 +59,19 @@ instance Collisionable AABB where
                 boxC = min + (max-min)/2
                 l = norm $ min + (vec2 (x boxC) (y min)) - min
     
+    getBox = id
+   
+    getCircle = circleFromAABB
 
 
 instance Collisionable Circle where
     
-    collideBox box sphere = case collideSphere sphere box of
+    collideBox box sphere = case collideCircle sphere box of
         FullyContains -> FullyContainedBy
         FullyContainedBy -> FullyContains
         x -> x
     
-    collideSphere s1@(Circle c1 r1) s2@(Circle c2 r2)
+    collideCircle s1@(Circle c1 r1) s2@(Circle c2 r2)
         | distance_centers <= sub_radii = if (r1 > r2) then FullyContains else FullyContainedBy
         | distance_centers <= sum_radii = Collision
         | otherwise = NoCollision
@@ -74,6 +79,10 @@ instance Collisionable Circle where
             distance_centers = normSq $ c1 - c2
             sum_radii    = (r1 + r2)^2
             sub_radii    = (r1 - r2)^2
+    
+    getBox = aabbFromCircle
+    
+    getCircle = id
 
 
 aabbPoints :: AABB -> [Vector2]
@@ -92,9 +101,9 @@ aabbPoints (AABB min max) = [p1,p2,p3,p4,p5,p6,p7,p8]
 -- | A collisioner component.
 data Collisioner
     -- | An axis-aligned bounding box.
-    = AABBCol { getBox :: {-# UNPACK #-} !AABB }
+    = AABBCol {-# UNPACK #-} !AABB
     -- | A bounding sphere.
-    | CircleCol { getCircle :: {-# UNPACK #-} !Circle }
+    | CircleCol {-# UNPACK #-} !Circle
 
 
 -- | Create a collisioner from the specified box.  
@@ -142,9 +151,9 @@ generatePoints = foldr generate []
 -- | Collide the given collisioners.
 collide :: Collisioner -> Collisioner -> CollisionType
 collide (AABBCol box1) (AABBCol box2)    = collideBox    box1 box2
-collide (CircleCol s1) (CircleCol s2)    = collideSphere s1 s2
-collide (AABBCol box) (CircleCol sphere) = collideBox    box sphere
-collide (CircleCol sphere) (AABBCol box) = collideSphere sphere box
+collide (CircleCol s1) (CircleCol s2)    = collideCircle s1 s2
+collide (AABBCol box) (CircleCol circle) = collideBox    box circle
+collide (CircleCol circle) (AABBCol box) = collideCircle circle box
 
 
 -- | Move the collisioner.
@@ -159,3 +168,11 @@ aabbFromCircle (Circle c r) = AABB bot top
     where
         bot = c - (vec2 r r)
         top = c + (vec2 r r)
+
+
+-- | Create the minimal circle fully containing the specified box.
+circleFromAABB :: AABB -> Circle
+circleFromAABB (AABB min max) = Circle c r
+    where
+        c = scale 0.5 (min + max)
+        r = norm . scale 0.5 $ max - min

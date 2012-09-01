@@ -13,6 +13,8 @@ module Spear.Math.Matrix4
 ,   mat4
 ,   mat4fromVec
 ,   transform
+,   translation
+,   rotation
 ,   lookAt
 ,   Spear.Math.Matrix4.id
     -- * Transformations
@@ -184,6 +186,34 @@ transform right up fwd pos = mat4
     (V3.y right) (V3.y up) (V3.y fwd) (V3.y pos)
     (V3.z right) (V3.z up) (V3.z fwd) (V3.z pos)
     0                 0              0               1
+
+
+-- | Get the translation part of the given transformation matrix.
+translation :: Matrix4 -> Matrix4
+translation (Matrix4
+    a00 a10 a20 a30
+    a01 a11 a21 a31
+    a02 a12 a22 a32
+    a03 a13 a23 a33)
+    = mat4
+    1   0   0   a30
+    0   1   0   a31
+    0   0   1   a32
+    0   0   0   a33    
+
+
+-- | Get the rotation part of the given transformation matrix.
+rotation :: Matrix4 -> Matrix4
+rotation (Matrix4
+    a00 a10 a20 a30
+    a01 a11 a21 a31
+    a02 a12 a22 a32
+    a03 a13 a23 a33)
+    = mat4
+    a00 a10 a20 0
+    a01 a11 a21 0
+    a02 a12 a22 0
+    a03 a13 a23 1    
 
 
 -- | Build a transformation 'Matrix4' defined by the given position and target.

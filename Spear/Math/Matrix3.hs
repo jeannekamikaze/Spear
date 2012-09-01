@@ -12,6 +12,8 @@ module Spear.Math.Matrix3
 ,   mat3
 ,   mat3fromVec
 ,   transform
+,   translation
+,   rotation
 ,   Spear.Math.Matrix3.id
     -- * Transformations
     -- ** Translation
@@ -153,6 +155,30 @@ transform r f p = mat3
     (V2.x r) (V2.x f) (V2.x p)
     (V2.y r) (V2.y f) (V2.y p)
     0        0        1
+
+
+-- | Get the translation part of the given transformation matrix.
+translation :: Matrix3 -> Matrix3
+translation (Matrix3
+    a00 a10 a20
+    a01 a11 a21
+    a02 a12 a22)
+    = mat3
+    1   0   a20
+    0   1   a21
+    0   0   a22
+
+
+-- | Get the rotation part of the given transformationmatrix.
+rotation :: Matrix3 -> Matrix3
+rotation (Matrix3
+    a00 a10 a20
+    a01 a11 a21
+    a02 a12 a22)
+    = mat3
+    a00 a10 0
+    a01 a11 0
+    a02 a12 1
 
 
 -- | Return the identity matrix.

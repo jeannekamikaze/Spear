@@ -21,6 +21,9 @@ instance S.Spatial2 Entity where
     strafeLeft  f ent = ent { transform = M.translv (V.scale (-f) $ S.right ent) * transform ent }
     strafeRight f ent = ent { transform = M.translv (V.scale f $ S.right ent) * transform ent }
     rotate      a ent = ent { transform = transform ent * M.rot a }
+    setRotation a ent =
+        let t = transform ent
+        in ent { transform = M.translation t * M.rot a }
     pos   = M.position . transform
     fwd   = M.forward  . transform
     up    = M.up       . transform

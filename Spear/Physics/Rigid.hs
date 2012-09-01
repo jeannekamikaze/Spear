@@ -41,6 +41,8 @@ instance Spatial2 RigidBody where
     
     rotate angle = id
     
+    setRotation angle = id
+    
     pos = position
     
     fwd _ = unity

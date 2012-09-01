@@ -106,6 +106,12 @@ instance S2.Spatial2 GameObject where
         , angle = (angle go + a) `mod'` 360 
         }
     
+    setRotation a go =
+        go
+        { transform = M3.translation (transform go) * M3.rot a
+        , angle = a
+        }
+    
     pos go = M3.position . transform $ go
     
     fwd go = M3.forward . transform $ go

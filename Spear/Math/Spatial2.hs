@@ -27,6 +27,9 @@ class Spatial2 s where
     -- | Rotate the spatial.
     rotate :: Float -> s -> s
     
+    -- | Set the spatial's rotation.
+    setRotation :: Float -> s -> s
+    
     -- | Get the spatial position.
     pos :: s -> Vector2
     

@@ -72,9 +72,9 @@ instance S2.Spatial2 GameObject where
         let m = transform go
             v = V2.scale s $ M3.forward m
         in go
-            { collisioners = fmap (Col.move v) $ collisioners go
-            , transform = M3.translv v * m
-            }
+           { collisioners = fmap (Col.move v) $ collisioners go
+           , transform = M3.translv v * m
+           }
     
     moveBack s go =
         let m = transform go

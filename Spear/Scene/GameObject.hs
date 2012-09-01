@@ -103,7 +103,7 @@ instance S2.Spatial2 GameObject where
     rotate a go =
         go
         { transform = transform go * M3.rot a
-        , angle = (angle go + a) `mod'` 360 
+        , angle = (angle go + a) `mod'` 360
         }
     
     setRotation a go =

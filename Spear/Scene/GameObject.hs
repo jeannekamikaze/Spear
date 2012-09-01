@@ -3,7 +3,6 @@ module Spear.Scene.GameObject
     GameObject
 ,   GameStyle(..)
 ,   AM.AnimationSpeed
-,   Rotation(..)
     -- * Construction
 ,   goNew
     -- * Accessors
@@ -54,10 +53,10 @@ data GameStyle
 -- | An object in the game scene.
 data GameObject = GameObject
     { gameStyle    :: !GameStyle
-    , rotation     :: !Rotation
     , renderer     :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
     , collisioners :: ![Collisioner]
     , transform    :: !M3.Matrix3
+    , axis         :: Vector3
     , angle        :: Float
     }
 
@@ -136,17 +135,17 @@ instance S2.Spatial2 GameObject where
 
 -- | Create a new game object.
 goNew :: GameStyle
-      -> Rotation
       -> Either StaticModelResource AM.AnimatedModelResource
       -> [Collisioner]
-      -> M3.Matrix3
+      -> M3.Matrix3 -- ^ Transform
+      -> Vector3 -- ^ Axis of rotation
       -> GameObject
 
-goNew style rtype (Left smr) cols transf =
-    GameObject style rtype (Left $ SM.staticModelRenderer smr) cols transf 0
+goNew style (Left smr) cols transf axis =
+    GameObject style (Left $ SM.staticModelRenderer smr) cols transf axis 0
 
-goNew style rtype (Right amr) cols transf =
-    GameObject style rtype (Right $ AM.animatedModelRenderer 1 amr) cols transf 0
+goNew style (Right amr) cols transf axis =
+    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf axis 0
 
 
 goUpdate :: Float -> GameObject -> GameObject
@@ -158,42 +157,6 @@ goUpdate dt go =
     in go
        { renderer = rend'
        }
-
-
--- | Get the game object's current animation.
-currentAnimation :: Enum a => GameObject -> a
-currentAnimation go = case renderer go of
-    Left _ -> toEnum 0
-    Right amr -> AM.currentAnimation amr 
-
-
--- | Set the game object's current animation.
-setAnimation :: Enum a => a -> GameObject -> GameObject
-setAnimation a go = case renderer go of
-    Left _ -> go
-    Right amr -> go { renderer = Right $ AM.setAnimation a amr }
-
-
--- | Set the game object's animation speed.
-setAnimationSpeed :: AM.AnimationSpeed -> GameObject -> GameObject
-setAnimationSpeed s go = case renderer go of
-    Left _ -> go
-    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
-
-
--- | Return the game object's number of collisioners.
-numCollisioners :: GameObject -> Int
-numCollisioners = length . collisioners
-
-
--- | Manipulate the game object's collisioners.
-withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
-withCollisioners go f = go { collisioners = f $ collisioners go }
-
-
--- | Set the game object's collisioners.
-setCollisioners :: GameObject -> [Collisioner] -> GameObject
-setCollisioners go cols = go { collisioners = cols }
 
 
 -- | Get the game object's ith bounding box.
@@ -212,7 +175,43 @@ goAABBs = fmap goAABB' . collisioners
 
 -- | Get the game object's 3D transform.
 go3Dtransform :: GameObject -> M4.Matrix4
-go3Dtransform go = rpgTransform 0 (angle go) (rotation go) . S2.transform $ go
+go3Dtransform go = rpgTransform 0 (angle go) (axis go) . S2.transform $ go
+
+
+-- | Get the game object's current animation.
+currentAnimation :: Enum a => GameObject -> a
+currentAnimation go = case renderer go of
+    Left _ -> toEnum 0
+    Right amr -> AM.currentAnimation amr 
+
+
+-- | Return the game object's number of collisioners.
+numCollisioners :: GameObject -> Int
+numCollisioners = length . collisioners
+
+
+-- | Set the game object's current animation.
+setAnimation :: Enum a => a -> GameObject -> GameObject
+setAnimation a go = case renderer go of
+    Left _ -> go
+    Right amr -> go { renderer = Right $ AM.setAnimation a amr }
+
+
+-- | Set the game object's animation speed.
+setAnimationSpeed :: AM.AnimationSpeed -> GameObject -> GameObject
+setAnimationSpeed s go = case renderer go of
+    Left _ -> go
+    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
+
+
+-- | Set the game object's collisioners.
+setCollisioners :: GameObject -> [Collisioner] -> GameObject
+setCollisioners go cols = go { collisioners = cols }
+
+
+-- | Manipulate the game object's collisioners.
+withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
+withCollisioners go f = go { collisioners = f $ collisioners go }
 
 
 -- | Render the game object.
@@ -222,13 +221,13 @@ goRender sprog aprog cam go =
         apu = animatedProgramUniforms aprog
         mat = S2.transform go
         style = gameStyle go
-        rtype = rotation go
+        axis' = axis go
         a   = angle go
     in case renderer go of
         Left smr  ->
-            goRender' style a rtype sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
+            goRender' style a axis' sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
         Right amr ->
-            goRender' style a rtype aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
+            goRender' style a axis' aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
 
 
 type Bind = IO ()
@@ -239,7 +238,7 @@ type Render = IO ()
 goRender' :: (ProgramUniforms u, Program p)
           => GameStyle
           -> Float
-          -> Rotation
+          -> Vector3
           -> p
           -> u
           -> M3.Matrix3
@@ -247,10 +246,10 @@ goRender' :: (ProgramUniforms u, Program p)
           -> Bind
           -> Render
           -> IO ()
-goRender' style a rtype prog uniforms model cam bindRenderer render =
+goRender' style a axis prog uniforms model cam bindRenderer render =
     let view  = M4.inverseTransform $ Cam.transform cam
         modelview = case style of
-            RPG -> view * rpgTransform 0 a rtype model
+            RPG -> view * rpgTransform 0 a axis model
             PLT -> view * pltTransform model
         normalmat = fastNormalMatrix modelview
     in do

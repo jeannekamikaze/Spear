@@ -1,7 +1,6 @@
 module Spear.Math.MatrixUtils
 (
-    Rotation(..)
-,   fastNormalMatrix
+    fastNormalMatrix
 ,   rpgTransform
 ,   pltTransform
 ,   rpgInverse
@@ -16,9 +15,6 @@ import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
 
 
-data Rotation = Yaw | Pitch | Roll deriving Eq
-
-
 -- | Compute the normal matrix of the given matrix.
 fastNormalMatrix :: Matrix4 -> Matrix3
 fastNormalMatrix m =
@@ -31,21 +27,17 @@ fastNormalMatrix m =
 
 -- | Maps the given 2D transformation matrix to a 3D transformation matrix.
 rpgTransform
-    :: Float    -- ^ The height above the ground.
-    -> Float    -- ^ Angle of rotation.
-    -> Rotation -- ^ How the 2D rotation should be interpreted in 3D.
+    :: Float    -- ^ The height above the ground
+    -> Float    -- ^ Angle of rotation
+    -> Vector3  -- ^ Axis of rotation
     -> Matrix3
     -> Matrix4
-rpgTransform h a rtype mat =
+rpgTransform h a axis mat =
     {-let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
         u = V3.unity
         f = let f' = M3.forward mat in vec3 (V2.x f') 0 (V2.y f')
         t = (vec3 0 h 0) + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')-}
-    let rot = case rtype of
-            Yaw   -> rotY
-            Pitch -> rotX
-            Roll  -> rotZ
-        mat' = rot a
+    let mat' = axisAngle axis a
         r = M4.right mat'
         u = M4.up mat'
         f = M4.forward mat'
@@ -79,9 +71,9 @@ pltTransform mat =
 --
 -- Use this in games such as RPGs and RTSs.
 rpgInverse
-    :: Float    -- ^ The height above the ground.
-    -> Float    -- ^ Angle of rotation.
-    -> Rotation -- ^ How the 2D rotation should be interpreted in 3D.
+    :: Float    -- ^ The height above the ground
+    -> Float    -- ^ Angle of rotation
+    -> Vector3  -- ^ Axis of rotation
     -> Matrix3
     -> Matrix4
 rpgInverse h a rot = M4.inverseTransform . rpgTransform h a rot

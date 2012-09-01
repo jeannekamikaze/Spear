@@ -31,7 +31,7 @@ import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
-import qualified Spear.Scene.GameObject as GO
+import Spear.Scene.GameObject as GO
 import Spear.Scene.Graph
 import Spear.Scene.Light
 import Spear.Scene.SceneResources
@@ -342,18 +342,18 @@ newLight _ = return ()
 -- Object Loading --
 --------------------
 
-loadGO :: GO.GameStyle -> SceneResources -> [Property] -> Matrix3 -> Setup GO.GameObject
+loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Setup GameObject
 loadGO style sceneRes props transf = do
     modelName <- asString . mandatory "model"    $ props
-    rtype <- asGORotation . mandatory "rotation" $ props
+    axis <- asVec3 . mandatory "axis" $ props
     let animSpeed = asFloat  . value "animation-speed" $ props
     go <- case getAnimatedModel sceneRes modelName of
         Just model ->
-            return $ GO.goNew style rtype (Right model) [] transf
+            return $ goNew style (Right model) [] transf axis
         Nothing ->
             case getStaticModel sceneRes modelName of
                 Just model ->
-                    return $ GO.goNew style rtype (Left model) [] transf
+                    return $ goNew style (Left model) [] transf axis
                 Nothing ->
                     setupError $ "model " ++ modelName ++ " not found"
     return $ case animSpeed of
@@ -465,13 +465,6 @@ asVec4 val = fmap toVec4 val
 asRotation :: Functor f => f [String] -> f Rotation
 asRotation val = fmap parseRotation val
     where parseRotation (ax:ay:az:order:_) = Rotation (read ax) (read ay) (read az) (readOrder order)
-
-
-asGORotation :: Functor f => f [String] -> f GO.Rotation
-asGORotation val = fmap parseRotation val
-    where parseRotation ["yaw"]   = GO.Yaw
-          parseRotation ["pitch"] = GO.Pitch
-          parseRotation ["roll"]  = GO.Roll
 
 
 data Rotation = Rotation

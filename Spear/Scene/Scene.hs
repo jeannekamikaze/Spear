@@ -97,17 +97,16 @@ update' updt (scene@ListScene {}) =
 
 
 -- | Perform collisions.
-collide :: (obj -> obj -> obj) -> Scene obj -> Scene obj
+collide :: ([obj] -> obj -> obj) -> Scene obj -> Scene obj
 
 collide col scene@ListScene {} =
     let objs   = objects scene
-        objs'  = fmap col' objs
-        col' o = foldl' col o objs
+        objs'  = fmap (col objs) objs
     in
         scene { objects = objs' }
 
-collide col scene@QuadTreeScene {} =
-    scene { world = gmap (collideAABB scene) col $ world scene }
+collide col scene@QuadTreeScene {} = error "not yet implemented"
+    --scene { world = gmap (collideAABB scene) col $ world scene }
 
 
 -- | Perform collisions.

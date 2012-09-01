@@ -267,8 +267,13 @@ goRender' style a axis prog uniforms model cam bindRenderer render =
         render
 
 
--- | Collide the game object with the given list of game objects.
-goCollide :: [GameObject] -> GameObject -> [GameObject]
-goCollide gos go = foldl' collide' [] gos
-    where
-        collide' gos target = target:gos
+-- | Return 'True' if the given game objects collide, 'False' otherwise.
+goCollide :: GameObject -> GameObject -> Bool
+goCollide go1 go2 =
+    let cols1 = collisioners go1
+        cols2 = collisioners go2
+        c1 = cols1 !! 0
+        c2 = cols2 !! 0
+    in
+        if length cols1 == 0 || length cols2 == 0 then False
+        else c1 `collide` c2 /= NoCollision

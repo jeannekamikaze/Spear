@@ -30,6 +30,8 @@ module Spear.Math.Matrix3
 ,   reflectZ
     -- * Operations
 ,   transpose
+,   mulp
+,   muld
 ,   mul
 ,   inverseTransform
 ,   Spear.Math.Matrix3.zipWith
@@ -271,6 +273,25 @@ transpose m = mat3
     (m00 m) (m01 m) (m02 m)
     (m10 m) (m11 m) (m12 m)
     (m20 m) (m21 m) (m22 m)
+
+
+-- | Transform the given point vector in 2D space with the given matrix.
+mulp :: Matrix3 -> Vector2 -> Vector2
+mulp m v = vec2 x' y'
+    where
+        v' = vec3 (V2.x v) (V2.y v) 1
+        x' = row0 m `V3.dot` v'
+        y' = row1 m `V3.dot` v'
+
+
+
+-- | Transform the given directional vector in 2D space with the given matrix.
+muld :: Matrix3 -> Vector2 -> Vector2
+muld m v = vec2 x' y'
+    where
+        v' = vec3 (V2.x v) (V2.y v) 0
+        x' = row0 m `V3.dot` v'
+        y' = row1 m `V3.dot` v'
 
 
 -- | Transform the given vector in 3D space with the given matrix.

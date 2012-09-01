@@ -221,7 +221,7 @@ rotateModel (Rotation x y z order) model =
         normalMat = fastNormalMatrix mat
         
         vTransform (Vec3 x' y' z') =
-            let v = mat `mulp` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
+            let v = mat `M4.mulp` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
         
         nTransform (Vec3 x' y' z') =
             let v = normalMat `M3.mul` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)

@@ -167,16 +167,12 @@ goUpdate dt go =
 
 -- | Get the game object's ith bounding box.
 goAABB :: Int -> GameObject -> AABB
-goAABB i go = goAABB' $ (collisioners go) !! i
-
-goAABB' col = case col of
-    (AABBCol box) -> box
-    (CircleCol circle) -> aabbFromCircle circle
+goAABB i = getAABB . flip (!!) i . collisioners
 
 
 -- | Get the game object's bounding boxes.
 goAABBs :: GameObject -> [AABB]
-goAABBs = fmap goAABB' . collisioners
+goAABBs = fmap getAABB . collisioners
 
 
 -- | Get the game object's 3D transform.

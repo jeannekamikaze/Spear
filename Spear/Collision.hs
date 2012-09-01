@@ -33,7 +33,7 @@ data CollisionType = NoCollision | Collision | FullyContains | FullyContainedBy
 class Collisionable a where
     collideBox    :: AABB   -> a -> CollisionType
     collideCircle :: Circle -> a -> CollisionType
-    getBox        :: a -> AABB
+    getAABB       :: a -> AABB
     getCircle     :: a -> Circle
 
 
@@ -59,7 +59,7 @@ instance Collisionable AABB where
                 boxC = min + (max-min)/2
                 l = norm $ min + (vec2 (x boxC) (y min)) - min
     
-    getBox = id
+    getAABB = id
    
     getCircle = circleFromAABB
 
@@ -80,9 +80,26 @@ instance Collisionable Circle where
             sum_radii    = (r1 + r2)^2
             sub_radii    = (r1 - r2)^2
     
-    getBox = aabbFromCircle
+    getAABB = aabbFromCircle
     
     getCircle = id
+
+
+instance Collisionable Collisioner where
+    
+    collideBox box (AABBCol self) = collideBox box self
+    collideBox box (CircleCol self) = collideBox box self 
+    
+    collideCircle circle (AABBCol self) = collideCircle circle self
+    collideCircle circle (CircleCol self) = collideCircle circle self
+    
+    getAABB (AABBCol box) = box
+    getAABB (CircleCol c) = aabbFromCircle c
+    
+    getCircle (AABBCol box) = circleFromAABB box
+    getCircle (CircleCol c) = c
+    
+    
 
 
 aabbPoints :: AABB -> [Vector2]

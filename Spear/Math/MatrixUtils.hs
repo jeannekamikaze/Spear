@@ -32,9 +32,9 @@ rpgTransform
     :: Float    -- ^ The height above the ground
     -> Float    -- ^ Angle of rotation
     -> Vector3  -- ^ Axis of rotation
-    -> Matrix3
+    -> Vector2  -- ^ Object's position.
     -> Matrix4
-rpgTransform h a axis mat =
+rpgTransform h a axis pos =
     {-let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
         u = V3.unity
         f = let f' = M3.forward mat in vec3 (V2.x f') 0 (V2.y f')
@@ -43,7 +43,7 @@ rpgTransform h a axis mat =
         r = M4.right mat'
         u = M4.up mat'
         f = M4.forward mat'
-        t = vec3 0 h 0 + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')
+        t = vec3 0 h 0 + vec3 (V2.x pos) 0 (-V2.y pos)
     in mat4
         (V3.x r) (V3.x u) (V3.x f) (V3.x t)
         (V3.y r) (V3.y u) (V3.y f) (V3.y t)
@@ -76,9 +76,9 @@ rpgInverse
     :: Float    -- ^ The height above the ground
     -> Float    -- ^ Angle of rotation
     -> Vector3  -- ^ Axis of rotation
-    -> Matrix3
+    -> Vector2
     -> Matrix4
-rpgInverse h a rot = M4.inverseTransform . rpgTransform h a rot
+rpgInverse h a rot pos = M4.inverseTransform $ rpgTransform h a rot pos
 
 
 -- | Compute the inverse transform of the given transformation matrix.

@@ -177,7 +177,7 @@ goAABBs = fmap getAABB . collisioners
 
 -- | Get the game object's 3D transform.
 go3Dtransform :: GameObject -> M4.Matrix4
-go3Dtransform go = rpgTransform 0 (angle go) (axis go) . S2.transform $ go
+go3Dtransform go = rpgTransform 0 (angle go) (axis go) (S2.pos go)
 
 
 -- | Get the game object's current animation.
@@ -251,7 +251,7 @@ goRender' :: (ProgramUniforms u, Program p)
 goRender' style a axis prog uniforms model cam bindRenderer render =
     let view  = M4.inverseTransform $ Cam.transform cam
         modelview = case style of
-            RPG -> view * rpgTransform 0 a axis model
+            RPG -> view * rpgTransform 0 a axis (M3.position model)
             PLT -> view * pltTransform model
         normalmat = fastNormalMatrix modelview
     in do

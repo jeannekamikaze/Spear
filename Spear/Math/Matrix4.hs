@@ -41,6 +41,7 @@ module Spear.Math.Matrix4
 ,   Spear.Math.Matrix4.map
 ,   transpose
 ,   inverseTransform
+,   inverse
 ,   mul
 ,   mulp
 ,   muld
@@ -444,6 +445,151 @@ inverseTransform mat =
             (V3.x u) (V3.y u) (V3.z u) (-t `V3.dot` u)
             (V3.x f) (V3.y f) (V3.z f) (-t `V3.dot` f)
             0        0        0        1
+
+
+-- | Invert the given matrix.
+inverse :: Matrix4 -> Matrix4
+inverse mat = 
+    let
+        a00 = m00 mat
+        a01 = m01 mat
+        a02 = m02 mat
+        a03 = m03 mat
+        a04 = m10 mat
+        a05 = m11 mat
+        a06 = m12 mat
+        a07 = m13 mat
+        a08 = m20 mat
+        a09 = m21 mat
+        a10 = m22 mat
+        a11 = m23 mat
+        a12 = m30 mat
+        a13 = m31 mat
+        a14 = m32 mat
+        a15 = m33 mat
+        
+        m00' = a05 * a10  * a15
+             - a05 * a11  * a14
+             - a09 * a06  * a15
+             + a09 * a07  * a14
+             + a13 * a06  * a11
+             - a13 * a07  * a10
+        
+        m04' = -a04 * a10 * a15
+             +  a04 * a11 * a14
+             +  a08 * a06 * a15
+             -  a08 * a07 * a14
+             -  a12 * a06 * a11
+             +  a12 * a07 * a10
+
+        m08' = a04 * a09 * a15
+             - a04 * a11 * a13
+             - a08 * a05 * a15
+             + a08 * a07 * a13
+             + a12 * a05 * a11
+             - a12 * a07 * a09
+
+        m12' = -a04 * a09 * a14
+             +  a04 * a10 * a13
+             +  a08 * a05 * a14
+             -  a08 * a06 * a13
+             -  a12 * a05 * a10
+             +  a12 * a06 * a09
+
+        m01' = -a01 * a10 * a15
+             +  a01 * a11 * a14
+             +  a09 * a02 * a15
+             -  a09 * a03 * a14
+             -  a13 * a02 * a11
+             +  a13 * a03 * a10
+
+        m05' = a00 * a10 * a15
+             - a00 * a11 * a14
+             - a08 * a02 * a15
+             + a08 * a03 * a14
+             + a12 * a02 * a11
+             - a12 * a03 * a10
+        
+        m09' = -a00 * a09 * a15
+             +  a00 * a11 * a13
+             +  a08 * a01 * a15
+             -  a08 * a03 * a13
+             -  a12 * a01 * a11
+             +  a12 * a03 * a09
+
+        m13' = a00 * a09 * a14
+             - a00 * a10 * a13
+             - a08 * a01 * a14
+             + a08 * a02 * a13
+             + a12 * a01 * a10
+             - a12 * a02 * a09
+
+        m02' = a01 * a06 * a15
+             - a01 * a07 * a14
+             - a05 * a02 * a15
+             + a05 * a03 * a14
+             + a13 * a02 * a07
+             - a13 * a03 * a06
+
+        m06' = -a00 * a06 * a15
+             +  a00 * a07 * a14
+             +  a04 * a02 * a15
+             -  a04 * a03 * a14
+             -  a12 * a02 * a07
+             +  a12 * a03 * a06
+
+        m10' = a00 * a05 * a15
+             - a00 * a07 * a13
+             - a04 * a01 * a15
+             + a04 * a03 * a13
+             + a12 * a01 * a07
+             - a12 * a03 * a05
+
+        m14' = -a00 * a05 * a14
+             +  a00 * a06 * a13
+             +  a04 * a01 * a14
+             -  a04 * a02 * a13
+             -  a12 * a01 * a06
+             +  a12 * a02 * a05
+
+        m03' = -a01 * a06 * a11
+             +  a01 * a07 * a10
+             +  a05 * a02 * a11
+             -  a05 * a03 * a10
+             -  a09 * a02 * a07
+             +  a09 * a03 * a06
+
+        m07' = a00 * a06 * a11
+             - a00 * a07 * a10
+             - a04 * a02 * a11
+             + a04 * a03 * a10
+             + a08 * a02 * a07
+             - a08 * a03 * a06
+
+        m11' = -a00 * a05 * a11
+             +  a00 * a07 * a09
+             +  a04 * a01 * a11
+             -  a04 * a03 * a09
+             -  a08 * a01 * a07
+             +  a08 * a03 * a05
+
+        m15' = a00 * a05 * a10
+             - a00 * a06 * a09
+             - a04 * a01 * a10
+             + a04 * a02 * a09
+             + a08 * a01 * a06
+             - a08 * a02 * a05
+        
+        det' = a00 * m00' + a01 * m04' + a02 * m08' + a03 * m12'
+    in
+        if det' == 0 then Spear.Math.Matrix4.id
+        else
+            let det = 1 / det'
+            in mat4
+                (m00' * det) (m04' * det) (m08' * det) (m12' * det)
+                (m01' * det) (m05' * det) (m09' * det) (m13' * det)
+                (m02' * det) (m06' * det) (m10' * det) (m14' * det)
+                (m03' * det) (m07' * det) (m11' * det) (m15' * det)
 
 
 -- | Transform the given vector in 3D space with the given matrix.

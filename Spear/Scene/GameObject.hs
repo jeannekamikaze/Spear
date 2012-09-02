@@ -268,8 +268,8 @@ goCollide :: GameObject -> GameObject -> Bool
 goCollide go1 go2 =
     let cols1 = collisioners go1
         cols2 = collisioners go2
-        c1 = cols1 !! 1
-        c2 = cols2 !! 1
+        c1 = cols1 !! 0
+        c2 = cols2 !! 0
     in
-        if length cols1 < 2 || length cols2 < 2 then False
+        if length cols1 == 0 || length cols2 == 0 then False
         else c1 `collide` c2 /= NoCollision

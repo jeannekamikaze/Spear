@@ -40,15 +40,13 @@ class Collisionable a where
 instance Collisionable AABB where
     
     collideBox box1@(AABB min1 max1) box2@(AABB min2 max2)
-        | min1 > max2   = NoCollision
-        | max1 < min2   = NoCollision
-        | box1 `aabbpt` min2 && box1 `aabbpt` max2 = FullyContains
-        | box2 `aabbpt` min1 && box2 `aabbpt` max1 = FullyContainedBy
         | (x max1) < (x min2) = NoCollision
         | (x min1) > (x max2) = NoCollision
         | (y max1) < (y min2) = NoCollision
         | (y min1) > (y max2) = NoCollision
-        | otherwise           = Collision
+        | box1 `aabbpt` min2 && box1 `aabbpt` max2 = FullyContains
+        | box2 `aabbpt` min1 && box2 `aabbpt` max1 = FullyContainedBy
+        | otherwise = Collision
     
     collideCircle sphere@(Circle c r) aabb@(AABB min max)
         | test == FullyContains || test == FullyContainedBy = test

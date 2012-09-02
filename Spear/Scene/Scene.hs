@@ -10,6 +10,7 @@ module Spear.Scene.Scene
 ,   Spear.Scene.Scene.filter
     -- * Queries
 ,   find
+,   query
     -- * Update and render
 ,   update
 ,   updateM
@@ -73,6 +74,11 @@ filter pred (scene@ListScene {}) = scene { objects = L.filter pred (objects scen
 -- | Search for an object in the 'Scene'.
 find :: (obj -> Bool) -> Scene obj -> Maybe obj
 find pred (scene@ListScene {}) = L.find pred $ objects scene
+
+
+-- | Return all objects that satisfy the given predicate.
+query :: (obj -> Bool) -> Scene obj -> [obj]
+query pred (scene@ListScene {}) = L.filter pred $ objects scene
 
 
 type Update obj = obj -> obj

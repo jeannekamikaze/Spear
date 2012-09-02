@@ -5,10 +5,12 @@ module Spear.Math.MatrixUtils
 ,   pltTransform
 ,   rpgInverse
 ,   pltInverse
+,   toClip
 )
 where
 
 
+import Spear.Math.Camera as Cam
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.Vector2 as V2
@@ -88,3 +90,14 @@ rpgInverse h a rot = M4.inverseTransform . rpgTransform h a rot
 -- Use this in games like platformers and space invaders style games.
 pltInverse :: Matrix3 -> Matrix4
 pltInverse = M4.inverseTransform . pltTransform
+
+
+-- | Transform an object from object to clip space coordinates.
+toClip :: Camera -> Matrix4 -> Vector3 -> Vector2
+toClip cam model p =
+    let
+        view = M4.inverseTransform $ Cam.transform cam
+        proj = Cam.projection cam
+        p' = (proj * view * model) `M4.mulp` p
+    in
+        vec2 (V3.x p') (V3.y p')

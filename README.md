@@ -1,7 +1,9 @@
 Spear
 =====
 
-Spear is a simple 3D game framework I have been working on since I started learning Haskell. The project's goal is to put what I learn into practise, to explore how far I can get with Haskell and if the results are decent enough, to build one or two game demos along the way.
+Spear is a simple 2.5D game engine I have been working on since I started learning Haskell.
+The project's goal is to put what I learn into practise, to explore how far I can get with Haskell and if the results
+are decent enough, to build one or two game demos along the way.
 
 Installation
 ------------
@@ -33,15 +35,15 @@ Features
 * Assets backed up by Resource for automatic (and optionally, manual) deletion.
 
 ### Collision
-* Simple collision library featuring AABBs and bounding spheres (more to come).
+* Simple collision library featuring AABBs and bounding circles.
 
 ### OpenGL
-* High level OpenGL >=3 wrappers.
+* OpenGL >=3 wrapper library.
 * OpenGL resources (VAOs, buffers, textures, etc.) backed up by Resource for automatic (and optionally, manual) deletion.
 
 ### Math
-* Vectors, matrices, quaternions, cameras, etc.
-* The Spatial type class for objects that can be moved around in 3D space.
+* Vectors, matrices, quaternions, cameras, segments, rays, etc.
+* The Spatial2 and Spatial3 type classes for objects that can be moved around in 2D and 3D space, respectively.
 
 ### Render
 * Static and vertex-animated model resources, compiled into a VAO for efficient rendering.

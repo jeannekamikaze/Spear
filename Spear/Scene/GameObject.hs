@@ -9,7 +9,8 @@ module Spear.Scene.GameObject
 ,   currentAnimation
 ,   goAABB
 ,   goAABBs
-,   go3Dtransform
+,   collisioners
+,   goRPGtransform
 ,   numCollisioners
 ,   renderer
     -- * Manipulation
@@ -18,6 +19,7 @@ module Spear.Scene.GameObject
 ,   setAnimationSpeed
 ,   withCollisioners
 ,   setCollisioners
+,   setViewInverse
     -- * Rendering
 ,   goRender
     -- * Collision
@@ -58,6 +60,7 @@ data GameObject = GameObject
     , transform    :: !M3.Matrix3
     , axis         :: Vector3
     , angle        :: Float
+    , viewInv      :: !M4.Matrix4
     }
 
 
@@ -148,10 +151,10 @@ goNew :: GameStyle
       -> GameObject
 
 goNew style (Left smr) cols transf axis =
-    GameObject style (Left $ SM.staticModelRenderer smr) cols transf axis 0
+    GameObject style (Left $ SM.staticModelRenderer smr) cols transf axis 0 M4.id
 
 goNew style (Right amr) cols transf axis =
-    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf axis 0
+    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf axis 0 M4.id
 
 
 goUpdate :: Float -> GameObject -> GameObject
@@ -176,8 +179,8 @@ goAABBs = fmap getAABB . collisioners
 
 
 -- | Get the game object's 3D transform.
-go3Dtransform :: GameObject -> M4.Matrix4
-go3Dtransform go = rpgTransform 0 (angle go) (axis go) (S2.pos go)
+goRPGtransform :: GameObject -> M4.Matrix4
+goRPGtransform go = rpgTransform 0 (angle go) (axis go) (S2.pos go) (viewInv go)
 
 
 -- | Get the game object's current animation.
@@ -211,6 +214,11 @@ setCollisioners :: GameObject -> [Collisioner] -> GameObject
 setCollisioners go cols = go { collisioners = cols }
 
 
+-- | Set the game object's view inverse matrix.
+setViewInverse :: M4.Matrix4 -> GameObject -> GameObject
+setViewInverse mat go = go { viewInv = mat }
+
+
 -- | Manipulate the game object's collisioners.
 withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
 withCollisioners go f = go { collisioners = f $ collisioners go }
@@ -221,15 +229,24 @@ goRender :: StaticProgram -> AnimatedProgram -> Cam.Camera -> GameObject -> IO (
 goRender sprog aprog cam go =
     let spu = staticProgramUniforms sprog
         apu = animatedProgramUniforms aprog
-        mat = S2.transform go
-        style = gameStyle go
-        axis' = axis go
-        a   = angle go
+        style  = gameStyle go
+        axis'  = axis go
+        a      = angle go
+        viewI  = viewInv go
+        proj   = Cam.projection cam
+        view   = M4.inverseTransform $ Cam.transform cam
+        transf = S2.transform go
+        normal = fastNormalMatrix modelview
+        modelview = case style of
+            RPG -> view * rpgTransform 0 a axis' (M3.position transf) viewI
+            PLT -> view * pltTransform transf
     in case renderer go of
         Left smr  ->
-            goRender' style a axis' sprog spu mat cam (SM.bind spu smr) (SM.render spu smr)
+            goRender' style a axis' sprog spu modelview proj normal
+                      (SM.bind spu smr) (SM.render spu smr)
         Right amr ->
-            goRender' style a axis' aprog apu mat cam (AM.bind apu amr) (AM.render apu amr)
+            goRender' style a axis' aprog apu modelview proj normal
+                      (AM.bind apu amr) (AM.render apu amr)
 
 
 type Bind = IO ()
@@ -243,22 +260,19 @@ goRender' :: (ProgramUniforms u, Program p)
           -> Vector3
           -> p
           -> u
-          -> M3.Matrix3
-          -> Cam.Camera
+          -> M4.Matrix4 -- Modelview
+          -> M4.Matrix4 -- Projection
+          -> M3.Matrix3 -- Normal matrix
           -> Bind
           -> Render
           -> IO ()
-goRender' style a axis prog uniforms model cam bindRenderer render =
-    let view  = M4.inverseTransform $ Cam.transform cam
-        modelview = case style of
-            RPG -> view * rpgTransform 0 a axis (M3.position model)
-            PLT -> view * pltTransform model
-        normalmat = fastNormalMatrix modelview
+goRender' style a axis prog uniforms modelview proj normal bindRenderer render =
+    let 
     in do
         useProgram . program $ prog
-        uniformMat4 (projLoc uniforms) $ Cam.projection cam
+        uniformMat4 (projLoc uniforms) proj
         uniformMat4 (modelviewLoc uniforms) modelview
-        uniformMat3 (normalmatLoc uniforms) normalmat
+        uniformMat3 (normalmatLoc uniforms) normal
         bindRenderer
         render
 

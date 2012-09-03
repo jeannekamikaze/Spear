@@ -5,7 +5,7 @@ module Spear.Math.MatrixUtils
 ,   pltTransform
 ,   rpgInverse
 ,   pltInverse
-,   toClip
+,   objToClip
 )
 where
 
@@ -27,31 +27,28 @@ fastNormalMatrix m =
         (M4.m02 m') (M4.m12 m') (M4.m22 m')
 
 
--- | Maps the given 2D transformation matrix to a 3D transformation matrix.
+-- | Map an object's transform in view space to world space.
 rpgTransform
-    :: Float    -- ^ The height above the ground
-    -> Float    -- ^ Angle of rotation
-    -> Vector3  -- ^ Axis of rotation
-    -> Vector2  -- ^ Object's position.
+    :: Float   -- ^ The height above the ground
+    -> Float   -- ^ Angle of rotation
+    -> Vector3 -- ^ Axis of rotation
+    -> Vector2 -- ^ Object's position.
+    -> Matrix4 -- ^ Inverse view matrix.
     -> Matrix4
-rpgTransform h a axis pos =
-    {-let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
-        u = V3.unity
-        f = let f' = M3.forward mat in vec3 (V2.x f') 0 (V2.y f')
-        t = (vec3 0 h 0) + let t' = M3.position mat in vec3 (V2.x t') 0 (V2.y t')-}
+rpgTransform h a axis pos viewInverse =
     let mat' = axisAngle axis a
         r = M4.right mat'
         u = M4.up mat'
         f = M4.forward mat'
         t = vec3 0 h 0 + vec3 (V2.x pos) 0 (-V2.y pos)
     in mat4
-        (V3.x r) (V3.x u) (V3.x f) (V3.x t)
-        (V3.y r) (V3.y u) (V3.y f) (V3.y t)
-        (V3.z r) (V3.z u) (V3.z f) (V3.z t)
-        0        0        0        1
+         (V3.x r) (V3.x u) (V3.x f) (V3.x t)
+         (V3.y r) (V3.y u) (V3.y f) (V3.y t)
+         (V3.z r) (V3.z u) (V3.z f) (V3.z t)
+         0        0        0        1
 
 
--- | Maps the given 2D transformation matrix to a 3D transformation matrix.
+-- | Map an object's transform in view space to world space.
 pltTransform :: Matrix3 -> Matrix4
 pltTransform mat =
     let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
@@ -65,23 +62,22 @@ pltTransform mat =
         0        0        0        1
 
 
--- | Compute the inverse transform of the given transformation matrix.
---
--- This function maps an object's transform in 2D to the object's inverse in 3D.
+-- | Map an object's transform in world space to view space.
 -- 
 -- The XY plane in 2D translates to the X(-Z) plane in 3D.
 --
 -- Use this in games such as RPGs and RTSs.
 rpgInverse
-    :: Float    -- ^ The height above the ground
-    -> Float    -- ^ Angle of rotation
-    -> Vector3  -- ^ Axis of rotation
-    -> Vector2
+    :: Float   -- ^ The height above the ground
+    -> Float   -- ^ Angle of rotation
+    -> Vector3 -- ^ Axis of rotation
+    -> Vector2 -- ^ Object's position.
+    -> Matrix4 -- ^ Inverse view matrix.
     -> Matrix4
-rpgInverse h a rot pos = M4.inverseTransform $ rpgTransform h a rot pos
+rpgInverse h a rot pos viewInv = M4.inverseTransform $ rpgTransform h a rot pos viewInv
 
 
--- | Compute the inverse transform of the given transformation matrix.
+-- | Map an object's transform in world space to view space.
 --
 -- This function maps an object's transform in 2D to the object's inverse in 3D.
 -- 
@@ -93,8 +89,8 @@ pltInverse = M4.inverseTransform . pltTransform
 
 
 -- | Transform an object from object to clip space coordinates.
-toClip :: Camera -> Matrix4 -> Vector3 -> Vector2
-toClip cam model p =
+objToClip :: Camera -> Matrix4 -> Vector3 -> Vector2
+objToClip cam model p =
     let
         view = M4.inverseTransform $ Cam.transform cam
         proj = Cam.projection cam

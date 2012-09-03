@@ -7,8 +7,10 @@ module Spear.Collision
 ,   Collisioner(..)
     -- ** Construction
 ,   aabbCollisioner
-,   sphereCollisioner
+,   circleCollisioner
+,   boxFromCircle
 ,   buildAABB
+,   mkCols
     -- ** Collision test
 ,   collide
     -- ** Manipulation
@@ -19,10 +21,13 @@ module Spear.Collision
 where
 
 
+import Spear.Assets.Model
 import Spear.Math.AABB
 import Spear.Math.Circle
+import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.Plane
 import Spear.Math.Vector2
+import qualified Spear.Math.Vector3 as V3
 
 
 -- | Encodes several collision situations.
@@ -48,12 +53,12 @@ instance Collisionable AABB where
         | box2 `aabbpt` min1 && box2 `aabbpt` max1 = FullyContainedBy
         | otherwise = Collision
     
-    collideCircle sphere@(Circle c r) aabb@(AABB min max)
+    collideCircle circle@(Circle c r) aabb@(AABB min max)
         | test == FullyContains || test == FullyContainedBy = test
         | normSq (c - boxC) > (l + r)^2 = NoCollision
         | otherwise = Collision
             where
-                test = aabb `collideBox` aabbFromCircle sphere
+                test = aabb `collideBox` aabbFromCircle circle
                 boxC = min + (max-min)/2
                 l = norm $ min + (vec2 (x boxC) (y min)) - min
     
@@ -64,7 +69,7 @@ instance Collisionable AABB where
 
 instance Collisionable Circle where
     
-    collideBox box sphere = case collideCircle sphere box of
+    collideBox box circle = case collideCircle circle box of
         FullyContains -> FullyContainedBy
         FullyContainedBy -> FullyContains
         x -> x
@@ -117,7 +122,7 @@ aabbPoints (AABB min max) = [p1,p2,p3,p4,p5,p6,p7,p8]
 data Collisioner
     -- | An axis-aligned bounding box.
     = AABBCol {-# UNPACK #-} !AABB
-    -- | A bounding sphere.
+    -- | A bounding circle.
     | CircleCol {-# UNPACK #-} !Circle
 
 
@@ -127,18 +132,18 @@ aabbCollisioner = AABBCol
 
 
 -- | Create a collisioner from the specified circle.
-sphereCollisioner :: Circle -> Collisioner
-sphereCollisioner = CircleCol
+circleCollisioner :: Circle -> Collisioner
+circleCollisioner = CircleCol
+
+
+-- | Create the minimal AABB collisioner fully containing the specified circle.
+boxFromCircle :: Circle -> Collisioner
+boxFromCircle = AABBCol . aabbFromCircle
 
 
 -- | Create the minimal AABB fully containing the specified collisioners.
 buildAABB :: [Collisioner] -> AABB
 buildAABB cols = aabb $ generatePoints cols
-
-
--- | Create the minimal AABB collisioner fully containing the specified circle.
-boxFromSphere :: Circle -> Collisioner
-boxFromSphere = AABBCol . aabbFromCircle
 
 
 generatePoints :: [Collisioner] -> [Vector2]
@@ -161,6 +166,22 @@ generatePoints = foldr generate []
                 p2 = c - unitx * (vec2 r r)
                 p3 = c + unity * (vec2 r r)
                 p4 = c - unity * (vec2 r r)
+
+
+-- | Compute collisioners in view space from the given 3D AABB.
+mkCols :: M4.Matrix4 -- ^ Modelview matrix
+       -> Box
+       -> [Collisioner]
+mkCols modelview (Box (Vec3 xmin ymin zmin) (Vec3 xmax ymax zmax)) =
+    let
+        toVec2 v = vec2 (V3.x v) (V3.y v)
+        p1   = toVec2 $ modelview `M4.mulp` V3.vec3 xmin ymin zmax
+        p2   = toVec2 $ modelview `M4.mulp` V3.vec3 xmax ymin zmin
+        p3   = toVec2 $ modelview `M4.mulp` V3.vec3 xmax ymax zmin
+        col1 = AABBCol $ AABB p1 p2
+        col2 = AABBCol $ AABB p1 p3
+    in
+        [col1, col2]
 
 
 -- | Collide the given collisioners.

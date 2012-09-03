@@ -13,16 +13,20 @@ module Spear.Render.StaticModel
     -- * Rendering
 ,   bind
 ,   render
+    -- * Collision
+,   mkColsFromStatic
 )
 where
 
 
 import Spear.Assets.Model
-import Spear.Render.Model
+import Spear.Collision
 import Spear.GLSL
 import Spear.Math.AABB
+import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector2 (vec2)
 import Spear.Render.Material
+import Spear.Render.Model
 import Spear.Render.Program
 import Spear.Setup as Setup
 
@@ -142,3 +146,11 @@ render uniforms (StaticModelRenderer model) =
         uniformVec4 (ksLoc uniforms) ks
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         drawArrays gl_TRIANGLES 0 $ nVertices model
+
+
+-- | Compute collisioners in 2d virtual space.
+mkColsFromStatic
+    :: Matrix4 -- ^ Modelview matrix
+    -> StaticModelResource
+    -> [Collisioner]
+mkColsFromStatic modelview modelRes = mkCols modelview (box 0 modelRes)

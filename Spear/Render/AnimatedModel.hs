@@ -23,16 +23,21 @@ module Spear.Render.AnimatedModel
     -- * Rendering
 ,   bind
 ,   render
+    -- * Collisions
+,   mkColsFromAnimated
 )
 where
 
 
 import Spear.Assets.Model
-import Spear.Render.Model
+import Spear.Collision
 import Spear.GLSL
 import Spear.Math.AABB
+import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector2 (vec2)
+import Spear.Math.Vector3 (vec3, x, y, z, scale)
 import Spear.Render.Material
+import Spear.Render.Model
 import Spear.Render.Program
 import Spear.Setup as Setup
 
@@ -230,3 +235,26 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         glUniform1f (fpLoc uniforms) (unsafeCoerce fp)
         drawArrays gl_TRIANGLES (n*curFrame) n
+
+
+-- | Compute collisioners in 2d virtual space.
+mkColsFromAnimated
+    :: Int     -- ^ Source frame
+    -> Int     -- ^ Dest frame
+    -> Float   -- ^ Frame progress
+    -> Matrix4 -- ^ Modelview matrix
+    -> AnimatedModelResource
+    -> [Collisioner]
+mkColsFromAnimated f1 f2 fp modelview modelRes =
+    let
+        (Box (Vec3 xmin1 ymin1 zmin1) (Vec3 xmax1 ymax1 zmax1)) = box f1 modelRes
+        (Box (Vec3 xmin2 ymin2 zmin2) (Vec3 xmax2 ymax2 zmax2)) = box f2 modelRes
+        min1 = vec3 xmin1 ymin1 zmin1
+        max1 = vec3 xmax1 ymax1 zmax1
+        min2 = vec3 xmin2 ymin2 zmin2
+        max2 = vec3 xmax2 ymax2 zmax2
+        min = min1 + scale fp (min2 - min1)
+        max = max1 + scale fp (max2 - max1)
+    in
+        mkCols modelview
+            $ Box (Vec3 (x min) (y min) (z min)) (Vec3 (x max) (y max) (z max))

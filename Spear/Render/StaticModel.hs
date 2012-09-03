@@ -148,7 +148,7 @@ render uniforms (StaticModelRenderer model) =
         drawArrays gl_TRIANGLES 0 $ nVertices model
 
 
--- | Compute collisioners in 2d virtual space.
+-- | Compute AABB collisioners in view space from the given model.
 mkColsFromStatic
     :: Matrix4 -- ^ Modelview matrix
     -> StaticModelResource

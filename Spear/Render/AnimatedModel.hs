@@ -23,7 +23,7 @@ module Spear.Render.AnimatedModel
     -- * Rendering
 ,   bind
 ,   render
-    -- * Collisions
+    -- * Collision
 ,   mkColsFromAnimated
 )
 where
@@ -237,7 +237,7 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
         drawArrays gl_TRIANGLES (n*curFrame) n
 
 
--- | Compute collisioners in 2d virtual space.
+-- | Compute AABB collisioners in view space from the given model.
 mkColsFromAnimated
     :: Int     -- ^ Source frame
     -> Int     -- ^ Dest frame

@@ -168,7 +168,7 @@ generatePoints = foldr generate []
                 p4 = c - unity * (vec2 r r)
 
 
--- | Compute collisioners in view space from the given 3D AABB.
+-- | Compute AABB collisioners in view space from the given 3D AABB.
 mkCols :: M4.Matrix4 -- ^ Modelview matrix
        -> Box
        -> [Collisioner]

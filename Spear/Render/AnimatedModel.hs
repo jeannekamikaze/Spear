@@ -102,7 +102,7 @@ instance Ord AnimatedModelRenderer where
     m1 < m2 = modelResource m1 < modelResource m2
 
 
--- | Create an 'AnimatedModelResource' from the given 'Model'.
+-- | Create an model resource from the given model.
 animatedModelResource :: AnimatedProgramChannels
                       -> Material
                       -> Texture
@@ -150,18 +150,18 @@ animatedModelResource
             material texture boxes rkey
 
 
--- | Release the given 'AnimatedModelResource'.
+-- | Release the given model resource.
 release :: AnimatedModelResource -> Setup ()
 release = Setup.release . rkey
 
 
--- | Create an 'AnimatedModelRenderer' from the given 'AnimatedModelResource'.
+-- | Create a renderer from the given model resource.
 animatedModelRenderer :: AnimationSpeed -> AnimatedModelResource -> AnimatedModelRenderer
 animatedModelRenderer animSpeed modelResource =
     AnimatedModelRenderer modelResource 0 0 0 0 0 animSpeed
 
 
--- | Update the 'AnimatedModelRenderer'.
+-- | Update the renderer.
 update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s) =
     AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp' s
         where f = fp + dt * s
@@ -212,7 +212,7 @@ setAnimationSpeed :: AnimationSpeed -> AnimatedModelRenderer -> AnimatedModelRen
 setAnimationSpeed s r = r { animationSpeed = s }
 
 
--- | Bind the given 'AnimatedModelRenderer' to prepare it for rendering.
+-- | Bind the given renderer to prepare it for rendering.
 bind :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
 bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend =
     let model' = modelResource modelRend
@@ -223,7 +223,7 @@ bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend
         glUniform1i texLoc 0
 
 
--- | Render the model described by the given 'AnimatedModelRenderer'.
+-- | Render the model described by the given renderer.
 render :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
 render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
     let n = nVertices model

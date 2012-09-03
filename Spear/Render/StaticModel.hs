@@ -64,7 +64,7 @@ instance Ord StaticModelRenderer where
     m1 < m2 = model m1 < model m2
 
 
--- | Create a 'StaticModelResource' from the given 'Model'.
+-- | Create a model resource from the given model.
 staticModelResource :: StaticProgramChannels
                     -> Material
                     -> Texture
@@ -105,12 +105,12 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
         vao (unsafeCoerce numVertices) material texture boxes rkey
 
 
--- | Release the given 'StaticModelResource'.
+-- | Release the given model resource.
 release :: StaticModelResource -> Setup ()
 release = Setup.release . rkey
 
 
--- | Create a 'StaticModelRenderer' from the given 'StaticModelResource'.
+-- | Create a renderer from the given model resource.
 staticModelRenderer :: StaticModelResource -> StaticModelRenderer
 staticModelRenderer = StaticModelRenderer
 
@@ -125,7 +125,7 @@ modelRes :: StaticModelRenderer -> StaticModelResource
 modelRes = model
 
 
--- | Bind the given 'StaticModelRenderer' to prepare it for rendering.
+-- | Bind the given renderer to prepare it for rendering.
 bind :: StaticProgramUniforms -> StaticModelRenderer -> IO ()
 bind (StaticProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _) (StaticModelRenderer model) =
     let (Material _ ka kd ks shi) = material model
@@ -136,7 +136,7 @@ bind (StaticProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _) (StaticModelR
         glUniform1i texLoc 0
 
 
--- | Render the given 'StaticModelRenderer'.
+-- | Render the given renderer.
 render :: StaticProgramUniforms -> StaticModelRenderer -> IO ()
 render uniforms (StaticModelRenderer model) =
     let (Material _ ka kd ks shi) = material model

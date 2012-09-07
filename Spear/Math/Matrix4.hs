@@ -36,6 +36,7 @@ module Spear.Math.Matrix4
     -- ** Projection
 ,   ortho
 ,   perspective
+,   planeProj
     -- * Operations
 ,   Spear.Math.Matrix4.zipWith
 ,   Spear.Math.Matrix4.map
@@ -45,6 +46,7 @@ module Spear.Math.Matrix4
 ,   mul
 ,   mulp
 ,   muld
+,   mul'
 )
 where
 
@@ -421,7 +423,27 @@ perspective fovy r near far =
         0     0    ((near+far)/a) (2*near*far/a)
         0     0    (-1)           0
 
-    
+
+-- | Create a plane projection matrix.
+planeProj :: Vector3 -- ^ Plane normal
+          -> Float   -- ^ Plane distance from the origin
+          -> Vector3 -- ^ Projection direction
+          -> Matrix4
+planeProj n d l =
+    let c = n `V3.dot` l
+        nx = V3.x n
+        ny = V3.y n
+        nz = V3.z n
+        lx = V3.x l
+        ly = V3.y l
+        lz = V3.z l
+    in mat4
+        (d + c - nx*lx) (-ny*lx)          (-nz*lx)        (-lx*d)
+        (-nx*ly)        (d + c - ny*ly)   (-nz*ly)        (-ly*d)
+        (-nx*lz)        (-ny*lz)          (d + c - nz*lz) (-lz*d)
+        (-nx)           (-ny)             (-nz)           c
+
+
 -- | Transpose the specified matrix.
 transpose :: Matrix4 -> Matrix4
 transpose m = mat4
@@ -610,6 +632,20 @@ mulp = mul 1
 -- | Transform the given directional vector in 3D space with the given matrix.
 muld :: Matrix4 -> Vector3 -> Vector3
 muld = mul 0
+
+
+-- | Transform the given vector with the given matrix.
+--
+-- The vector is brought from homogeneous space to 3D space by performing a
+-- perspective divide.
+mul' :: Float -> Matrix4 -> Vector3 -> Vector3
+mul' w m v = vec3 (x'/w') (y'/w') (z'/w')
+    where
+        v' = vec4 (V3.x v) (V3.y v) (V3.z v) w
+        x' = row0 m `V4.dot` v'
+        y' = row1 m `V4.dot` v'
+        z' = row2 m `V4.dot` v'
+        w' = row3 m `V4.dot` v'
 
 
 toRAD = (*pi) . (/180)

@@ -32,15 +32,19 @@ rpgTransform
     :: Float   -- ^ The height above the ground
     -> Float   -- ^ Angle of rotation
     -> Vector3 -- ^ Axis of rotation
-    -> Vector2 -- ^ Object's position.
-    -> Matrix4 -- ^ Inverse view matrix.
+    -> Vector2 -- ^ Object's position
+    -> Matrix4 -- ^ Inverse view matrix
     -> Matrix4
-rpgTransform h a axis pos viewInverse =
-    let mat' = axisAngle axis a
+rpgTransform h a axis pos viewI =
+    let p1 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) 0)
+        p2 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) (-100))
+        lambda  = (V3.y p1 / (V3.y p1 - V3.y p2))
+        p  = p1 + V3.scale lambda (p2 - p1)
+        mat' = axisAngle axis a
         r = M4.right mat'
         u = M4.up mat'
         f = M4.forward mat'
-        t = vec3 0 h 0 + vec3 (V2.x pos) 0 (-V2.y pos)
+        t = p + vec3 0 h 0
     in mat4
          (V3.x r) (V3.x u) (V3.x f) (V3.x t)
          (V3.y r) (V3.y u) (V3.y f) (V3.y t)
@@ -71,10 +75,11 @@ rpgInverse
     :: Float   -- ^ The height above the ground
     -> Float   -- ^ Angle of rotation
     -> Vector3 -- ^ Axis of rotation
-    -> Vector2 -- ^ Object's position.
-    -> Matrix4 -- ^ Inverse view matrix.
+    -> Vector2 -- ^ Object's position
+    -> Matrix4 -- ^ Inverse view matrix
     -> Matrix4
-rpgInverse h a rot pos viewInv = M4.inverseTransform $ rpgTransform h a rot pos viewInv
+rpgInverse h a axis pos viewI =
+    M4.inverseTransform $ rpgTransform h a axis pos viewI
 
 
 -- | Map an object's transform in world space to view space.

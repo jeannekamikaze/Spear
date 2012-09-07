@@ -17,6 +17,7 @@ module Spear.Scene.GameObject
 ,   goUpdate
 ,   setAnimation
 ,   setAnimationSpeed
+,   setAxis
 ,   withCollisioners
 ,   setCollisioners
 ,   setViewInverse
@@ -132,13 +133,17 @@ instance S2.Spatial2 GameObject where
         in go { transform = M3.transform (M3.right m) (M3.forward m) pos }
     
     lookAt p go =
-        let position = S2.pos go
-            fwd      = V2.normalise $ p - position
-            r        = perp fwd
+        let position  = S2.pos go
+            fwd       = V2.normalise $ p - position
+            r         = perp fwd
+            toDeg     = (*(180/pi))
         in
             go
             { transform = M3.transform r fwd position
-            , angle = acos $ r `V2.dot` V2.unitx
+            , angle = (-180) +
+                if V2.y r > 0
+                then toDeg . acos $ r `V2.dot` V2.unitx
+                else (+180) . toDeg . acos $ r `V2.dot` (-V2.unitx)
             }
 
 
@@ -206,7 +211,12 @@ setAnimation a go = case renderer go of
 setAnimationSpeed :: AM.AnimationSpeed -> GameObject -> GameObject
 setAnimationSpeed s go = case renderer go of
     Left _ -> go
-    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr } 
+    Right amr -> go { renderer = Right $ AM.setAnimationSpeed s amr }
+
+
+-- | Set the game object's axis of rotation.
+setAxis :: Vector3 -> GameObject -> GameObject
+setAxis ax go = go { axis = ax }
 
 
 -- | Set the game object's collisioners.
@@ -238,7 +248,7 @@ goRender sprog aprog cam go =
         transf = S2.transform go
         normal = fastNormalMatrix modelview
         modelview = case style of
-            RPG -> view * rpgTransform 0 a axis' (M3.position transf) viewI
+            RPG -> view * goRPGtransform go
             PLT -> view * pltTransform transf
     in case renderer go of
         Left smr  ->

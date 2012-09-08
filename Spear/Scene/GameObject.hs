@@ -2,6 +2,7 @@ module Spear.Scene.GameObject
 (
     GameObject
 ,   GameStyle(..)
+,   Window(..)
 ,   AM.AnimationSpeed
     -- * Construction
 ,   goNew
@@ -13,6 +14,7 @@ module Spear.Scene.GameObject
 ,   goRPGtransform
 ,   numCollisioners
 ,   renderer
+,   window
     -- * Manipulation
 ,   goUpdate
 ,   setAnimation
@@ -20,7 +22,7 @@ module Spear.Scene.GameObject
 ,   setAxis
 ,   withCollisioners
 ,   setCollisioners
-,   setViewInverse
+,   setWindow
     -- * Rendering
 ,   goRender
     -- * Collision
@@ -53,15 +55,28 @@ data GameStyle
     | PLT -- ^ Platformer or space invaders style game.
 
 
+data Window = Window
+    { projInv :: !M4.Matrix4
+    , viewInv :: !M4.Matrix4
+    , vpx     :: !Float
+    , vpy     :: !Float
+    , width   :: !Float
+    , height  :: !Float
+    }
+
+
+dummyWindow = Window M4.id M4.id 0 0 640 480
+
+
 -- | An object in the game scene.
 data GameObject = GameObject
     { gameStyle    :: !GameStyle
     , renderer     :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
     , collisioners :: ![Collisioner]
     , transform    :: !M3.Matrix3
-    , axis         :: Vector3
-    , angle        :: Float
-    , viewInv      :: !M4.Matrix4
+    , axis         :: !Vector3
+    , angle        :: !Float
+    , window       :: !Window -- ^ Get the game object's window.
     }
 
 
@@ -133,17 +148,28 @@ instance S2.Spatial2 GameObject where
         in go { transform = M3.transform (M3.right m) (M3.forward m) pos }
     
     lookAt p go =
-        let position  = S2.pos go
-            fwd       = V2.normalise $ p - position
-            r         = perp fwd
-            toDeg     = (*(180/pi))
+        let position = S2.pos go
+            fwd      = V2.normalise $ p - position
+            r        = perp fwd
+            toDeg = (*(180/pi))
+            wnd = window go
+            viewI = viewInv wnd
+            vpx'  = vpx wnd
+            vpy'  = vpy wnd
+            w     = width wnd
+            h     = height wnd
+            p1'   = position
+            p2'   = position + fwd
+            p1    = rpgUnproject M4.id viewI vpx' vpy' w h (V2.x p1') (V2.y p1')
+            p2    = rpgUnproject M4.id viewI vpx' vpy' w h (V2.x p2') (V2.y p2')
+            f     = V2.normalise $ p2 - p1
         in
             go
             { transform = M3.transform r fwd position
-            , angle = (-180) +
-                if V2.y r > 0
-                then toDeg . acos $ r `V2.dot` V2.unitx
-                else (+180) . toDeg . acos $ r `V2.dot` (-V2.unitx)
+            , angle = 180 -
+                if V2.x f > 0
+                then toDeg . acos $ f `V2.dot` V2.unity
+                else (+180) . toDeg . acos $ f `V2.dot` (-V2.unity)
             }
 
 
@@ -155,11 +181,11 @@ goNew :: GameStyle
       -> Vector3 -- ^ Axis of rotation
       -> GameObject
 
-goNew style (Left smr) cols transf axis =
-    GameObject style (Left $ SM.staticModelRenderer smr) cols transf axis 0 M4.id
+goNew style (Left smr) cols transf axis = GameObject
+    style (Left $ SM.staticModelRenderer smr) cols transf axis 0 dummyWindow
 
-goNew style (Right amr) cols transf axis =
-    GameObject style (Right $ AM.animatedModelRenderer 1 amr) cols transf axis 0 M4.id
+goNew style (Right amr) cols transf axis = GameObject
+    style (Right $ AM.animatedModelRenderer 1 amr) cols transf axis 0 dummyWindow
 
 
 goUpdate :: Float -> GameObject -> GameObject
@@ -185,7 +211,9 @@ goAABBs = fmap getAABB . collisioners
 
 -- | Get the game object's 3D transform.
 goRPGtransform :: GameObject -> M4.Matrix4
-goRPGtransform go = rpgTransform 0 (angle go) (axis go) (S2.pos go) (viewInv go)
+goRPGtransform go =
+    let viewI = viewInv . window $ go
+    in rpgTransform 0 (angle go) (axis go) (S2.pos go) viewI
 
 
 -- | Get the game object's current animation.
@@ -224,9 +252,9 @@ setCollisioners :: GameObject -> [Collisioner] -> GameObject
 setCollisioners go cols = go { collisioners = cols }
 
 
--- | Set the game object's view inverse matrix.
-setViewInverse :: M4.Matrix4 -> GameObject -> GameObject
-setViewInverse mat go = go { viewInv = mat }
+-- | Set the game object's window.
+setWindow :: Window -> GameObject -> GameObject
+setWindow wnd go = go { window = wnd }
 
 
 -- | Manipulate the game object's collisioners.
@@ -242,7 +270,7 @@ goRender sprog aprog cam go =
         style  = gameStyle go
         axis'  = axis go
         a      = angle go
-        viewI  = viewInv go
+        viewI  = viewInv . window $ go
         proj   = Cam.projection cam
         view   = M4.inverseTransform $ Cam.transform cam
         transf = S2.transform go

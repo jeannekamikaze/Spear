@@ -1,6 +1,8 @@
 module Spear.Math.MatrixUtils
 (
     fastNormalMatrix
+,   unproject
+,   rpgUnproject
 ,   rpgTransform
 ,   pltTransform
 ,   rpgInverse
@@ -27,6 +29,50 @@ fastNormalMatrix m =
         (M4.m02 m') (M4.m12 m') (M4.m22 m')
 
 
+-- | Transform the given point in window coordinates to object coordinates.
+unproject :: Matrix4 -- ^ Inverse projection matrix
+          -> Matrix4 -- ^ Inverse modelview matrix.
+          -> Float   -- ^ Viewport x
+          -> Float   -- ^ Viewport y
+          -> Float   -- ^ Viewport width
+          -> Float   -- ^ Viewport height
+          -> Float   -- ^ Window x
+          -> Float   -- ^ Window y
+          -> Float   -- ^ Window z
+          -> V3.Vector3
+unproject projI modelviewI vpx vpy w h x y z =
+    let
+        xmouse = 2*(x-vpx)/w - 1
+        ymouse = 2*(y-vpy)/h - 1
+        zmouse = 2*z - 1
+    in
+        (modelviewI * projI) `M4.mulp` V3.vec3 xmouse ymouse zmouse
+
+
+-- | Transform the given point in window coordinates to 2d coordinates.
+--
+-- The line defined by the given point in window space is intersected with
+-- the XZ plane in world space to yield the resulting 2d point.
+rpgUnproject
+    :: Matrix4 -- ^ Inverse projection matrix
+    -> Matrix4 -- ^ Inverse viewI matrix.
+    -> Float   -- ^ Viewport x
+    -> Float   -- ^ Viewport y
+    -> Float   -- ^ Viewport width
+    -> Float   -- ^ Viewport height
+    -> Float   -- ^ Window x
+    -> Float   -- ^ Window y
+    -> Vector2
+rpgUnproject projI viewI vpx vpy w h x y =
+    let
+        p1 = unproject projI viewI vpx vpy w h x y 0
+        p2 = unproject projI viewI vpx vpy w h x y (-1)
+        lambda = (V3.y p1 / (V3.y p1 - V3.y p2))
+        p' = p1 + V3.scale lambda (p2 - p1)
+    in
+        vec2 (V3.x p') (-V3.z p')
+
+
 -- | Map an object's transform in view space to world space.
 rpgTransform
     :: Float   -- ^ The height above the ground
@@ -37,7 +83,7 @@ rpgTransform
     -> Matrix4
 rpgTransform h a axis pos viewI =
     let p1 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) 0)
-        p2 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) (-100))
+        p2 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) (-1))
         lambda  = (V3.y p1 / (V3.y p1 - V3.y p2))
         p  = p1 + V3.scale lambda (p2 - p1)
         mat' = axisAngle axis a

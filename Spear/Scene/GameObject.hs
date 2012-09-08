@@ -39,6 +39,7 @@ import qualified Spear.Math.Matrix3 as M3
 import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils
 import qualified Spear.Math.Spatial2 as S2
+import Spear.Math.Utils
 import Spear.Math.Vector2 as V2
 import Spear.Math.Vector3 as V3
 import qualified Spear.Render.AnimatedModel as AM
@@ -76,7 +77,7 @@ data GameObject = GameObject
     , transform    :: !M3.Matrix3
     , axis         :: !Vector3
     , angle        :: !Float
-    , window       :: !Window -- ^ Get the game object's window.
+    , window       :: !Window
     }
 
 
@@ -152,16 +153,9 @@ instance S2.Spatial2 GameObject where
             fwd      = V2.normalise $ p - position
             r        = perp fwd
             toDeg = (*(180/pi))
-            wnd = window go
-            viewI = viewInv wnd
-            vpx'  = vpx wnd
-            vpy'  = vpy wnd
-            w     = width wnd
-            h     = height wnd
-            p1'   = position
-            p2'   = position + fwd
-            p1    = rpgUnproject M4.id viewI vpx' vpy' w h (V2.x p1') (V2.y p1')
-            p2    = rpgUnproject M4.id viewI vpx' vpy' w h (V2.x p2') (V2.y p2')
+            viewI = viewInv . window $ go
+            p1    = viewToWorld2d position viewI
+            p2    = viewToWorld2d (position + fwd) viewI
             f     = V2.normalise $ p2 - p1
         in
             go
@@ -270,7 +264,6 @@ goRender sprog aprog cam go =
         style  = gameStyle go
         axis'  = axis go
         a      = angle go
-        viewI  = viewInv . window $ go
         proj   = Cam.projection cam
         view   = M4.inverseTransform $ Cam.transform cam
         transf = S2.transform go

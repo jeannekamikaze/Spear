@@ -242,8 +242,8 @@ setAxis ax go = go { axis = ax }
 
 
 -- | Set the game object's collisioners.
-setCollisioners :: GameObject -> [Collisioner] -> GameObject
-setCollisioners go cols = go { collisioners = cols }
+setCollisioners :: [Collisioner] -> GameObject -> GameObject
+setCollisioners cols go = go { collisioners = cols }
 
 
 -- | Set the game object's window.

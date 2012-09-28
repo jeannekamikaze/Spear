@@ -25,9 +25,9 @@ orientation2d p q r = (x q - x p) * (y r - y p) - (y q - y p) * (x r - x p)
 
 
 -- | Project the given point in view space onto the XZ plane in world space.
-viewToWorld2d :: Vector2
-              -> Matrix4
-              -> Vector2
+viewToWorld2d :: Vector2 -- ^ Point in view space
+              -> Matrix4 -- ^ Inverse view matrix
+              -> Vector2 -- ^ Projection of the given point
 viewToWorld2d p viewI =
     let
         p1' = V3.vec3 (V2.x p) (V2.y p) 0

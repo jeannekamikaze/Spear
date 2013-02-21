@@ -134,8 +134,8 @@ getMouse oldMouse =
 
 
 -- | Get input devices.
-getInput :: Mouse -> IO Input
-getInput oldMouse = do
+getInput :: Input -> IO Input
+getInput (Input _ oldMouse) = do
     keyboard <- getKeyboard
     mouse    <- getMouse oldMouse
     return $ Input keyboard mouse

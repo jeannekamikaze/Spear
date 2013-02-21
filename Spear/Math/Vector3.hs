@@ -173,7 +173,7 @@ cross :: Vector3 -> Vector3 -> Vector3
 -- | Compute the given vector's squared norm.
 normSq :: Vector3 -> Float
 normSq (Vector3 ax ay az) = ax*ax + ay*ay + az*az
-    
+
 
 -- | Compute the given vector's norm.
 norm :: Vector3 -> Float

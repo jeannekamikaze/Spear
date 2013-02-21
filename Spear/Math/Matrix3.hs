@@ -40,8 +40,7 @@ module Spear.Math.Matrix3
 where
 
 
-import Spear.Math.Vector2 as V2
-import Spear.Math.Vector3 as V3
+import Spear.Math.Vector
 
 import Foreign.Storable
 
@@ -142,9 +141,9 @@ mat3 = Matrix3
 -- | Build a matrix from three vectors in 3D.
 mat3fromVec :: Vector3 -> Vector3 -> Vector3 -> Matrix3
 mat3fromVec v0 v1 v2 = Matrix3
-    (V3.x v0) (V3.x v1) (V3.x v2)
-    (V3.y v0) (V3.y v1) (V3.y v2)
-    (V3.z v0) (V3.z v1) (V3.z v2)
+    (x v0) (x v1) (x v2)
+    (y v0) (y v1) (y v2)
+    (z v0) (z v1) (z v2)
 
 
 -- | Build a transformation matrix.
@@ -154,8 +153,8 @@ transform :: Vector2 -- ^ Right vector
           -> Matrix3 -- ^ Transform
 
 transform r f p = mat3
-    (V2.x r) (V2.x f) (V2.x p)
-    (V2.y r) (V2.y f) (V2.y p)
+    (x r) (x f) (x p)
+    (y r) (y f) (y p)
     0        0        1
 
 
@@ -205,8 +204,8 @@ transl tx ty = mat3
 -- | Create a translation matrix.
 translv :: Vector2 -> Matrix3
 translv v = mat3
-    1 0 (V2.x v)
-    0 1 (V2.y v)
+    1 0 (x v)
+    0 1 (y v)
     0 0 1
 
 
@@ -238,9 +237,9 @@ scalev v = mat3
     0   sy  0
     0   0   sz
         where
-            sx = V3.x v
-            sy = V3.y v
-            sz = V3.z v
+            sx = x v
+            sy = y v
+            sz = z v
 
 
 -- | Create an X reflection matrix.
@@ -279,9 +278,9 @@ transpose m = mat3
 mulp :: Matrix3 -> Vector2 -> Vector2
 mulp m v = vec2 x' y'
     where
-        v' = vec3 (V2.x v) (V2.y v) 1
-        x' = row0 m `V3.dot` v'
-        y' = row1 m `V3.dot` v'
+        v' = vec3 (x v) (y v) 1
+        x' = row0 m `dot` v'
+        y' = row1 m `dot` v'
 
 
 
@@ -289,19 +288,19 @@ mulp m v = vec2 x' y'
 muld :: Matrix3 -> Vector2 -> Vector2
 muld m v = vec2 x' y'
     where
-        v' = vec3 (V2.x v) (V2.y v) 0
-        x' = row0 m `V3.dot` v'
-        y' = row1 m `V3.dot` v'
+        v' = vec3 (x v) (y v) 0
+        x' = row0 m `dot` v'
+        y' = row1 m `dot` v'
 
 
 -- | Transform the given vector in 3D space with the given matrix.
 mul :: Matrix3 -> Vector3 -> Vector3
 mul m v = vec3 x' y' z'
     where
-        v' = vec3 (V3.x v) (V3.y v) (V3.z v)
-        x' = row0 m `V3.dot` v'
-        y' = row1 m `V3.dot` v'
-        z' = row2 m `V3.dot` v'
+        v' = vec3 (x v) (y v) (z v)
+        x' = row0 m `dot` v'
+        y' = row1 m `dot` v'
+        z' = row2 m `dot` v'
 
 
 -- | Zip two 'Matrix3' together with the specified function.
@@ -327,11 +326,10 @@ inverseTransform mat =
         f = forward mat
         t = -(position mat)
     in mat3
-        (V2.x r) (V2.y r) (t `V2.dot` r)
-        (V2.x f) (V2.y f) (t `V2.dot` f)
+        (x r) (y r) (t `dot` r)
+        (x f) (y f) (t `dot` f)
         0        0        1
 
 
 fromDeg :: (Floating a) => a -> a
 fromDeg = (*pi) . (/180)
-

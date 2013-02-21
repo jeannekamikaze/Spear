@@ -93,9 +93,7 @@ where
 import Spear.Assets.Image
 import Spear.Math.Matrix3 (Matrix3)
 import Spear.Math.Matrix4 (Matrix4)
-import Spear.Math.Vector2 as V2
-import Spear.Math.Vector3 as V3
-import Spear.Math.Vector4 as V4
+import Spear.Math.Vector
 import Spear.Setup
 
 import Control.Monad
@@ -371,25 +369,25 @@ readSource' file = do
 -- | Load a 2D vector.
 uniformVec2 :: GLint -> Vector2 -> IO ()
 uniformVec2 loc v = glUniform2f loc x' y'
-    where x' = unsafeCoerce $ V2.x v
-          y' = unsafeCoerce $ V2.y v
+    where x' = unsafeCoerce $ x v
+          y' = unsafeCoerce $ y v
 
 
 -- | Load a 3D vector.
 uniformVec3 :: GLint -> Vector3 -> IO ()
 uniformVec3 loc v = glUniform3f loc x' y' z'
-    where x' = unsafeCoerce $ V3.x v
-          y' = unsafeCoerce $ V3.y v
-          z' = unsafeCoerce $ V3.z v
+    where x' = unsafeCoerce $ x v
+          y' = unsafeCoerce $ y v
+          z' = unsafeCoerce $ z v
     
 
 -- | Load a 4D vector.
 uniformVec4 :: GLint -> Vector4 -> IO ()
 uniformVec4 loc v = glUniform4f loc x' y' z' w'
-    where x' = unsafeCoerce $ V4.x v
-          y' = unsafeCoerce $ V4.y v
-          z' = unsafeCoerce $ V4.z v
-          w' = unsafeCoerce $ V4.w v
+    where x' = unsafeCoerce $ x v
+          y' = unsafeCoerce $ y v
+          z' = unsafeCoerce $ z v
+          w' = unsafeCoerce $ w v
 
 
 -- | Load a 3x3 matrix.

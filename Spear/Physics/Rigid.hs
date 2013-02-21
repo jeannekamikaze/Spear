@@ -12,7 +12,7 @@ where
 
 import qualified Spear.Math.Matrix3 as M3
 import Spear.Math.Spatial2
-import Spear.Math.Vector2
+import Spear.Math.Vector
 import Spear.Physics.Types
 
 import Data.List (foldl')
@@ -31,13 +31,13 @@ instance Spatial2 RigidBody where
     
     move v body = body { position = v + position body }
     
-    moveFwd     speed body = body { position = position body + scale speed unity }
+    moveFwd     speed body = body { position = position body + scale speed unity2 }
     
-    moveBack    speed body = body { position = position body + scale (-speed) unity }
+    moveBack    speed body = body { position = position body + scale (-speed) unity2 }
     
-    strafeLeft  speed body = body { position = position body + scale (-speed) unitx }
+    strafeLeft  speed body = body { position = position body + scale (-speed) unitx2 }
     
-    strafeRight speed body = body { position = position body + scale speed unitx }
+    strafeRight speed body = body { position = position body + scale speed unitx2 }
     
     rotate angle = id
     
@@ -45,13 +45,13 @@ instance Spatial2 RigidBody where
     
     pos = position
     
-    fwd _ = unity
+    fwd _ = unity2
     
-    up _ = unity
+    up _ = unity2
     
-    right _ = unitx
+    right _ = unitx2
     
-    transform body = M3.transform unitx unity $ position body
+    transform body = M3.transform unitx2 unity2 $ position body
     
     setTransform transf body = body { position = M3.position transf }
     
@@ -60,13 +60,13 @@ instance Spatial2 RigidBody where
 
 -- | Build a 'RigidBody'.
 rigidBody :: Mass -> Position -> RigidBody
-rigidBody m x = RigidBody m x zero zero
+rigidBody m x = RigidBody m x zero2 zero2
 
 
 -- | Update the given 'RigidBody'.
 update :: [Force] -> Dt -> RigidBody -> RigidBody
 update forces dt body =
-    let netforce = foldl' (+) zero forces
+    let netforce = foldl' (+) zero2 forces
         m  = mass body
         r1 = position body
         v1 = velocity body

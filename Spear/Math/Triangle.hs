@@ -5,7 +5,7 @@ module Spear.Math.Triangle
 where
 
 
-import Spear.Math.Vector3
+import Spear.Math.Vector
 
 import Foreign.C.Types
 import Foreign.Storable

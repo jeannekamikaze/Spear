@@ -1,25 +1,18 @@
-module Spear.Math.Vector2
+module Spear.Math.Vector.Vector2
 (
     Vector2
-    -- * Accessors
-,   x
-,   y
     -- * Construction
-,   unitx
-,   unity
-,   zero
-,   fromList
+,   unitx2
+,   unity2
+,   zero2
 ,   vec2
     -- * Operations
 ,   perp
-,   dot
-,   normSq
-,   norm
-,   scale
-,   neg
-,   normalise
 )
 where
+
+
+import Spear.Math.Vector.Class
 
 
 import Foreign.C.Types (CFloat)
@@ -53,6 +46,33 @@ instance Ord Vector2 where
     min (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.min ax bx) (Prelude.min ay by)
 
 
+instance VectorClass Vector2 where
+         fromList (ax:ay:_) = Vector2 ax ay
+         
+         x (Vector2 ax _) = ax
+         
+         y (Vector2 _ ay) = ay
+
+         (Vector2 ax _) ! 0 = ax
+         (Vector2 _ ay) ! 1 = ay
+         _              ! _ = 0
+         
+         Vector2 ax ay `dot` Vector2 bx by = ax*bx + ay*by
+         
+         normSq (Vector2 ax ay) = ax*ax + ay*ay
+         
+         norm = sqrt . normSq
+         
+         scale s (Vector2 ax ay) = Vector2 (s*ax) (s*ay)
+         
+         neg (Vector2 ax ay) = Vector2 (-ax) (-ay)
+         
+         normalise v =
+                   let n' = norm v
+                       n = if n' == 0 then 1 else n'
+                   in scale (1.0 / n) v
+
+
 sizeFloat = sizeOf (undefined :: CFloat)
 
 
@@ -71,31 +91,19 @@ instance Storable Vector2 where
 
 
 -- | Get the vector's x coordinate.    
-x (Vector2 ax _) = ax
 
-
--- | Get the vector's y coordinate.
-y (Vector2 _ ay) = ay
 
 
 -- | Unit vector along the X axis.
-unitx :: Vector2
-unitx = Vector2 1 0
+unitx2 = Vector2 1 0
 
 
 -- | Unit vector along the Y axis.
-unity :: Vector2
-unity = Vector2 0 1
+unity2 = Vector2 0 1
 
 
 -- | Zero vector.
-zero :: Vector2
-zero = Vector2 0 0
-
-
--- | Create a vector from the given list.
-fromList :: [Float] -> Vector2
-fromList (ax:ay:_) = Vector2 ax ay
+zero2 = Vector2 0 0
 
 
 -- | Create a vector from the given values.
@@ -110,36 +118,3 @@ vec2 ax ay = Vector2 ax ay
 -- perp (Vector2 1 0) = Vector2 0 (-1)
 perp :: Vector2 -> Vector2
 perp (Vector2 x y) = Vector2 y (-x)
-
-
--- | Compute the given vectors' dot product.
-dot :: Vector2 -> Vector2 -> Float
-Vector2 ax ay `dot` Vector2 bx by = ax*bx + ay*by
-
-
--- | Compute the given vector's squared norm.
-normSq :: Vector2 -> Float
-normSq (Vector2 ax ay) = ax*ax + ay*ay
-
-
--- | Compute the given vector's norm.
-norm :: Vector2 -> Float
-norm = sqrt . normSq
-
-
--- | Multiply the given vector with the given scalar.
-scale :: Float -> Vector2 -> Vector2
-scale s (Vector2 ax ay) = Vector2 (s*ax) (s*ay)
-
-
--- | Negate the given vector.
-neg :: Vector2 -> Vector2
-neg (Vector2 ax ay) = Vector2 (-ax) (-ay)
-
-
--- | Normalise the given vector.
-normalise :: Vector2 -> Vector2
-normalise v =
-          let n' = norm v
-              n = if n' == 0 then 1 else n'
-          in scale (1.0 / n) v

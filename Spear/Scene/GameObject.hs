@@ -40,8 +40,7 @@ import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils
 import qualified Spear.Math.Spatial2 as S2
 import Spear.Math.Utils
-import Spear.Math.Vector2 as V2
-import Spear.Math.Vector3 as V3
+import Spear.Math.Vector
 import qualified Spear.Render.AnimatedModel as AM
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
@@ -90,7 +89,7 @@ instance S2.Spatial2 GameObject where
     
     moveFwd s go =
         let m = transform go
-            v = V2.scale s $ M3.forward m
+            v = scale s $ M3.forward m
         in go
            { collisioners = fmap (Col.move v) $ collisioners go
            , transform = M3.translv v * m
@@ -98,7 +97,7 @@ instance S2.Spatial2 GameObject where
     
     moveBack s go =
         let m = transform go
-            v = V2.scale (-s) $ M3.forward m
+            v = scale (-s) $ M3.forward m
         in go
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
@@ -106,7 +105,7 @@ instance S2.Spatial2 GameObject where
     
     strafeLeft s go =
         let m = transform go
-            v = V2.scale (-s) $ M3.right m
+            v = scale (-s) $ M3.right m
         in go
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
@@ -114,7 +113,7 @@ instance S2.Spatial2 GameObject where
     
     strafeRight s go =
         let m = transform go
-            v = V2.scale s $ M3.right m
+            v = scale s $ M3.right m
         in go
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
@@ -150,20 +149,20 @@ instance S2.Spatial2 GameObject where
     
     lookAt p go =
         let position = S2.pos go
-            fwd      = V2.normalise $ p - position
+            fwd      = normalise $ p - position
             r        = perp fwd
             toDeg = (*(180/pi))
             viewI = viewInv . window $ go
             p1    = viewToWorld2d position viewI
             p2    = viewToWorld2d (position + fwd) viewI
-            f     = V2.normalise $ p2 - p1
+            f     = normalise $ p2 - p1
         in
             go
             { transform = M3.transform r fwd position
             , angle = 180 -
-                if V2.x f > 0
-                then toDeg . acos $ f `V2.dot` V2.unity
-                else (+180) . toDeg . acos $ f `V2.dot` (-V2.unity)
+                if x f > 0
+                then toDeg . acos $ f `dot` unity2
+                else (+180) . toDeg . acos $ f `dot` (-unity2)
             }
 
 

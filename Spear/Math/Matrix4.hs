@@ -51,8 +51,7 @@ module Spear.Math.Matrix4
 where
 
 
-import Spear.Math.Vector3 as V3
-import Spear.Math.Vector4 as V4
+import Spear.Math.Vector
 
 import Foreign.Storable
 
@@ -171,10 +170,10 @@ mat4 = Matrix4
 -- | Build a matrix from four vectors in 4D.
 mat4fromVec :: Vector4 -> Vector4 -> Vector4 -> Vector4 -> Matrix4
 mat4fromVec v0 v1 v2 v3 = Matrix4
-    (V4.x v0) (V4.x v1) (V4.x v2) (V4.x v3)
-    (V4.y v0) (V4.y v1) (V4.y v2) (V4.y v3)
-    (V4.z v0) (V4.z v1) (V4.z v2) (V4.z v3)
-    (V4.w v0) (V4.w v1) (V4.w v2) (V4.w v3)
+    (x v0) (x v1) (x v2) (x v3)
+    (y v0) (y v1) (y v2) (y v3)
+    (z v0) (z v1) (z v2) (z v3)
+    (w v0) (w v1) (w v2) (w v3)
 
 
 -- | Build a transformation 'Matrix4' from the given vectors.
@@ -185,9 +184,9 @@ transform :: Vector3 -- ^ Right vector.
           -> Matrix4
 
 transform right up fwd pos = mat4
-    (V3.x right) (V3.x up) (V3.x fwd) (V3.x pos)
-    (V3.y right) (V3.y up) (V3.y fwd) (V3.y pos)
-    (V3.z right) (V3.z up) (V3.z fwd) (V3.z pos)
+    (x right) (x up) (x fwd) (x pos)
+    (y right) (y up) (y fwd) (y pos)
+    (z right) (z up) (z fwd) (z pos)
     0                 0              0               1
 
 
@@ -225,8 +224,8 @@ lookAt :: Vector3 -- ^ Eye position.
        -> Matrix4
 
 lookAt pos target =
-        let fwd = V3.normalise $ target - pos
-            r    = fwd `cross` V3.unity
+        let fwd = normalise $ target - pos
+            r    = fwd `cross` unity3
             u    = r `cross` fwd
         in
             transform r u (-fwd) pos
@@ -271,9 +270,9 @@ transl x y z = mat4
 -- | Create a translation matrix.
 translv :: Vector3 -> Matrix4
 translv v = mat4
-    1    0    0    (V3.x v)
-    0    1    0    (V3.y v)
-    0    0    1    (V3.z v)
+    1    0    0    (x v)
+    0    1    0    (y v)
+    0    0    1    (z v)
     0    0    0    1
 
 
@@ -320,22 +319,22 @@ rotZ angle = mat4
 -- The given angle must be in degrees.
 axisAngle :: Vector3 -> Float -> Matrix4
 axisAngle v angle = mat4
-    (c + omc*x^2) (omc*xy-sz) (omc*xz+sy) 0
-    (omc*xy+sz)   (c+omc*y^2) (omc*yz-sx) 0
-    (omc*xz-sy)   (omc*yz+sx) (c+omc*z^2) 0
-     0             0           0          1
+    (c + omc*ax^2) (omc*xy-sz)  (omc*xz+sy)  0
+    (omc*xy+sz)    (c+omc*ay^2) (omc*yz-sx)  0
+    (omc*xz-sy)    (omc*yz+sx)  (c+omc*az^2) 0
+     0             0           0             1
     where
-        x = V3.x v
-        y = V3.y v
-        z = V3.z v
+        ax  = x v
+        ay  = y v
+        az  = z v
         s   = sin . toRAD $ angle
         c   = cos . toRAD $ angle
-        xy  = x*y
-        xz  = x*z
-        yz  = y*z
-        sx  = s*x
-        sy  = s*y
-        sz  = s*z
+        xy  = ax*ay
+        xz  = ax*az
+        yz  = ay*az
+        sx  = s*ax
+        sy  = s*ay
+        sz  = s*az
         omc = 1 - c
 
 
@@ -356,9 +355,9 @@ scalev v = mat4
     0   0   sz  0
     0   0   0   1
         where
-            sx = V3.x v
-            sy = V3.y v
-            sz = V3.z v
+            sx = x v
+            sy = y v
+            sz = z v
 
 
 -- | Create an X reflection matrix.
@@ -430,13 +429,13 @@ planeProj :: Vector3 -- ^ Plane normal
           -> Vector3 -- ^ Projection direction
           -> Matrix4
 planeProj n d l =
-    let c = n `V3.dot` l
-        nx = V3.x n
-        ny = V3.y n
-        nz = V3.z n
-        lx = V3.x l
-        ly = V3.y l
-        lz = V3.z l
+    let c = n `dot` l
+        nx = x n
+        ny = y n
+        nz = z n
+        lx = x l
+        ly = y l
+        lz = z l
     in mat4
         (d + c - nx*lx) (-ny*lx)          (-nz*lx)        (-lx*d)
         (-nx*ly)        (d + c - ny*ly)   (-nz*ly)        (-ly*d)
@@ -463,9 +462,9 @@ inverseTransform mat =
         t = position mat
     in
         mat4
-            (V3.x r) (V3.y r) (V3.z r) (-t `V3.dot` r)
-            (V3.x u) (V3.y u) (V3.z u) (-t `V3.dot` u)
-            (V3.x f) (V3.y f) (V3.z f) (-t `V3.dot` f)
+            (x r) (y r) (z r) (-t `dot` r)
+            (x u) (y u) (z u) (-t `dot` u)
+            (x f) (y f) (z f) (-t `dot` f)
             0        0        0        1
 
 
@@ -618,10 +617,10 @@ inverse mat =
 mul :: Float -> Matrix4 -> Vector3 -> Vector3
 mul w m v = vec3 x' y' z'
     where
-        v' = vec4 (V3.x v) (V3.y v) (V3.z v) w
-        x' = row0 m `V4.dot` v'
-        y' = row1 m `V4.dot` v'
-        z' = row2 m `V4.dot` v'
+        v' = vec4 (x v) (y v) (z v) w
+        x' = row0 m `dot` v'
+        y' = row1 m `dot` v'
+        z' = row2 m `dot` v'
 
 
 -- | Transform the given point vector in 3D space with the given matrix.
@@ -641,11 +640,11 @@ muld = mul 0
 mul' :: Float -> Matrix4 -> Vector3 -> Vector3
 mul' w m v = vec3 (x'/w') (y'/w') (z'/w')
     where
-        v' = vec4 (V3.x v) (V3.y v) (V3.z v) w
-        x' = row0 m `V4.dot` v'
-        y' = row1 m `V4.dot` v'
-        z' = row2 m `V4.dot` v'
-        w' = row3 m `V4.dot` v'
+        v' = vec4 (x v) (y v) (z v) w
+        x' = row0 m `dot` v'
+        y' = row1 m `dot` v'
+        z' = row2 m `dot` v'
+        w' = row3 m `dot` v'
 
 
 toRAD = (*pi) . (/180)

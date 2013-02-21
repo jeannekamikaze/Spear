@@ -22,13 +22,15 @@ library
                      Spear.Math.AABB Spear.Math.Circle Spear.Math.Triangle Spear.Game
                      Spear.GLSL Spear.Math.Camera Spear.Math.Entity Spear.Math.Matrix3
                      Spear.Math.Matrix4 Spear.Math.MatrixUtils Spear.Math.Plane
-                     Spear.Math.Quaternion Spear.Math.Vector3 Spear.Math.Vector4
+                     Spear.Math.Quaternion Spear.Math.Vector Spear.Math.Vector.Class
+                     Spear.Math.Vector.Vector3 Spear.Math.Vector.Vector4
+                     Spear.Math.Vector.Vector2
                      Spear.Physics Spear.Physics.Rigid Spear.Render.AnimatedModel
                      Spear.Render.Material Spear.Render.Model Spear.Render.Program
                      Spear.Render.StaticModel Spear.Scene.Graph Spear.Scene.Light
                      Spear.Scene.Loader Spear.Scene.Scene Spear.Scene.SceneResources
                      Spear.Setup Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
-                     Spear.Math.Vector2 Spear.Math.Quad Spear.Math.Ray
+                     Spear.Math.Quad Spear.Math.Ray
                      Spear.Math.Segment Spear.Math.Utils Spear.Math.Spatial2
                      Spear.Math.Spatial3
     exposed: True

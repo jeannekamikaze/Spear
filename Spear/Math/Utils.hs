@@ -9,8 +9,7 @@ where
 
 
 import Spear.Math.Matrix4 as M4
-import Spear.Math.Vector2 as V2
-import qualified Spear.Math.Vector3 as V3
+import Spear.Math.Vector as V
 
 
 data Side = L | R deriving (Eq, Show)
@@ -30,10 +29,10 @@ viewToWorld2d :: Vector2 -- ^ Point in view space
               -> Vector2 -- ^ Projection of the given point
 viewToWorld2d p viewI =
     let
-        p1' = V3.vec3 (V2.x p) (V2.y p) 0
+        p1' = vec3 (x p) (y p) 0
         p1  = viewI `mulp` p1'
         p2  = p1 - M4.forward viewI
-        lambda = (V3.y p1 / (V3.y p1 - V3.y p2))
-        p'  = p1 + V3.scale lambda (p2 - p1)
+        lambda = (y p1 / (y p1 - y p2))
+        p'  = p1 + V.scale lambda (p2 - p1)
     in
-        vec2 (V3.x p') (-V3.z p')
+        vec2 (x p') (-z p')

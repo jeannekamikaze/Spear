@@ -7,7 +7,7 @@ module Spear.Math.Circle
 where
 
 
-import Spear.Math.Vector2
+import Spear.Math.Vector
 
 
 -- | A bounding volume.

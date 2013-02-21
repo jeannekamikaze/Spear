@@ -10,15 +10,14 @@ module Spear.Math.Quaternion
 ,   qmul
 ,   qconj
 ,   qinv
-,   Spear.Math.Quaternion.normalise
-,   Spear.Math.Quaternion.norm
+,   qnormalise
+,   qnorm
 ,   qrot
 )
 where
 
 
-import qualified Spear.Math.Vector3 as V3
-import Spear.Math.Vector4 as V4
+import Spear.Math.Vector
 
 
 newtype Quaternion = Quaternion { getVec :: Vector4 }
@@ -39,23 +38,23 @@ qvec4 = Quaternion
 
 
 -- | Build a 'Quaternion' from the given 'Vector3' and w.
-qvec3 :: V3.Vector3 -> Float -> Quaternion
-qvec3 v w = Quaternion $ vec4 (V3.x v) (V3.y v) (V3.z v) w
+qvec3 :: Vector3 -> Float -> Quaternion
+qvec3 v w = Quaternion $ vec4 (x v) (y v) (z v) w
 
 
 -- | Build a 'Quaternion' representing the given rotation.
-qAxisAngle :: V3.Vector3 -> Float -> Quaternion
+qAxisAngle :: Vector3 -> Float -> Quaternion
 qAxisAngle axis angle =
-    let s' = V3.norm axis
-        s  = if s' == 0 then 1 else s'
-        a  = angle * toRAD * 0.5
-        sa = sin a
-        w  = cos a
-        x  = V3.x axis * sa * s
-        y  = V3.y axis * sa * s
-        z  = V3.z axis * sa * s
+    let s'  = norm axis
+        s   = if s' == 0 then 1 else s'
+        a   = angle * toRAD * 0.5
+        sa  = sin a
+        qw  = cos a
+        qx  = x axis * sa * s
+        qy  = y axis * sa * s
+        qz  = z axis * sa * s
     in
-        Quaternion $ vec4 x y z w
+        Quaternion $ vec4 qx qy qz qw
 
 
 -- | Compute the product of the given two quaternions.
@@ -90,19 +89,19 @@ qinv (Quaternion q) =
 
 
 -- | Normalise the given 'Quaternion'.
-normalise :: Quaternion -> Quaternion
-normalise = Quaternion . V4.normalise . getVec
+qnormalise :: Quaternion -> Quaternion
+qnormalise = Quaternion . normalise . getVec
 
 
 -- | Compute the norm of the given 'Quaternion'.
-norm :: Quaternion -> Float
-norm = V4.norm . getVec
+qnorm :: Quaternion -> Float
+qnorm = norm . getVec
 
 
 -- | Rotate the given 'Vector3'.
-qrot :: Quaternion -> V3.Vector3 -> V3.Vector3
+qrot :: Quaternion -> Vector3 -> Vector3
 qrot q v = toVec3 $ q `qmul` qvec3 v 0 `qmul` qconj q
-    where toVec3 (Quaternion q) = V3.vec3 (x q) (y q) (z q)
+    where toVec3 (Quaternion q) = vec3 (x q) (y q) (z q)
 
 
 toRAD = pi / 180

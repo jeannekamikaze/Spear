@@ -15,8 +15,7 @@ where
 import Spear.Math.Camera as Cam
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
-import Spear.Math.Vector2 as V2
-import Spear.Math.Vector3 as V3
+import Spear.Math.Vector as V
 
 
 -- | Compute the normal matrix of the given matrix.
@@ -39,14 +38,14 @@ unproject :: Matrix4 -- ^ Inverse projection matrix
           -> Float   -- ^ Window x
           -> Float   -- ^ Window y
           -> Float   -- ^ Window z
-          -> V3.Vector3
+          -> Vector3
 unproject projI modelviewI vpx vpy w h x y z =
     let
         xmouse = 2*(x-vpx)/w - 1
         ymouse = 2*(y-vpy)/h - 1
         zmouse = 2*z - 1
     in
-        (modelviewI * projI) `M4.mulp` V3.vec3 xmouse ymouse zmouse
+        (modelviewI * projI) `M4.mulp` vec3 xmouse ymouse zmouse
 
 
 -- | Transform the given point in window coordinates to 2d coordinates.
@@ -63,14 +62,14 @@ rpgUnproject
     -> Float   -- ^ Window x
     -> Float   -- ^ Window y
     -> Vector2
-rpgUnproject projI viewI vpx vpy w h x y =
+rpgUnproject projI viewI vpx vpy w h wx wy =
     let
-        p1 = unproject projI viewI vpx vpy w h x y 0
-        p2 = unproject projI viewI vpx vpy w h x y (-1)
-        lambda = (V3.y p1 / (V3.y p1 - V3.y p2))
-        p' = p1 + V3.scale lambda (p2 - p1)
+        p1 = unproject projI viewI vpx vpy w h wx wy 0
+        p2 = unproject projI viewI vpx vpy w h wx wy (-1)
+        lambda = (y p1 / (y p1 - y p2))
+        p' = p1 + V.scale lambda (p2 - p1)
     in
-        vec2 (V3.x p') (-V3.z p')
+        vec2 (x p') (-(z p'))
 
 
 -- | Map an object's transform in view space to world space.
@@ -82,33 +81,33 @@ rpgTransform
     -> Matrix4 -- ^ Inverse view matrix
     -> Matrix4
 rpgTransform h a axis pos viewI =
-    let p1 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) 0)
-        p2 = viewI `M4.mulp` (vec3 (V2.x pos) (V2.y pos) (-1))
-        lambda  = (V3.y p1 / (V3.y p1 - V3.y p2))
-        p  = p1 + V3.scale lambda (p2 - p1)
+    let p1 = viewI `M4.mulp` (vec3 (x pos) (y pos) 0)
+        p2 = viewI `M4.mulp` (vec3 (x pos) (y pos) (-1))
+        lambda  = (y p1 / (y p1 - y p2))
+        p  = p1 + V.scale lambda (p2 - p1)
         mat' = axisAngle axis a
         r = M4.right mat'
         u = M4.up mat'
         f = M4.forward mat'
         t = p + vec3 0 h 0
     in mat4
-         (V3.x r) (V3.x u) (V3.x f) (V3.x t)
-         (V3.y r) (V3.y u) (V3.y f) (V3.y t)
-         (V3.z r) (V3.z u) (V3.z f) (V3.z t)
+         (x r) (x u) (x f) (x t)
+         (y r) (y u) (y f) (y t)
+         (z r) (z u) (z f) (z t)
          0        0        0        1
 
 
 -- | Map an object's transform in view space to world space.
 pltTransform :: Matrix3 -> Matrix4
 pltTransform mat =
-    let r = let r' = M3.right mat in vec3 (V2.x r') (V2.y r') 0
-        u = let u' = M3.up mat in vec3 (V2.x u') (V2.y u') 0
-        f = V3.unitz
-        t = let t' = M3.position mat in vec3 (V2.x t') (V2.y t') 0
+    let r = let r' = M3.right mat in vec3 (x r') (y r') 0
+        u = let u' = M3.up mat in vec3 (x u') (y u') 0
+        f = unitz3
+        t = let t' = M3.position mat in vec3 (x t') (y t') 0
     in mat4
-        (V3.x r) (V3.x u) (V3.x f) (V3.x t)
-        (V3.y r) (V3.y u) (V3.y f) (V3.y t)
-        (V3.z r) (V3.z u) (V3.z f) (V3.z t)
+        (x r) (x u) (x f) (x t)
+        (y r) (y u) (y f) (y t)
+        (z r) (z u) (z f) (z t)
         0        0        0        1
 
 
@@ -147,4 +146,4 @@ objToClip cam model p =
         proj = Cam.projection cam
         p' = (proj * view * model) `M4.mulp` p
     in
-        vec2 (V3.x p') (V3.y p')
+        vec2 (x p') (y p')

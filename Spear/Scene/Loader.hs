@@ -24,9 +24,7 @@ import qualified Spear.GLSL as GLSL
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
-import Spear.Math.Vector2 as V2
-import Spear.Math.Vector3 as V3
-import Spear.Math.Vector4 as V4
+import Spear.Math.Vector
 import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
@@ -204,27 +202,27 @@ loadModel' file rotation scale = do
             (case scale of
                 Nothing -> Prelude.id
                 Just s  -> flip Model.transformVerts $
-                    \(Vec3 x' y' z') -> Vec3 (V3.x s * x') (V3.y s * y') (V3.z s * z'))
+                    \(Vec3 x' y' z') -> Vec3 (x s * x') (y s * y') (z s * z'))
     
     (fmap transform $ Model.loadModel file) >>= setupIO . toGround
 
 
 rotateModel :: Rotation -> Model -> Model
-rotateModel (Rotation x y z order) model =
+rotateModel (Rotation ax ay az order) model =
     let mat = case order of
-            XYZ -> rotZ z * rotY y * rotX x
-            XZY -> rotY y * rotZ z * rotX x
-            YXZ -> rotZ z * rotX x * rotY y
-            YZX -> rotX x * rotZ z * rotY y
-            ZXY -> rotY y * rotX x * rotZ z
-            ZYX -> rotX x * rotY y * rotZ z
+            XYZ -> rotZ az * rotY ay * rotX ax
+            XZY -> rotY ay * rotZ az * rotX ax
+            YXZ -> rotZ az * rotX ax * rotY ay
+            YZX -> rotX ax * rotZ az * rotY ay
+            ZXY -> rotY ay * rotX ax * rotZ az
+            ZYX -> rotX ax * rotY ay * rotZ az
         normalMat = fastNormalMatrix mat
         
         vTransform (Vec3 x' y' z') =
-            let v = mat `M4.mulp` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
+            let v = mat `M4.mulp` (vec3 x' y' z') in Vec3 (x v) (y v) (z v)
         
         nTransform (Vec3 x' y' z') =
-            let v = normalMat `M3.mul` (vec3 x' y' z') in Vec3 (V3.x v) (V3.y v) (V3.z v)
+            let v = normalMat `M3.mul` (vec3 x' y' z') in Vec3 (x v) (y v) (z v)
     in
         flip Model.transformVerts vTransform . flip Model.transformNormals nTransform $ model
 
@@ -404,7 +402,7 @@ newObject' newGO sceneRes nid props = do
 
 vectors :: Maybe Vector2 -> (Vector2, Vector2)
 vectors up = case up of
-    Nothing -> (V2.unitx, V2.unity)
+    Nothing -> (unitx2, unity2)
     Just u  -> (perp u, u)
 
 

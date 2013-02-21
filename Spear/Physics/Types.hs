@@ -2,7 +2,7 @@ module Spear.Physics.Types
 where
 
 
-import Spear.Math.Vector2
+import Spear.Math.Vector
 
 
 type Dt = Float

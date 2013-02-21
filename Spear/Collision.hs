@@ -26,8 +26,7 @@ import Spear.Math.AABB
 import Spear.Math.Circle
 import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.Plane
-import Spear.Math.Vector2
-import qualified Spear.Math.Vector3 as V3
+import Spear.Math.Vector
 
 
 -- | Encodes several collision situations.
@@ -149,23 +148,23 @@ buildAABB cols = aabb $ generatePoints cols
 generatePoints :: [Collisioner] -> [Vector2]
 generatePoints = foldr generate []
     where
-        generate (AABBCol (AABB min max)) acc = p1:p2:p3:p4:p5:p6:p7:p8:acc
+        generate (AABBCol (AABB pmin pmax)) acc = p1:p2:p3:p4:p5:p6:p7:p8:acc
             where
-                p1 = vec2 (x min) (y min)
-                p2 = vec2 (x min) (y min)
-                p3 = vec2 (x min) (y max)
-                p4 = vec2 (x min) (y max)
-                p5 = vec2 (x max) (y min)
-                p6 = vec2 (x max) (y min)
-                p7 = vec2 (x max) (y max)
-                p8 = vec2 (x max) (y max)
+                p1 = vec2 (x pmin) (y pmin)
+                p2 = vec2 (x pmin) (y pmin)
+                p3 = vec2 (x pmin) (y pmax)
+                p4 = vec2 (x pmin) (y pmax)
+                p5 = vec2 (x pmax) (y pmin)
+                p6 = vec2 (x pmax) (y pmin)
+                p7 = vec2 (x pmax) (y pmax)
+                p8 = vec2 (x pmax) (y pmax)
     
         generate (CircleCol (Circle c r)) acc = p1:p2:p3:p4:acc
             where
-                p1 = c + unitx * (vec2 r r)
-                p2 = c - unitx * (vec2 r r)
-                p3 = c + unity * (vec2 r r)
-                p4 = c - unity * (vec2 r r)
+                p1 = c + unitx2 * (vec2 r r)
+                p2 = c - unitx2 * (vec2 r r)
+                p3 = c + unity2 * (vec2 r r)
+                p4 = c - unity2 * (vec2 r r)
 
 
 -- | Compute AABB collisioners in view space from the given 3D AABB.
@@ -174,10 +173,10 @@ mkCols :: M4.Matrix4 -- ^ Modelview matrix
        -> [Collisioner]
 mkCols modelview (Box (Vec3 xmin ymin zmin) (Vec3 xmax ymax zmax)) =
     let
-        toVec2 v = vec2 (V3.x v) (V3.y v)
-        p1   = toVec2 $ modelview `M4.mulp` V3.vec3 xmin ymin zmax
-        p2   = toVec2 $ modelview `M4.mulp` V3.vec3 xmax ymin zmin
-        p3   = toVec2 $ modelview `M4.mulp` V3.vec3 xmax ymax zmin
+        toVec2 v = vec2 (x v) (y v)
+        p1   = toVec2 $ modelview `M4.mulp` vec3 xmin ymin zmax
+        p2   = toVec2 $ modelview `M4.mulp` vec3 xmax ymin zmin
+        p3   = toVec2 $ modelview `M4.mulp` vec3 xmax ymax zmin
         col1 = AABBCol $ AABB p1 p2
         col2 = AABBCol $ AABB p1 p3
     in

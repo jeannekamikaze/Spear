@@ -11,7 +11,7 @@ where
 
 import Spear.Collision
 import Spear.Math.AABB
-import Spear.Math.Vector2
+import Spear.Math.Vector
 
 import Control.Applicative ((<*>))
 import Data.List

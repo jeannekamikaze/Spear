@@ -1,29 +1,20 @@
-module Spear.Math.Vector3
+module Spear.Math.Vector.Vector3
 (
     Vector3
-    -- * Accessors
-,   x
-,   y
-,   z
     -- * Construction
-,   unitx
-,   unity
-,   unitz
-,   zero
-,   fromList
+,   unitx3
+,   unity3
+,   unitz3
+,   zero3
 ,   vec3
 ,   orbit
     -- * Operations
-,   dot
 ,   cross
-,   normSq
-,   norm
-,   scale
-,   neg
-,   normalise
 )
 where
 
+
+import Spear.Math.Vector.Class
 
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
@@ -77,6 +68,36 @@ instance Ord Vector3 where
     min (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz)
 
 
+instance VectorClass Vector3 where
+         fromList (ax:ay:az:_) = Vector3 ax ay az
+         
+         x (Vector3 ax _  _ ) = ax
+         
+         y (Vector3 _  ay _ ) = ay
+         
+         z (Vector3 _  _  az) = az
+
+         (Vector3 ax _ _) ! 0 = ax
+         (Vector3 _ ay _) ! 1 = ay
+         (Vector3 _ _ az) ! 2 = az
+         _                ! _ = 0
+         
+         Vector3 ax ay az `dot` Vector3 bx by bz = ax*bx + ay*by + az*bz
+         
+         normSq (Vector3 ax ay az) = ax*ax + ay*ay + az*az
+         
+         norm = sqrt . normSq
+         
+         scale s (Vector3 ax ay az) = Vector3 (s*ax) (s*ay) (s*az)
+         
+         neg (Vector3 ax ay az) = Vector3 (-ax) (-ay) (-az)
+         
+         normalise v =
+                   let n' = norm v
+                       n = if n' == 0 then 1 else n'
+                   in scale (1.0 / n) v
+
+
 sizeFloat = sizeOf (undefined :: CFloat)
 
 
@@ -96,34 +117,20 @@ instance Storable Vector3 where
         pokeByteOff ptr (2*sizeFloat) az
 
 
-x (Vector3 ax _  _ ) = ax
-y (Vector3 _  ay _ ) = ay
-z (Vector3 _  _  az) = az
-
-
 -- | Unit vector along the X axis.
-unitx :: Vector3
-unitx = Vector3 1 0 0
+unitx3 = Vector3 1 0 0
 
 
 -- | Unit vector along the Y axis.
-unity :: Vector3
-unity = Vector3 0 1 0
+unity3 = Vector3 0 1 0
 
 
 -- | Unit vector along the Z axis.
-unitz :: Vector3
-unitz = Vector3 0 0 1
+unitz3 = Vector3 0 0 1
 
 
 -- | Zero vector.
-zero :: Vector3
-zero = Vector3 0 0 0
-
-
--- | Create a vector from the given list.
-fromList :: [Float] -> Vector3
-fromList (ax:ay:az:_) = Vector3 ax ay az
+zero3 = Vector3 0 0 0
 
 
 -- | Create a 3D vector from the given values.
@@ -152,36 +159,7 @@ orbit center radius anglex angley =
         vec3 px py pz
 
 
--- | Compute the given vectors' dot product.
-dot :: Vector3 -> Vector3 -> Float
-Vector3 ax ay az `dot` Vector3 bx by bz = ax*bx + ay*by + az*bz
-
-
 -- | Compute the given vectors' cross product.
 cross :: Vector3 -> Vector3 -> Vector3
 (Vector3 ax ay az) `cross` (Vector3 bx by bz) =
     Vector3 (ay * bz - az * by) (az * bx - ax * bz) (ax * by - ay * bx)
-    
-
--- | Compute the given vector's squared norm.
-normSq (Vector3 ax ay az) = ax*ax + ay*ay + az*az
-
-
--- | Compute the given vector's norm.
-norm = sqrt . normSq
-
-
--- | Multiply the given vector with the given scalar.
-scale s (Vector3 ax ay az) = Vector3 (s*ax) (s*ay) (s*az)
-
-
--- | Negate the given vector.
-neg (Vector3 ax ay az) = Vector3 (-ax) (-ay) (-az)
-
-
--- | Normalise the given vector.
-normalise v =
-          let n' = norm v
-              n = if n' == 0 then 1 else n'
-          in scale (1.0 / n) v
-

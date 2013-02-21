@@ -1,27 +1,18 @@
-module Spear.Math.Vector4
+module Spear.Math.Vector.Vector4
 (
     Vector4
-    -- * Accessors
-,   x
-,   y
-,   z
-,   w
     -- * Construction
-,   unitX
-,   unitY
-,   unitZ
-,   fromList
+,   unitx4
+,   unity4
+,   unitz4
 ,   vec4
     -- * Operations
-,   dot
-,   normSq
-,   norm
-,   scale
-,   neg
-,   normalise
+,   cross'
 )
 where
 
+
+import Spear.Math.Vector.Class
 
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
@@ -82,6 +73,39 @@ instance Ord Vector4 where
         Vector4 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz) (Prelude.min aw bw)
 
 
+instance VectorClass Vector4 where
+         fromList (ax:ay:az:aw:_) = Vector4 ax ay az aw
+
+         x (Vector4 ax _  _  _ ) = ax
+         
+         y (Vector4 _  ay _  _ ) = ay
+         
+         z (Vector4 _  _  az _ ) = az
+         
+         w (Vector4 _  _  _  aw) = aw
+
+         (Vector4 ax _ _ _) ! 0 = ax
+         (Vector4 _ ay _ _) ! 1 = ay
+         (Vector4 _ _ az _) ! 2 = az
+         (Vector4 _ _ _ aw) ! 3 = aw
+         _                  ! _ = 0
+         
+         Vector4 ax ay az aw `dot` Vector4 bx by bz bw = ax*bx + ay*by + az*bz + aw*bw
+         
+         normSq (Vector4 ax ay az aw) = ax*ax + ay*ay + az*az + aw*aw
+         
+         norm = sqrt . normSq
+         
+         scale s (Vector4 ax ay az aw) = Vector4 (s*ax) (s*ay) (s*az) (s*aw)
+         
+         neg (Vector4 ax ay az aw) = Vector4 (-ax) (-ay) (-az) (-aw)
+         
+         normalise v =
+                   let n' = norm v
+                       n = if n' == 0 then 1 else n'
+                   in scale (1.0 / n) v
+
+
 sizeFloat = sizeOf (undefined :: CFloat)
 
 
@@ -103,30 +127,19 @@ instance Storable Vector4 where
         pokeByteOff ptr (3 * sizeFloat) aw
 
 
-x (Vector4 ax _  _  _ ) = ax
-y (Vector4 _  ay _  _ ) = ay
-z (Vector4 _  _  az _ ) = az
-w (Vector4 _  _  _  aw) = aw
-
-
 -- | Unit vector along the X axis.
-unitX :: Vector4
-unitX = Vector4 1 0 0 0
+unitx4 = Vector4 1 0 0 0
 
 
 -- | Unit vector along the Y axis.
-unitY :: Vector4
-unitY = Vector4 0 1 0 0
+unity4 = Vector4 0 1 0 0
 
 
 -- | Unit vector along the Z axis.
-unitZ :: Vector4
-unitZ = Vector4 0 0 1 0
+unitz4 = Vector4 0 0 1 0
 
-
--- | Create a vector from the given list.
-fromList :: [Float] -> Vector4
-fromList (ax:ay:az:aw:_) = Vector4 ax ay az aw
+-- | Unit vector along the W axis.
+unitw4 = Vector4 0 0 0 1
 
 
 -- | Create a 4D vector from the given values.
@@ -134,43 +147,8 @@ vec4 :: Float -> Float -> Float -> Float -> Vector4
 vec4 ax ay az aw = Vector4 ax ay az aw
 
 
--- | Compute the given vectors' dot product.
-dot :: Vector4 -> Vector4 -> Float
-Vector4 ax ay az aw `dot` Vector4 bx by bz bw = ax*bx + ay*by + az*bz + aw*bw
-
-
 -- | Compute the given vectors' cross product.
 -- The vectors are projected to 3D space. The resulting vector is the cross product of the vectors' projections with w=0.
-cross :: Vector4 -> Vector4 -> Vector4
-(Vector4 ax ay az _) `cross` (Vector4 bx by bz _) =
-    Vector4 (ay * bz - az * by) (az * bx - ax * bz) (ax * by - ay * bx) 0
-    
-    
--- | Compute the given vector's squared norm.
-normSq :: Vector4 -> Float
-normSq (Vector4 ax ay az aw) = ax*ax + ay*ay + az*az + aw*aw
-    
-
--- | Compute the given vector's norm.
-norm :: Vector4 -> Float
-norm = sqrt . normSq
-
-
--- | Multiply the given vector with the given scalar.
-scale :: Float -> Vector4 -> Vector4
-scale s (Vector4 ax ay az aw) = Vector4 (s*ax) (s*ay) (s*az) (s*aw)
-
-
--- | Negate the given vector.
-neg :: Vector4 -> Vector4
-neg (Vector4 ax ay az aw) = Vector4 (-ax) (-ay) (-az) (-aw)
-
-
--- | Normalise the given vector.
-normalise :: Vector4 -> Vector4
-normalise v =
-    let n' = norm v
-        n = if n' == 0 then 1 else n'
-    in
-        scale (1.0 / n) v
-
+cross' :: Vector4 -> Vector4 -> Vector4
+(Vector4 ax ay az _) `cross'` (Vector4 bx by bz _) =
+         Vector4 (ay * bz - az * by) (az * bx - ax * bz) (ax * by - ay * bx) 0

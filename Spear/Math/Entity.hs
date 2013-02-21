@@ -7,7 +7,7 @@ where
 
 import qualified Spear.Math.Matrix3 as M
 import qualified Spear.Math.Spatial2 as S
-import qualified Spear.Math.Vector2 as V
+import qualified Spear.Math.Vector as V
 
 
 -- | An entity in 2D space.

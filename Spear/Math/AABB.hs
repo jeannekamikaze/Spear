@@ -7,7 +7,7 @@ module Spear.Math.AABB
 where
 
 
-import Spear.Math.Vector2
+import Spear.Math.Vector
 
 
 -- | An axis-aligned bounding box.

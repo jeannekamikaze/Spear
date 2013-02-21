@@ -24,7 +24,7 @@ import Spear.Collision
 import Spear.GLSL
 import Spear.Math.AABB
 import Spear.Math.Matrix4 (Matrix4)
-import Spear.Math.Vector2 (vec2)
+import Spear.Math.Vector
 import Spear.Render.Material
 import Spear.Render.Model
 import Spear.Render.Program

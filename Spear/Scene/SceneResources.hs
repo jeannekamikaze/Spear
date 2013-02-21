@@ -20,7 +20,7 @@ where
 
 import Spear.Assets.Model as Model
 import Spear.GLSL as GLSL
-import Spear.Math.Vector3
+import Spear.Math.Vector
 import Spear.Render.AnimatedModel
 import Spear.Render.Material
 import Spear.Render.Program

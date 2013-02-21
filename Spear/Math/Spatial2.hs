@@ -2,7 +2,7 @@ module Spear.Math.Spatial2
 where
 
 
-import Spear.Math.Vector2
+import Spear.Math.Vector
 import Spear.Math.Matrix3 as M
 
 

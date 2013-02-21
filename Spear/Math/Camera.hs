@@ -4,7 +4,7 @@ where
 
 import qualified Spear.Math.Matrix4 as M
 import qualified Spear.Math.Spatial3 as S
-import Spear.Math.Vector3
+import Spear.Math.Vector
 
 
 data Camera = Camera

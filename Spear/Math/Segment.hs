@@ -7,7 +7,7 @@ where
 
 
 import Spear.Math.Utils
-import Spear.Math.Vector2
+import Spear.Math.Vector
 
 
 -- | A line segment in 2D space.

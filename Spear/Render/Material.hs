@@ -4,7 +4,7 @@ module Spear.Render.Material
 where
 
 
-import Spear.Math.Vector4
+import Spear.Math.Vector
 
 
 data Material = Material

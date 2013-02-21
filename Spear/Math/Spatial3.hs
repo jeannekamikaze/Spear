@@ -2,7 +2,7 @@ module Spear.Math.Spatial3
 where
 
 
-import Spear.Math.Vector3
+import Spear.Math.Vector
 import Spear.Math.Matrix4 as M
 
 
@@ -57,7 +57,7 @@ class Spatial3 s where
     lookAt pt s =
         let position = pos s
             fwd      = normalise $ pt - position
-            r        = fwd `cross` unity
+            r        = fwd `cross` unity3
             u        = r `cross` fwd
         in
             setTransform (M.transform r u (-fwd) position) s

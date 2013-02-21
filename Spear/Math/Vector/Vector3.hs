@@ -69,29 +69,40 @@ instance Ord Vector3 where
 
 
 instance VectorClass Vector3 where
+         {-# INLINABLE fromList #-}
          fromList (ax:ay:az:_) = Vector3 ax ay az
-         
-         x (Vector3 ax _  _ ) = ax
-         
-         y (Vector3 _  ay _ ) = ay
-         
-         z (Vector3 _  _  az) = az
 
+         {-# INLINABLE x #-}
+         x (Vector3 ax _  _ ) = ax
+
+         {-# INLINABLE y #-}
+         y (Vector3 _  ay _ ) = ay
+
+         {-# INLINABLE z #-}
+         z (Vector3 _  _  az) = az
+         
+         {-# INLINABLE (!) #-}
          (Vector3 ax _ _) ! 0 = ax
          (Vector3 _ ay _) ! 1 = ay
          (Vector3 _ _ az) ! 2 = az
          _                ! _ = 0
-         
+
+         {-# INLINABLE dot #-}
          Vector3 ax ay az `dot` Vector3 bx by bz = ax*bx + ay*by + az*bz
-         
+
+         {-# INLINABLE normSq #-}
          normSq (Vector3 ax ay az) = ax*ax + ay*ay + az*az
-         
+
+         {-# INLINABLE norm #-}
          norm = sqrt . normSq
-         
+
+         {-# INLINABLE scale #-}
          scale s (Vector3 ax ay az) = Vector3 (s*ax) (s*ay) (s*az)
-         
+
+         {-# INLINABLE neg #-}
          neg (Vector3 ax ay az) = Vector3 (-ax) (-ay) (-az)
-         
+
+         {-# INLINABLE normalise #-}
          normalise v =
                    let n' = norm v
                        n = if n' == 0 then 1 else n'

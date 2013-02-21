@@ -47,26 +47,36 @@ instance Ord Vector2 where
 
 
 instance VectorClass Vector2 where
+         {-# INLINABLE fromList #-}
          fromList (ax:ay:_) = Vector2 ax ay
-         
+
+         {-# INLINABLE x #-}
          x (Vector2 ax _) = ax
-         
+
+         {-# INLINABLE y #-}
          y (Vector2 _ ay) = ay
 
+         {-# INLINABLE (!) #-}
          (Vector2 ax _) ! 0 = ax
          (Vector2 _ ay) ! 1 = ay
          _              ! _ = 0
-         
+
+         {-# INLINABLE dot #-}
          Vector2 ax ay `dot` Vector2 bx by = ax*bx + ay*by
-         
+
+         {-# INLINABLE normSq #-}
          normSq (Vector2 ax ay) = ax*ax + ay*ay
-         
+
+         {-# INLINABLE norm #-}
          norm = sqrt . normSq
-         
+
+         {-# INLINABLE scale #-}
          scale s (Vector2 ax ay) = Vector2 (s*ax) (s*ay)
-         
+
+         {-# INLINABLE neg #-}
          neg (Vector2 ax ay) = Vector2 (-ax) (-ay)
-         
+
+         {-# INLINABLE normalise #-}
          normalise v =
                    let n' = norm v
                        n = if n' == 0 then 1 else n'

@@ -74,32 +74,44 @@ instance Ord Vector4 where
 
 
 instance VectorClass Vector4 where
+         {-# INLINABLE fromList #-}
          fromList (ax:ay:az:aw:_) = Vector4 ax ay az aw
 
+         {-# INLINABLE x #-}
          x (Vector4 ax _  _  _ ) = ax
-         
-         y (Vector4 _  ay _  _ ) = ay
-         
-         z (Vector4 _  _  az _ ) = az
-         
-         w (Vector4 _  _  _  aw) = aw
 
+         {-# INLINABLE y #-}
+         y (Vector4 _  ay _  _ ) = ay
+
+         {-# INLINABLE z #-}
+         z (Vector4 _  _  az _ ) = az
+
+         {-# INLINABLE w #-}
+         w (Vector4 _  _  _  aw) = aw
+         
+         {-# INLINABLE (!) #-}
          (Vector4 ax _ _ _) ! 0 = ax
          (Vector4 _ ay _ _) ! 1 = ay
          (Vector4 _ _ az _) ! 2 = az
          (Vector4 _ _ _ aw) ! 3 = aw
          _                  ! _ = 0
          
+         {-# INLINABLE dot #-}
          Vector4 ax ay az aw `dot` Vector4 bx by bz bw = ax*bx + ay*by + az*bz + aw*bw
          
+         {-# INLINABLE normSq #-}
          normSq (Vector4 ax ay az aw) = ax*ax + ay*ay + az*az + aw*aw
          
+         {-# INLINABLE norm #-}
          norm = sqrt . normSq
          
+         {-# INLINABLE scale #-}
          scale s (Vector4 ax ay az aw) = Vector4 (s*ax) (s*ay) (s*az) (s*aw)
          
+         {-# INLINABLE neg #-}
          neg (Vector4 ax ay az aw) = Vector4 (-ax) (-ay) (-az) (-aw)
          
+         {-# INLINABLE normalise #-}
          normalise v =
                    let n' = norm v
                        n = if n' == 0 then 1 else n'

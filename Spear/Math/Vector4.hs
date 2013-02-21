@@ -13,14 +13,12 @@ module Spear.Math.Vector4
 ,   fromList
 ,   vec4
     -- * Operations
-,   Spear.Math.Vector4.min
-,   Spear.Math.Vector4.max
 ,   dot
 ,   normSq
 ,   norm
 ,   scale
-,   normalise
 ,   neg
+,   normalise
 )
 where
 
@@ -77,6 +75,12 @@ instance Ord Vector4 where
         || (ax == bx && ay == by && az > bz)
         || (ax == bx && ay == by && az == bz && aw > bw)
 
+    min (Vector4 ax ay az aw) (Vector4 bx by bz bw) =
+        Vector4 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz) (Prelude.min aw bw)
+
+    max (Vector4 ax ay az aw) (Vector4 bx by bz bw) =
+        Vector4 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz) (Prelude.min aw bw)
+
 
 sizeFloat = sizeOf (undefined :: CFloat)
 
@@ -130,18 +134,6 @@ vec4 :: Float -> Float -> Float -> Float -> Vector4
 vec4 ax ay az aw = Vector4 ax ay az aw
 
 
--- | Create a vector whose components are the minimum of each of the given vectors'.
-min :: Vector4 -> Vector4 -> Vector4
-min (Vector4 ax ay az aw) (Vector4 bx by bz bw) =
-    Vector4 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz) (Prelude.min aw bw)
-
-
--- | Create a vector whose components are the maximum of each of the given vectors'.
-max :: Vector4 -> Vector4 -> Vector4
-max (Vector4 ax ay az aw) (Vector4 bx by bz bw) =
-    Vector4 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz) (Prelude.min aw bw)
-
-
 -- | Compute the given vectors' dot product.
 dot :: Vector4 -> Vector4 -> Float
 Vector4 ax ay az aw `dot` Vector4 bx by bz bw = ax*bx + ay*by + az*bz + aw*bw
@@ -169,6 +161,11 @@ scale :: Float -> Vector4 -> Vector4
 scale s (Vector4 ax ay az aw) = Vector4 (s*ax) (s*ay) (s*az) (s*aw)
 
 
+-- | Negate the given vector.
+neg :: Vector4 -> Vector4
+neg (Vector4 ax ay az aw) = Vector4 (-ax) (-ay) (-az) (-aw)
+
+
 -- | Normalise the given vector.
 normalise :: Vector4 -> Vector4
 normalise v =
@@ -177,7 +174,3 @@ normalise v =
     in
         scale (1.0 / n) v
 
-
--- | Negate the given vector.
-neg :: Vector4 -> Vector4
-neg (Vector4 ax ay az aw) = Vector4 (-ax) (-ay) (-az) (-aw)

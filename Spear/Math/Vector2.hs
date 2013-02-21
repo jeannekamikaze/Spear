@@ -11,17 +11,16 @@ module Spear.Math.Vector2
 ,   fromList
 ,   vec2
     -- * Operations
-,   v2min
-,   v2max
+,   perp
 ,   dot
 ,   normSq
 ,   norm
 ,   scale
-,   normalise
 ,   neg
-,   perp
+,   normalise
 )
 where
+
 
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
@@ -50,6 +49,8 @@ instance Ord Vector2 where
     Vector2 ax ay >= Vector2 bx by =  (ax >= bx) || (ax == bx && ay >= by)
     Vector2 ax ay < Vector2 bx by  =  (ax < bx)  || (ax == bx && ay < by)
     Vector2 ax ay > Vector2 bx by  =  (ax > bx)  || (ax == bx && ay > by)
+    max (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.max ax bx) (Prelude.max ay by)
+    min (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.min ax bx) (Prelude.min ay by)
 
 
 sizeFloat = sizeOf (undefined :: CFloat)
@@ -102,14 +103,13 @@ vec2 :: Float -> Float -> Vector2
 vec2 ax ay = Vector2 ax ay
 
 
--- | Create a vector with components set to the minimum of each of the given vectors'.
-v2min :: Vector2 -> Vector2 -> Vector2
-v2min (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.min ax bx) (Prelude.min ay by)
-
-
--- | Create a vector with components set to the maximum of each of the given vectors'.
-v2max :: Vector2 -> Vector2 -> Vector2
-v2max (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.max ax bx) (Prelude.max ay by)
+-- | Compute a vector perpendicular to the given one, satisfying:
+-- 
+-- perp (Vector2 0 1) = Vector2 1 0
+-- 
+-- perp (Vector2 1 0) = Vector2 0 (-1)
+perp :: Vector2 -> Vector2
+perp (Vector2 x y) = Vector2 y (-x)
 
 
 -- | Compute the given vectors' dot product.
@@ -120,7 +120,7 @@ Vector2 ax ay `dot` Vector2 bx by = ax*bx + ay*by
 -- | Compute the given vector's squared norm.
 normSq :: Vector2 -> Float
 normSq (Vector2 ax ay) = ax*ax + ay*ay
-    
+
 
 -- | Compute the given vector's norm.
 norm :: Vector2 -> Float
@@ -132,24 +132,14 @@ scale :: Float -> Vector2 -> Vector2
 scale s (Vector2 ax ay) = Vector2 (s*ax) (s*ay)
 
 
--- | Normalise the given vector.
-normalise :: Vector2 -> Vector2
-normalise v =
-    let n' = norm v
-        n = if n' == 0 then 1 else n'
-    in
-        scale (1.0 / n) v
-
-
 -- | Negate the given vector.
 neg :: Vector2 -> Vector2
 neg (Vector2 ax ay) = Vector2 (-ax) (-ay)
 
 
--- | Compute a vector perpendicular to the given one, satisfying:
---
--- perp (Vector2 0 1) = Vector2 1 0
--- 
--- perp (Vector2 1 0) = Vector2 0 (-1)
-perp :: Vector2 -> Vector2
-perp (Vector2 x y) = Vector2 y (-x)
+-- | Normalise the given vector.
+normalise :: Vector2 -> Vector2
+normalise v =
+          let n' = norm v
+              n = if n' == 0 then 1 else n'
+          in scale (1.0 / n) v

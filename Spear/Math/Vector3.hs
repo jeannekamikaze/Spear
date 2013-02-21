@@ -14,17 +14,16 @@ module Spear.Math.Vector3
 ,   vec3
 ,   orbit
     -- * Operations
-,   Spear.Math.Vector3.min
-,   Spear.Math.Vector3.max
 ,   dot
 ,   cross
 ,   normSq
 ,   norm
 ,   scale
-,   normalise
 ,   neg
+,   normalise
 )
 where
+
 
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
@@ -72,6 +71,10 @@ instance Ord Vector3 where
         =  (ax > bx)
         || (ax == bx && ay > by)
         || (ax == bx && ay == by && az > bz)
+
+    max (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz)
+
+    min (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz)
 
 
 sizeFloat = sizeOf (undefined :: CFloat)
@@ -149,16 +152,6 @@ orbit center radius anglex angley =
         vec3 px py pz
 
 
--- | Create a vector with components set to the minimum of each of the given vectors'.
-min :: Vector3 -> Vector3 -> Vector3
-min (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz)
-
-
--- | Create a vector with components set to the maximum of each of the given vectors'.
-max :: Vector3 -> Vector3 -> Vector3
-max (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz)
-
-
 -- | Compute the given vectors' dot product.
 dot :: Vector3 -> Vector3 -> Float
 Vector3 ax ay az `dot` Vector3 bx by bz = ax*bx + ay*by + az*bz
@@ -169,31 +162,26 @@ cross :: Vector3 -> Vector3 -> Vector3
 (Vector3 ax ay az) `cross` (Vector3 bx by bz) =
     Vector3 (ay * bz - az * by) (az * bx - ax * bz) (ax * by - ay * bx)
     
-    
+
 -- | Compute the given vector's squared norm.
-normSq :: Vector3 -> Float
 normSq (Vector3 ax ay az) = ax*ax + ay*ay + az*az
 
 
 -- | Compute the given vector's norm.
-norm :: Vector3 -> Float
 norm = sqrt . normSq
 
 
 -- | Multiply the given vector with the given scalar.
-scale :: Float -> Vector3 -> Vector3
 scale s (Vector3 ax ay az) = Vector3 (s*ax) (s*ay) (s*az)
 
 
--- | Normalise the given vector.
-normalise :: Vector3 -> Vector3
-normalise v =
-    let n' = norm v
-        n = if n' == 0 then 1 else n'
-    in
-        scale (1.0 / n) v
-
-
 -- | Negate the given vector.
-neg :: Vector3 -> Vector3
 neg (Vector3 ax ay az) = Vector3 (-ax) (-ay) (-az)
+
+
+-- | Normalise the given vector.
+normalise v =
+          let n' = norm v
+              n = if n' == 0 then 1 else n'
+          in scale (1.0 / n) v
+

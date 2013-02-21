@@ -22,10 +22,10 @@ circle :: [Vector2] -> Circle
 circle [] = error "Attempting to build a Circle from an empty list!"
 circle (x:xs) = Circle c r
     where
-        c = min + (max-min)/2
-        r = norm $ max - c
-        (min,max) = foldr update (x,x) xs
-        update p (min,max) = (v2min p min, v2max p max)
+        c = pmin + (pmax-pmin)/2
+        r = norm $ pmax - c
+        (pmin,pmax) = foldr update (x,x) xs
+        update p (pmin,pmax) = (min p pmin, max p pmax)
 
 
 -- | Return 'True' if the given 'Sphere' contains the given point, 'False' otherwise.         

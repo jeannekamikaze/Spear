@@ -7,7 +7,7 @@ module Spear.Math.Plane
 where
 
 
-import Spear.Math.Vector3 as Vector
+import Spear.Math.Vector3
 
 
 data PointPlanePos = Front | Back | Contained deriving (Eq, Ord, Show)

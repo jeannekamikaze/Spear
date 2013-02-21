@@ -9,6 +9,7 @@ module Spear.App.Application
 ,   DisplayBits(..)
 ,   WindowMode(..)
 ,   Opened(..)
+,   WindowSizeCallback
     -- * Setup
 ,   setup
 ,   quit

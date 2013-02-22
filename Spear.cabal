@@ -29,7 +29,7 @@ library
                      Spear.Render.Material Spear.Render.Model Spear.Render.Program
                      Spear.Render.StaticModel Spear.Scene.Graph Spear.Scene.Light
                      Spear.Scene.Loader Spear.Scene.Scene Spear.Scene.SceneResources
-                     Spear.Setup Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
+                     Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
                      Spear.Math.Quad Spear.Math.Ray
                      Spear.Math.Segment Spear.Math.Utils Spear.Math.Spatial2
                      Spear.Math.Spatial3

@@ -6,7 +6,6 @@ module Spear.GLSL
 ,   ShaderType(..)
     -- ** Programs
 ,   newProgram
-,   releaseProgram
 ,   linkProgram
 ,   useProgram
 ,   withGLSLProgram
@@ -15,7 +14,6 @@ module Spear.GLSL
 ,   detachShader
 ,   loadShader
 ,   newShader
-,   releaseShader
     -- *** Source loading
 ,   loadSource
 ,   shaderSource
@@ -36,12 +34,10 @@ module Spear.GLSL
     -- ** Helper functions
 ,   ($=)
 ,   Data.StateVar.get
-
     -- * VAOs
 ,   VAO
     -- ** Creation and destruction
 ,   newVAO
-,   releaseVAO
     -- ** Manipulation
 ,   bindVAO
 ,   enableVAOAttrib
@@ -49,20 +45,17 @@ module Spear.GLSL
     -- ** Rendering
 ,   drawArrays
 ,   drawElements
-
     -- * Buffers
 ,   GLBuffer
 ,   TargetBuffer(..)
 ,   BufferUsage(..)
     -- ** Creation and destruction
 ,   newBuffer
-,   releaseBuffer
     -- ** Manipulation
 ,   bindBuffer
 ,   bufferData
 ,   bufferDatal
 ,   withGLBuffer
-
     -- * Textures
 ,   Texture
 ,   SettableStateVar
@@ -70,14 +63,12 @@ module Spear.GLSL
     -- ** Creation and destruction
 ,   newTexture
 ,   loadTextureImage
-,   releaseTexture
     -- ** Manipulation
 ,   bindTexture
 ,   loadTextureData
 ,   texParami
 ,   texParamf
 ,   activeTexture
-
     -- * Error Handling
 ,   getGLError
 ,   printGLError
@@ -89,12 +80,11 @@ module Spear.GLSL
 )
 where
 
-
 import Spear.Assets.Image
+import Spear.Game
 import Spear.Math.Matrix3 (Matrix3)
 import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector
-import Spear.Setup
 
 import Control.Monad
 import Control.Monad.Trans.Class
@@ -114,11 +104,9 @@ import System.Directory (doesFileExist, getCurrentDirectory, setCurrentDirectory
 import System.IO (hPutStrLn, stderr)
 import Unsafe.Coerce
 
-
 --
 -- MANAGEMENT
 --
-
 
 -- | A GLSL shader handle.
 data GLSLShader  = GLSLShader
@@ -126,34 +114,34 @@ data GLSLShader  = GLSLShader
     , getShaderKey :: Resource
     }
 
+instance ResourceClass GLSLShader where
+         getResource = getShaderKey
 
 -- | A GLSL program handle.
 data GLSLProgram = GLSLProgram
     { getProgram    :: GLuint
     , getProgramKey :: Resource
     }
-    
-    
+
+instance ResourceClass GLSLProgram where
+         getResource = getProgramKey
+
 -- | Supported shader types.
 data ShaderType = VertexShader | FragmentShader deriving (Eq, Show)
-
 
 toGLShader :: ShaderType -> GLenum
 toGLShader VertexShader   = gl_VERTEX_SHADER
 toGLShader FragmentShader = gl_FRAGMENT_SHADER
 
-
 -- | Apply the given function to the program's id.
 withGLSLProgram :: GLSLProgram -> (GLuint -> a) -> a
 withGLSLProgram prog f = f $ getProgram prog
-
 
 -- | Get the location of the given uniform variable within the given program.
 uniformLocation :: GLSLProgram -> String -> GettableStateVar GLint
 uniformLocation prog var = makeGettableStateVar get
     where
         get = withCString var $ \str -> glGetUniformLocation (getProgram prog) (unsafeCoerce str)
-
 
 -- | Get or set the location of the given variable to a fragment shader colour number.
 fragLocation :: GLSLProgram -> String -> StateVar GLint
@@ -163,7 +151,6 @@ fragLocation prog var = makeStateVar get set
         set idx = withCString var $ \str ->
             glBindFragDataLocation (getProgram prog) (unsafeCoerce idx) (unsafeCoerce str)
 
-
 -- | Get or set the location of the given attribute within the given program.
 attribLocation :: GLSLProgram -> String -> StateVar GLint
 attribLocation prog var = makeStateVar get set
@@ -172,25 +159,18 @@ attribLocation prog var = makeStateVar get set
         set idx = withCString var $ \str ->
             glBindAttribLocation (getProgram prog) (unsafeCoerce idx) (unsafeCoerce str)
 
-
 -- | Create a new program.
-newProgram :: [GLSLShader] -> Setup GLSLProgram
+newProgram :: [GLSLShader] -> Game s GLSLProgram
 newProgram shaders = do
-    h <- setupIO glCreateProgram
-    when (h == 0) $ setupError "glCreateProgram failed"
+    h <- gameIO glCreateProgram
+    when (h == 0) $ gameError "glCreateProgram failed"
     rkey <- register $ deleteProgram h
     let program = GLSLProgram h rkey
     
-    mapM_ (setupIO . attachShader program) shaders
+    mapM_ (gameIO . attachShader program) shaders
     linkProgram program
     
     return program
-
-
--- | Release the program.
-releaseProgram :: GLSLProgram -> Setup ()
-releaseProgram = release . getProgramKey
-
 
 -- | Delete the program.
 deleteProgram :: GLuint -> IO ()
@@ -199,12 +179,11 @@ deleteProgram prog = do
     putStrLn $ "Deleting shader program " ++ show prog
     glDeleteProgram prog
 
-
 -- | Link the program.
-linkProgram :: GLSLProgram -> Setup ()
+linkProgram :: GLSLProgram -> Game s ()
 linkProgram prog = do
     let h = getProgram prog
-    err <- setupIO $ do
+    err <- gameIO $ do
         glLinkProgram h
         alloca $ \statptr -> do
             glGetProgramiv h gl_LINK_STATUS statptr
@@ -215,51 +194,40 @@ linkProgram prog = do
     
     case length err of
         0 -> return ()
-        _ -> setupError err
-
+        _ -> gameError err
 
 -- | Use the program.
 useProgram :: GLSLProgram -> IO ()
 useProgram prog = glUseProgram $ getProgram prog
 
-
 -- | Attach the given shader to the given program.
 attachShader :: GLSLProgram -> GLSLShader -> IO ()
 attachShader prog shader = glAttachShader (getProgram prog) (getShader shader)
-
 
 -- | Detach the given GLSL from the given program.
 detachShader :: GLSLProgram -> GLSLShader -> IO ()
 detachShader prog shader = glDetachShader (getProgram prog) (getShader shader)
 
-
 -- | Load a shader from the file specified by the given string.
 --
 -- This function creates a new shader. To load source code into an existing shader,
 -- see 'loadSource', 'shaderSource' and 'readSource'.
-loadShader :: FilePath -> ShaderType -> Setup GLSLShader
+loadShader :: FilePath -> ShaderType -> Game s GLSLShader
 loadShader file shaderType = do
     shader <- newShader shaderType
     loadSource file shader
     compile file shader
     return shader
 
-
 -- | Create a new shader.
-newShader :: ShaderType -> Setup GLSLShader
+newShader :: ShaderType -> Game s GLSLShader
 newShader shaderType = do
-    h <- setupIO $ glCreateShader (toGLShader shaderType)
+    h <- gameIO $ glCreateShader (toGLShader shaderType)
     case h of
-        0 -> setupError "glCreateShader failed"
+        0 -> gameError "glCreateShader failed"
         _ -> do
             rkey <- register $ deleteShader h
             return $ GLSLShader h rkey
-
-
--- | Release the shader.
-releaseShader :: GLSLShader -> Setup ()
-releaseShader = release . getShaderKey
-
 
 -- | Free the shader.
 deleteShader :: GLuint -> IO ()
@@ -268,18 +236,16 @@ deleteShader shader = do
     putStrLn $ "Deleting shader " ++ show shader
     glDeleteShader shader
 
-
 -- | Load a shader source from the file specified by the given string
 -- into the shader.
-loadSource :: FilePath -> GLSLShader -> Setup ()
+loadSource :: FilePath -> GLSLShader -> Game s ()
 loadSource file h = do
-    exists <- setupIO $ doesFileExist file
+    exists <- gameIO $ doesFileExist file
     case exists of
-        False -> setupError "the specified shader file does not exist"
-        True  -> setupIO $ do
+        False -> gameError "the specified shader file does not exist"
+        True  -> gameIO $ do
             code <- readSource file
             withCString code $ shaderSource h
-
 
 -- | Load the given shader source into the shader.
 shaderSource :: GLSLShader -> CString -> IO ()
@@ -287,17 +253,16 @@ shaderSource shader str =
     let ptr = unsafeCoerce str
     in  withArray [ptr] $ flip (glShaderSource (getShader shader) 1) nullPtr
 
-
 -- | Compile the shader.
-compile :: FilePath -> GLSLShader -> Setup ()
+compile :: FilePath -> GLSLShader -> Game s ()
 compile file shader = do
     let h = getShader shader
     
     -- Compile
-    setupIO $ glCompileShader h
+    gameIO $ glCompileShader h
     
     -- Verify status
-    err <- setupIO $ alloca $ \statusPtr -> do
+    err <- gameIO $ alloca $ \statusPtr -> do
         glGetShaderiv h gl_COMPILE_STATUS statusPtr
         result <- peek statusPtr
         case result of
@@ -306,12 +271,10 @@ compile file shader = do
     
     case length err of
         0 -> return ()
-        _ -> setupError $ "Unable to compile shader " ++ file ++ ":\n" ++ err
-        
+        _ -> gameError $ "Unable to compile shader " ++ file ++ ":\n" ++ err
         
 type StatusCall = GLuint -> GLenum -> Ptr GLint -> IO ()
 type LogCall    = GLuint -> GLsizei -> Ptr GLsizei -> Ptr GLchar -> IO ()
-
 
 getStatus :: StatusCall -> LogCall -> GLuint -> IO String
 getStatus getStatus getLog h = do
@@ -322,13 +285,11 @@ getStatus getStatus getLog h = do
             0 -> return ""
             _ -> withCString (replicate (unsafeCoerce len) '\0') $ getErrorString getLog h (unsafeCoerce len)
 
-
 getErrorString :: LogCall -> GLuint -> GLsizei -> CString -> IO String
 getErrorString getLog h len str = do
     let ptr = unsafeCoerce str
     getLog h len nullPtr ptr
     peekCString str
-
 
 -- | Load the shader source specified by the given file.
 --
@@ -336,7 +297,6 @@ getErrorString getLog h len str = do
 -- refer to other files.
 readSource :: FilePath -> IO String
 readSource = fmap B.unpack . readSource'
-
 
 readSource' :: FilePath -> IO B.ByteString
 readSource' file = do
@@ -365,13 +325,11 @@ readSource' file = do
     
     return code
 
-
 -- | Load a 2D vector.
 uniformVec2 :: GLint -> Vector2 -> IO ()
 uniformVec2 loc v = glUniform2f loc x' y'
     where x' = unsafeCoerce $ x v
           y' = unsafeCoerce $ y v
-
 
 -- | Load a 3D vector.
 uniformVec3 :: GLint -> Vector3 -> IO ()
@@ -380,7 +338,6 @@ uniformVec3 loc v = glUniform3f loc x' y' z'
           y' = unsafeCoerce $ y v
           z' = unsafeCoerce $ z v
     
-
 -- | Load a 4D vector.
 uniformVec4 :: GLint -> Vector4 -> IO ()
 uniformVec4 loc v = glUniform4f loc x' y' z' w'
@@ -389,20 +346,17 @@ uniformVec4 loc v = glUniform4f loc x' y' z' w'
           z' = unsafeCoerce $ z v
           w' = unsafeCoerce $ w v
 
-
 -- | Load a 3x3 matrix.
 uniformMat3 :: GLint -> Matrix3 -> IO ()
 uniformMat3 loc mat =
     with mat $ \ptrMat ->
         glUniformMatrix3fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
 
-
 -- | Load a 4x4 matrix.
 uniformMat4 :: GLint -> Matrix4 -> IO ()
 uniformMat4 loc mat =
     with mat $ \ptrMat ->
         glUniformMatrix4fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
-
 
 -- | Load a list of floats.
 uniformfl :: GLint -> [GLfloat] -> IO ()
@@ -413,7 +367,6 @@ uniformfl loc vals = withArray vals $ \ptr ->
         3 -> glUniform3fv loc 1 ptr
         4 -> glUniform4fv loc 1 ptr
 
-
 -- | Load a list of integers.
 uniformil :: GLint -> [GLint] -> IO ()
 uniformil loc vals = withArray vals $ \ptr ->
@@ -423,15 +376,9 @@ uniformil loc vals = withArray vals $ \ptr ->
         3 -> glUniform3iv loc 1 ptr
         4 -> glUniform4iv loc 1 ptr
 
-
-
-
-
-
 --
 -- VAOs
 --
-
 
 -- | A vertex array object.
 data VAO = VAO
@@ -439,48 +386,39 @@ data VAO = VAO
     , vaoKey :: Resource
     }
 
+instance ResourceClass VAO where
+         getResource = vaoKey
 
 instance Eq VAO where
     vao1 == vao2 = getVAO vao1 == getVAO vao2
 
-
 instance Ord VAO where
     vao1 < vao2 = getVAO vao1 < getVAO vao2
 
-
 -- | Create a new vao.
-newVAO :: Setup VAO
+newVAO :: Game s VAO
 newVAO = do
-    h <- setupIO . alloca $ \ptr -> do
+    h <- gameIO . alloca $ \ptr -> do
         glGenVertexArrays 1 ptr
         peek ptr
     
     rkey <- register $ deleteVAO h
     return $ VAO h rkey
 
-
--- | Release the vao.
-releaseVAO :: VAO -> Setup ()
-releaseVAO = release . vaoKey
-
-
 -- | Delete the vao.
 deleteVAO :: GLuint -> IO ()
 deleteVAO vao = Foreign.with vao $ glDeleteVertexArrays 1
-
 
 -- | Bind the vao.
 bindVAO :: VAO -> IO ()
 bindVAO = glBindVertexArray . getVAO
 
-
 -- | Enable the given vertex attribute of the bound vao.
---
+-- 
 -- See also 'bindVAO'.
 enableVAOAttrib :: GLuint -- ^ Attribute index.
                 -> IO ()
 enableVAOAttrib = glEnableVertexAttribArray
-
 
 -- | Bind the bound buffer to the given point.
 attribVAOPointer
@@ -494,7 +432,6 @@ attribVAOPointer
 attribVAOPointer idx ncomp dattype normalise stride off =
     glVertexAttribPointer idx ncomp dattype (unsafeCoerce normalise) stride (unsafeCoerce off)
 
-
 -- | Draw the bound vao.
 drawArrays
     :: GLenum -- ^ The kind of primitives to render.
@@ -502,7 +439,6 @@ drawArrays
     -> Int    -- ^ The number of indices to be rendered.
     -> IO ()
 drawArrays mode first count = glDrawArrays mode (unsafeCoerce first) (unsafeCoerce count)
-
 
 -- | Draw the bound vao, indexed mode.
 drawElements
@@ -513,15 +449,9 @@ drawElements
     -> IO ()
 drawElements mode count t idxs = glDrawElements mode (unsafeCoerce count) t idxs
 
-
-
-
-
-
 --
 -- BUFFER
 --
-
 
 -- | An OpenGL buffer.
 data GLBuffer = GLBuffer
@@ -529,6 +459,8 @@ data GLBuffer = GLBuffer
     , rkey      :: Resource
     }
 
+instance ResourceClass GLBuffer where
+         getResource = rkey
 
 -- | The type of target buffer.
 data TargetBuffer
@@ -538,13 +470,11 @@ data TargetBuffer
     | PixelUnpackBuffer
     deriving (Eq, Show)
     
-    
 fromTarget :: TargetBuffer -> GLenum
 fromTarget ArrayBuffer        = gl_ARRAY_BUFFER
 fromTarget ElementArrayBuffer = gl_ELEMENT_ARRAY_BUFFER
 fromTarget PixelPackBuffer    = gl_PIXEL_PACK_BUFFER
 fromTarget PixelUnpackBuffer  = gl_PIXEL_UNPACK_BUFFER
-
 
 -- | A buffer usage.
 data BufferUsage
@@ -559,7 +489,6 @@ data BufferUsage
     | DynamicCopy
     deriving (Eq, Show)
 
-
 fromUsage :: BufferUsage -> GLenum
 fromUsage StreamDraw  = gl_STREAM_DRAW
 fromUsage StreamRead  = gl_STREAM_READ
@@ -571,32 +500,23 @@ fromUsage DynamicDraw = gl_DYNAMIC_DRAW
 fromUsage DynamicRead = gl_DYNAMIC_READ
 fromUsage DynamicCopy = gl_DYNAMIC_COPY
 
-
 -- | Create a new buffer.
-newBuffer :: Setup GLBuffer
+newBuffer :: Game s GLBuffer
 newBuffer = do
-    h <- setupIO . alloca $ \ptr -> do
+    h <- gameIO . alloca $ \ptr -> do
         glGenBuffers 1 ptr
         peek ptr
     
     rkey <- register $ deleteBuffer h
     return $ GLBuffer h rkey
 
-
--- | Release the buffer.
-releaseBuffer :: GLBuffer -> Setup ()
-releaseBuffer = release . rkey
-
-
 -- | Delete the buffer.
 deleteBuffer :: GLuint -> IO ()
 deleteBuffer buf = Foreign.with buf $ glDeleteBuffers 1
 
-
 -- | Bind the buffer.
 bindBuffer :: GLBuffer -> TargetBuffer -> IO ()
 bindBuffer buf target = glBindBuffer (fromTarget target) $ getBuffer buf
-
 
 -- | Set the buffer's data.
 bufferData :: TargetBuffer
@@ -605,7 +525,6 @@ bufferData :: TargetBuffer
            -> BufferUsage
            -> IO ()
 bufferData target n bufData usage = glBufferData (fromTarget target) (unsafeCoerce n) bufData (fromUsage usage)
-
 
 -- | Set the buffer's data.
 bufferDatal :: Storable a
@@ -617,15 +536,9 @@ bufferDatal :: Storable a
 bufferDatal target n bufData usage = withArray bufData $
     \ptr -> bufferData target (n * length bufData) ptr usage
 
-
 -- | Apply the given function the buffer's id.
 withGLBuffer :: GLBuffer -> (GLuint -> a) -> a
 withGLBuffer buf f = f $ getBuffer buf
-
-
-
-
-
 
 --
 -- TEXTURE
@@ -637,30 +550,24 @@ data Texture = Texture
     , texKey :: Resource
     }
 
-
 instance Eq Texture where
     t1 == t2 = getTex t1 == getTex t2
-
 
 instance Ord Texture where
     t1 < t2 = getTex t1 < getTex t2
 
+instance ResourceClass Texture where
+         getResource = texKey
 
 -- | Create a new texture.
-newTexture :: Setup Texture
+newTexture :: Game s Texture
 newTexture = do
-    tex <- setupIO . alloca $ \ptr -> do
+    tex <- gameIO . alloca $ \ptr -> do
         glGenTextures 1 ptr
         peek ptr
     
     rkey <- register $ deleteTexture tex
     return $ Texture tex rkey
-
-
--- | Release the texture.
-releaseTexture :: Texture -> Setup ()
-releaseTexture = release . texKey
-
 
 -- | Delete the texture.
 deleteTexture :: GLuint -> IO ()
@@ -669,16 +576,15 @@ deleteTexture tex = do
     putStrLn $ "Releasing texture " ++ show tex
     with tex $ glDeleteTextures 1
 
-
 -- | Load the 'Texture' specified by the given file.
 loadTextureImage :: FilePath
                  -> GLenum          -- ^ Texture's min filter.
                  -> GLenum          -- ^ Texture's mag filter.
-                 -> Setup Texture
+                 -> Game s Texture
 loadTextureImage file minFilter magFilter = do
     image <- loadImage file
     tex   <- newTexture
-    setupIO $ do
+    gameIO $ do
         let w    = width  image
             h    = height image
             pix  = pixels image
@@ -691,11 +597,9 @@ loadTextureImage file minFilter magFilter = do
     
     return tex
 
-
 -- | Bind the texture.
 bindTexture :: Texture -> IO ()
 bindTexture = glBindTexture gl_TEXTURE_2D . getTex
-
 
 -- | Load data onto the bound texture.
 --
@@ -721,30 +625,21 @@ loadTextureData target level internalFormat width height border format texType t
                  texType
                  texData
 
-
 -- | Set the bound texture's parameter to the given value.
 texParami :: GLenum -> GLenum -> SettableStateVar GLenum
 texParami target param = makeSettableStateVar $ \val -> glTexParameteri target param $ fromIntegral . fromEnum $ val
-
 
 -- | Set the bound texture's parameter to the given value.
 texParamf :: GLenum -> GLenum -> SettableStateVar Float
 texParamf target param = makeSettableStateVar $ \val -> glTexParameterf target param (unsafeCoerce val)
 
-
 -- | Set the active texture unit.
 activeTexture :: SettableStateVar GLenum
 activeTexture = makeSettableStateVar glActiveTexture
 
-
-
-
-
-
 --
 -- ERROR
 --
-
 
 -- | Get the last OpenGL error.
 getGLError :: IO (Maybe String)
@@ -758,22 +653,20 @@ getGLError = fmap translate glGetError
             | err == gl_OUT_OF_MEMORY     = Just "Out of memory"
             | otherwise                   = Just "Unknown error"
 
-
 -- | Print the last OpenGL error.
 printGLError :: IO ()
 printGLError = getGLError >>= \err -> case err of
     Nothing  -> return ()
     Just str -> hPutStrLn stderr str
 
-
 -- | Run the given setup action and check for OpenGL errors.
 --
 -- If an OpenGL error is produced, an exception is thrown containing
 -- the given string appended to the string describing the error.
-assertGL :: Setup a -> String -> Setup a
+assertGL :: Game s a -> String -> Game s a
 assertGL action err = do
     result <- action
-    status <- setupIO getGLError
+    status <- gameIO getGLError
     case status of
-        Just str -> setupError $ "OpenGL error raised: " ++ err ++ "; " ++ str
+        Just str -> gameError $ "OpenGL error raised: " ++ err ++ "; " ++ str
         Nothing  -> return result

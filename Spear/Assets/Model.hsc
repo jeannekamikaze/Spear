@@ -27,9 +27,7 @@ module Spear.Assets.Model
 )
 where
 
-
-import Spear.Setup
-
+import Spear.Game
 
 import qualified Data.ByteString.Char8 as B
 import Data.Char (toLower)
@@ -45,11 +43,9 @@ import Foreign.Marshal.Alloc (alloca, allocaBytes)
 import Foreign.Marshal.Array (allocaArray, copyArray, peekArray)
 import Unsafe.Coerce (unsafeCoerce)
 
-
 #include "Model.h"
 #include "MD2/MD2_load.h"
 #include "OBJ/OBJ_load.h"
-
 
 data ModelErrorCode
     = ModelSuccess
@@ -60,14 +56,11 @@ data ModelErrorCode
     | ModelNoSuitableLoader
     deriving (Eq, Enum, Show)
 
-
 sizeFloat = #{size float}
 sizePtr   = #{size int*}
 
-
 -- | A 2D vector.
 data Vec2 = Vec2 {-# UNPACK #-} !Float {-# UNPACK #-} !Float
-
 
 instance Storable Vec2 where
     sizeOf _ = 2*sizeFloat
@@ -82,10 +75,8 @@ instance Storable Vec2 where
         pokeByteOff ptr 0         f0
         pokeByteOff ptr sizeFloat f1
 
-
 -- | A 3D vector.
 data Vec3 = Vec3 {-# UNPACK #-} !Float {-# UNPACK #-} !Float {-# UNPACK #-} !Float
-
 
 instance Storable Vec3 where
     sizeOf _ = 3*sizeFloat
@@ -102,10 +93,8 @@ instance Storable Vec3 where
         pokeByteOff ptr sizeFloat     f1
         pokeByteOff ptr (2*sizeFloat) f2
 
-
 -- | A 2D texture coordinate.
 data TexCoord = TexCoord {-# UNPACK #-} !Float {-# UNPACK #-} !Float
-
 
 instance Storable TexCoord where
     sizeOf _ = 2*sizeFloat
@@ -120,7 +109,6 @@ instance Storable TexCoord where
         pokeByteOff ptr 0         f0
         pokeByteOff ptr sizeFloat f1
 
-
 -- | A raw triangle holding vertex/normal and texture indices.
 data CTriangle = CTriangle
     { vertexIndex0  :: {-# UNPACK #-} !CUShort
@@ -130,7 +118,6 @@ data CTriangle = CTriangle
     , textureIndex2 :: {-# UNPACK #-} !CUShort
     , textureIndex3 :: {-# UNPACK #-} !CUShort
     }
-
 
 instance Storable CTriangle where
     sizeOf _ = #{size triangle}
@@ -156,10 +143,8 @@ instance Storable CTriangle where
         #{poke triangle, textureIndices[1]} ptr t1
         #{poke triangle, textureIndices[2]} ptr t2
 
-
 -- | A 3D axis-aligned bounding box.
 data Box = Box {-# UNPACK #-} !Vec3 {-# UNPACK #-} !Vec3
-
 
 instance Storable Box where
     sizeOf _ = 6 * sizeFloat
@@ -182,10 +167,8 @@ instance Storable Box where
         pokeByteOff ptr (4*sizeFloat) ymax
         pokeByteOff ptr (5*sizeFloat) zmax
 
-
 -- | A model skin.
 newtype Skin = Skin { skinName :: B.ByteString }
-
 
 instance Storable Skin where
     sizeOf (Skin s) = 64
@@ -198,7 +181,6 @@ instance Storable Skin where
     poke ptr (Skin s) = do
         B.useAsCStringLen s $ \(sptr, len) -> copyArray (unsafeCoerce ptr) sptr len
 
-
 -- | A model animation.
 --
 -- See also: 'animation', 'animationByName', 'numAnimations'.
@@ -207,7 +189,6 @@ data Animation = Animation
     , start :: Int
     , end   :: Int
     }
-
 
 instance Storable Animation where
     sizeOf _    = #{size animation}
@@ -224,7 +205,6 @@ instance Storable Animation where
         #{poke animation, start} ptr start
         #{poke animation, end}   ptr end
 
-
 -- | A 3D model.
 data Model = Model
     { vertices      :: S.Vector Vec3       -- ^ Array of 'numFrames' * 'numVerts' vertices.
@@ -240,7 +220,6 @@ data Model = Model
     , numSkins      :: Int                 -- ^ Number of skins.
     , numAnimations :: Int                 -- ^ Number of animations.
     }
-
 
 instance Storable Model where
     sizeOf _    = #{size Model}
@@ -291,7 +270,6 @@ instance Storable Model where
                 #{poke Model, numSkins}      ptr numSkins
                 #{poke Model, numAnimations} ptr numAnimations
 
-
 -- | A model triangle.
 --
 -- See also: 'triangles''.
@@ -306,7 +284,6 @@ data Triangle = Triangle
     , t1 :: TexCoord
     , t2 :: TexCoord
     }
-
 
 instance Storable Triangle where
     sizeOf _ = #{size model_triangle}
@@ -335,39 +312,33 @@ instance Storable Triangle where
         #{poke model_triangle, t1} ptr t1
         #{poke model_triangle, t2} ptr t2
 
-
 foreign import ccall "Model.h model_free"
     model_free :: Ptr Model -> IO ()
-
 
 foreign import ccall "MD2_load.h MD2_load"
     md2_load' :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO Int
 
-
 foreign import ccall "OBJ_load.h OBJ_load"
     obj_load' :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO Int
-
 
 md2_load :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO ModelErrorCode
 md2_load file clockwise leftHanded model =
     md2_load' file clockwise leftHanded model >>= \code -> return . toEnum $ code
 
-
 obj_load :: Ptr CChar -> CChar -> CChar -> Ptr Model -> IO ModelErrorCode
 obj_load file clockwise leftHanded model =
     obj_load' file clockwise leftHanded model >>= \code -> return . toEnum $ code
 
-
 -- | Load the model specified by the given file.
-loadModel :: FilePath -> Setup Model
+loadModel :: FilePath -> Game s Model
 loadModel file = do
     dotPos <- case elemIndex '.' file of
-            Nothing -> setupError $ "file name has no extension: " ++ file
+            Nothing -> gameError $ "file name has no extension: " ++ file
             Just p  -> return p
     
     let ext = map toLower . tail . snd $ splitAt dotPos file
     
-    result <- setupIO . alloca $ \ptr -> do
+    result <- gameIO . alloca $ \ptr -> do
         status <- withCString file $ \fileCstr -> do
             case ext of
                 "md2" -> md2_load fileCstr 0 0 ptr
@@ -387,24 +358,20 @@ loadModel file = do
     
     case result of
         Right model -> return model
-        Left err    -> setupError $ "loadModel: " ++ err
-
+        Left err    -> gameError $ "loadModel: " ++ err
 
 -- | Return 'True' if the model is animated, 'False' otherwise.
 animated :: Model -> Bool
 animated = (>1) . numFrames
 
-
 -- | Return the model's ith animation.
 animation :: Model -> Int -> Animation
 animation model i = animations model S.! i
-
 
 -- | Return the animation specified by the given string.
 animationByName :: Model -> String -> Maybe Animation
 animationByName model anim =
     let anim' = B.pack anim in S.find ((==) anim' . name) $ animations model
-
 
 -- | Return a copy of the model's triangles.
 triangles' :: Model -> IO [Triangle]
@@ -416,10 +383,8 @@ triangles' model =
             tris <- peekArray n arrayPtr
             return tris
 
-
 foreign import ccall "Model.h model_copy_triangles"
     model_copy_triangles :: Ptr Model -> Ptr Triangle -> IO ()
-
 
 -- | Transform the model's vertices.
 transformVerts :: Model -> (Vec3 -> Vec3) -> Model
@@ -429,7 +394,6 @@ transformVerts model f = model { vertices = vertices' }
         vertices' = S.generate n f'
         f' i = f $ vertices model S.! i 
 
-
 -- | Transform the model's normals.
 transformNormals :: Model -> (Vec3 -> Vec3) -> Model
 transformNormals model f = model { normals = normals' }
@@ -437,7 +401,6 @@ transformNormals model f = model { normals = normals' }
         n = numVerts model * numFrames model
         normals' = S.generate n f'
         f' i = f $ normals model S.! i 
-
 
 -- | Translate the model such that its lowest point has y = 0.
 toGround :: Model -> IO Model
@@ -447,10 +410,8 @@ toGround model =
     in    
         with model' model_to_ground >> return model'
 
-
 foreign import ccall "Model.h model_to_ground"
     model_to_ground :: Ptr Model -> IO ()
-
 
 -- | Get the model's 3D bounding boxes.
 modelBoxes :: Model -> IO (V.Vector Box)
@@ -474,8 +435,6 @@ modelBoxes model =
                     box  = Box pmin pmax
                 peekBoxes ptr n (cur+1) (off + 6*sizeFloat) $ fmap (box:) l
     fmap (V.fromList . reverse) getBoxes
-    
-
 
 foreign import ccall "Model.h model_compute_boxes"
     model_compute_boxes :: Ptr Model -> Ptr Vec2 -> IO ()

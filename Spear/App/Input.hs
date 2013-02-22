@@ -14,6 +14,7 @@ module Spear.App.Input
 ,   getKeyboard
 ,   newMouse
 ,   getMouse
+,   newInput
 ,   getInput
 ,   pollInput
     -- * Toggled input
@@ -68,7 +69,7 @@ data Input = Input
     }
 
 
--- | Return a dummy keyboard.
+-- | Return a new dummy keyboard.
 --
 -- This function should be called to get an initial keyboard.
 --
@@ -90,7 +91,7 @@ getKeyboard =
             >>= return . keyboard'
 
 
--- | Return a dummy mouse.
+-- | Return a new dummy mouse.
 --
 -- This function should be called to get an initial mouse.
 --
@@ -131,6 +132,11 @@ getMouse oldMouse =
             { button   = getButton buttonState
             , property = getProp $ props (fromIntegral xpos) (fromIntegral ypos)
             }
+
+
+-- | Return a new dummy input.
+newInput :: Input
+newInput = Input newKeyboard newMouse
 
 
 -- | Get input devices.

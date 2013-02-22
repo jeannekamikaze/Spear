@@ -27,7 +27,7 @@ perspective :: Float -- ^ Fovy - Vertical field of view angle in degrees.
 perspective fovy r n f right up fwd pos =
     Camera
     { projection = M.perspective fovy r n f
-    , transform  = M.transform right up fwd pos
+    , transform  = M.transform right up (neg fwd) pos
     }
 
 
@@ -47,7 +47,7 @@ ortho :: Float   -- ^ Left.
 ortho l r b t n f right up fwd pos =
     Camera
     { projection = M.ortho l r b t n f
-    , transform  = M.transform right up fwd pos
+    , transform  = M.transform right up (neg fwd) pos
     }
 
 

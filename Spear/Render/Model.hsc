@@ -7,9 +7,8 @@ module Spear.Render.Model
 )
 where
 
-
 import qualified Spear.Assets.Model as Assets
-import Spear.Setup
+import Spear.Game
 
 import Foreign.Ptr
 import Foreign.C.Types
@@ -18,21 +17,17 @@ import Foreign.Marshal.Array
 import Foreign.Marshal.Utils (with)
 import Foreign.Storable
 
-
 #include "RenderModel.h"
-
 
 data Vec3 = Vec3 !CFloat !CFloat !CFloat
 
 data TexCoord = TexCoord !CFloat !CFloat
-
 
 data RenderModel = RenderModel
     { elements    :: Ptr CChar
     , numFrames   :: CUInt
     , numVertices :: CUInt -- ^ Number of vertices per frame.
     }
-
 
 instance Storable RenderModel where
     sizeOf _    = #{size RenderModel}
@@ -49,10 +44,8 @@ instance Storable RenderModel where
         #{poke RenderModel, numFrames}   ptr numFrames
         #{poke RenderModel, numVertices} ptr numVertices
 
-
 foreign import ccall "RenderModel.h render_model_from_model_asset"
     render_model_from_model_asset :: Ptr Assets.Model -> Ptr RenderModel -> IO Int
-
 
 -- | Convert the given 'Model' to a 'ModelData' instance.
 renderModelFromModel :: Assets.Model -> IO RenderModel

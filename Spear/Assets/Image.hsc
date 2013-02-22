@@ -6,7 +6,6 @@ module Spear.Assets.Image
     Image
     -- * Loading and unloading
 ,   loadImage
-,   releaseImage
     -- * Accessors
 ,   width
 ,   height
@@ -15,8 +14,7 @@ module Spear.Assets.Image
 )
 where
 
-
-import Spear.Setup
+import Spear.Game
 import Foreign.Ptr
 import Foreign.Storable
 import Foreign.C.Types
@@ -26,10 +24,8 @@ import Foreign.Marshal.Alloc (alloca)
 import Data.List (splitAt, elemIndex)
 import Data.Char (toLower)
 
-
 #include "Image.h"
 #include "BMP/BMP_load.h"
-
 
 data ImageErrorCode
     = ImageSuccess
@@ -40,14 +36,12 @@ data ImageErrorCode
     | ImageNoSuitableLoader
     deriving (Eq, Enum, Show)
 
-
 data CImage = CImage
     { cwidth  :: CInt
     , cheight :: CInt
     , cbpp    :: CInt
     , cpixels :: Ptr CUChar
     }
-
 
 instance Storable CImage where
     sizeOf _    = #{size Image}
@@ -66,36 +60,34 @@ instance Storable CImage where
         #{poke Image, bpp}    ptr bpp
         #{poke Image, pixels} ptr pixels
 
-
 -- | Represents an image 'Resource'.
 data Image = Image
     { imageData :: CImage
     , rkey      :: Resource
     }
 
+instance ResourceClass Image where
+         getResource = rkey
 
 foreign import ccall "Image.h image_free"
     image_free :: Ptr CImage -> IO ()
 
-
 foreign import ccall "BMP_load.h BMP_load"
     bmp_load' :: Ptr CChar -> Ptr CImage -> IO Int
-
 
 bmp_load :: Ptr CChar -> Ptr CImage -> IO ImageErrorCode
 bmp_load file image = bmp_load' file image >>= \code -> return . toEnum $ code
 
-
 -- | Load the image specified by the given file.
-loadImage :: FilePath -> Setup Image
+loadImage :: FilePath -> Game s Image
 loadImage file = do
     dotPos <- case elemIndex '.' file of
-            Nothing -> setupError $ "file name has no extension: " ++ file
+            Nothing -> gameError $ "file name has no extension: " ++ file
             Just p  -> return p
     
     let ext = map toLower . tail . snd $ splitAt dotPos file
     
-    result <- setupIO . alloca $ \ptr -> do
+    result <- gameIO . alloca $ \ptr -> do
         status <- withCString file $ \fileCstr -> do
             case ext of
                 "bmp" -> bmp_load fileCstr ptr
@@ -111,33 +103,23 @@ loadImage file = do
         
     case result of
         Right image -> register (freeImage image) >>= return . Image image
-        Left  err   -> setupError $ "loadImage: " ++ err
-
-
--- | Release the given 'Image'.
-releaseImage :: Image -> Setup ()
-releaseImage = release . rkey
-
+        Left  err   -> gameError $ "loadImage: " ++ err
 
 -- | Free the given 'CImage'.
 freeImage :: CImage -> IO ()
 freeImage image = Foreign.with image image_free
 
-
 -- | Return the given image's width.
 width :: Image -> Int
 width = fromIntegral . cwidth . imageData
-
 
 -- | Return the given image's height.
 height :: Image -> Int
 height = fromIntegral . cheight . imageData
 
-
 -- | Return the given image's bits per pixel.
 bpp :: Image -> Int
 bpp = fromIntegral . cbpp . imageData
-
 
 -- | Return the given image's pixels.
 pixels :: Image -> Ptr CUChar

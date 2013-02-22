@@ -7,7 +7,6 @@ module Spear.Render.AnimatedModel
     -- * Construction and destruction
 ,   animatedModelResource
 ,   animatedModelRenderer
-,   Spear.Render.AnimatedModel.release
     -- * Accessors
 ,   animationSpeed
 ,   box
@@ -28,9 +27,9 @@ module Spear.Render.AnimatedModel
 )
 where
 
-
 import Spear.Assets.Model
 import Spear.Collision
+import Spear.Game
 import Spear.GLSL
 import Spear.Math.AABB
 import Spear.Math.Matrix4 (Matrix4)
@@ -38,16 +37,13 @@ import Spear.Math.Vector
 import Spear.Render.Material
 import Spear.Render.Model
 import Spear.Render.Program
-import Spear.Setup as Setup
 
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Vector as V
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
 
-
 type AnimationSpeed = Float
-
 
 -- | An animated model resource.
 --
@@ -63,14 +59,14 @@ data AnimatedModelResource = AnimatedModelResource
     , rkey      :: Resource
     }
 
-
 instance Eq AnimatedModelResource where
     m1 == m2 = vao m1 == vao m2
-
 
 instance Ord AnimatedModelResource where
     m1 < m2 = vao m1 < vao m2
 
+instance ResourceClass AnimatedModelResource where
+         getResource = rkey
 
 -- | An animated model renderer.
 --
@@ -92,31 +88,28 @@ data AnimatedModelRenderer = AnimatedModelRenderer
     , animationSpeed :: Float -- ^ Get the renderer's animation speed.
     }
 
-
 instance Eq AnimatedModelRenderer where
     m1 == m2 = modelResource m1 == modelResource m2
 
-
 instance Ord AnimatedModelRenderer where
     m1 < m2 = modelResource m1 < modelResource m2
-
 
 -- | Create an model resource from the given model.
 animatedModelResource :: AnimatedProgramChannels
                       -> Material
                       -> Texture
                       -> Model
-                      -> Setup AnimatedModelResource
+                      -> Game s AnimatedModelResource
 
 animatedModelResource
     (AnimatedProgramChannels vertChan1 vertChan2 normChan1 normChan2 texChan)
     material texture model = do
-        RenderModel elements numFrames numVertices <- setupIO . renderModelFromModel $ model
+        RenderModel elements numFrames numVertices <- gameIO . renderModelFromModel $ model
         elementBuf <- newBuffer
         vao        <- newVAO
-        boxes      <- setupIO $ modelBoxes model
+        boxes      <- gameIO $ modelBoxes model
         
-        setupIO $ do
+        gameIO $ do
         
             let elemSize  = 56
                 elemSize' = fromIntegral elemSize
@@ -139,26 +132,19 @@ animatedModelResource
             enableVAOAttrib normChan2
             enableVAOAttrib texChan
             
-        rkey <- register . runSetup_ $ do
-            setupIO $ putStrLn "Releasing animated model resource"
-            releaseVAO vao
-            releaseBuffer elementBuf        
+        rkey <- register $ do
+             putStrLn "Releasing animated model resource"
+             clean vao
+             clean elementBuf
         
         return $ AnimatedModelResource
             model vao (unsafeCoerce numFrames) (unsafeCoerce numVertices)
             material texture boxes rkey
 
-
--- | Release the given model resource.
-release :: AnimatedModelResource -> Setup ()
-release = Setup.release . rkey
-
-
 -- | Create a renderer from the given model resource.
 animatedModelRenderer :: AnimationSpeed -> AnimatedModelResource -> AnimatedModelRenderer
 animatedModelRenderer animSpeed modelResource =
     AnimatedModelRenderer modelResource 0 0 0 0 0 animSpeed
-
 
 -- | Update the renderer.
 update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s) =
@@ -171,21 +157,17 @@ update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s
                                in if x > endFrame then startFrame else x
                           else curFrame
 
-
 -- | Get the model's ith bounding box.
 box :: Int -> AnimatedModelResource -> Box
 box i model = boxes model V.! i
-
 
 -- | Get the renderer's current animation.
 currentAnimation :: Enum a => AnimatedModelRenderer -> a
 currentAnimation = toEnum . currentAnim
 
-
 -- | Get the renderer's model resource.
 modelRes :: AnimatedModelRenderer -> AnimatedModelResource
 modelRes = modelResource
-
 
 -- | Get the renderer's next frame.
 nextFrame :: AnimatedModelRenderer -> Int
@@ -196,7 +178,6 @@ nextFrame rend =
         then frameStart rend
         else curFrame + 1
 
-
 -- | Set the active animation to the given one.
 setAnimation :: Enum a => a -> AnimatedModelRenderer -> AnimatedModelRenderer
 setAnimation anim modelRend =
@@ -205,11 +186,9 @@ setAnimation anim modelRend =
     in
         modelRend { currentAnim = anim', frameStart = f1, frameEnd = f2, currentFrame = f1 }
 
-
 -- | Set the renderer's animation speed.
 setAnimationSpeed :: AnimationSpeed -> AnimatedModelRenderer -> AnimatedModelRenderer
 setAnimationSpeed s r = r { animationSpeed = s }
-
 
 -- | Bind the given renderer to prepare it for rendering.
 bind :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
@@ -220,7 +199,6 @@ bind (AnimatedProgramUniforms kaLoc kdLoc ksLoc shiLoc texLoc _ _ _ _) modelRend
         bindTexture $ texture model'
         activeTexture $= gl_TEXTURE0
         glUniform1i texLoc 0
-
 
 -- | Render the model described by the given renderer.
 render :: AnimatedProgramUniforms -> AnimatedModelRenderer -> IO ()
@@ -234,7 +212,6 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         glUniform1f (fpLoc uniforms) (unsafeCoerce fp)
         drawArrays gl_TRIANGLES (n*curFrame) n
-
 
 -- | Compute AABB collisioners in view space from the given model.
 mkColsFromAnimated

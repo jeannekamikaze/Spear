@@ -17,9 +17,9 @@ module Spear.Scene.Loader
 )
 where
 
-
 import Spear.Assets.Model as Model
 import Spear.Collision
+import Spear.Game
 import qualified Spear.GLSL as GLSL
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
@@ -33,7 +33,6 @@ import Spear.Scene.GameObject as GO
 import Spear.Scene.Graph
 import Spear.Scene.Light
 import Spear.Scene.SceneResources
-import Spear.Setup
 
 import Control.Monad.State.Strict
 import Control.Monad.Trans (lift)
@@ -43,37 +42,27 @@ import qualified Data.StateVar as SV (get)
 import Graphics.Rendering.OpenGL.Raw.Core31
 import Text.Printf (printf)
 
-
-type Loader = StateT SceneResources Setup
-
-
-loaderSetup = lift
-loaderIO    = loaderSetup . setupIO
-loaderError = loaderSetup . setupError
-
+type Loader = Game SceneResources
 
 -- | Load the scene specified by the given file.
-loadScene :: FilePath -> Setup (SceneResources, SceneGraph)
+loadScene :: FilePath -> Game s (SceneResources, SceneGraph)
 loadScene file = do
-    result <- setupIO $ loadSceneGraphFromFile file
+    result <- gameIO $ loadSceneGraphFromFile file
     case result of
-        Left err -> setupError $ show err
+        Left err -> gameError $ show err
         Right g  -> case validate g of
             Nothing  -> do
                 sceneRes <- resourceMap g
                 return (sceneRes, g)
-            Just err -> setupError err
-
+            Just err -> gameError err
 
 -- | Validate the given SceneGraph.
 validate :: SceneGraph -> Maybe String
 validate _ = Nothing
 
-
 -- | Load the scene described by the given 'SceneGraph'.
-resourceMap :: SceneGraph -> Setup SceneResources
-resourceMap g = execStateT (resourceMap' g) emptySceneResources
-
+resourceMap :: SceneGraph -> Game s SceneResources
+resourceMap g = execSubGame (resourceMap' g) emptySceneResources
 
 resourceMap' :: SceneGraph -> Loader ()
 resourceMap' node@(SceneLeaf nid props) = do
@@ -86,52 +75,43 @@ resourceMap' node@(SceneLeaf nid props) = do
 resourceMap' node@(SceneNode nid props children) = do
     mapM_ resourceMap' children
 
-
 -- Lookup the given resource in the data pool. Load it if it is not present, otherwise return it.
 loadResource :: String -- ^ Resource name.
              -> (SceneResources -> Map String a) -- ^ Map getter.
              -> (String -> a -> Loader ()) -- ^ Function to modify resources.
-             -> Setup a -- ^ Resource loader.
+             -> Loader a -- ^ Resource loader.
              -> Loader a
 loadResource key field modifyResources load = do
     sceneData <- get
     case M.lookup key $ field sceneData of
         Just val -> return val
         Nothing  -> do
-            loaderIO $ printf "Loading %s..." key
-            resource <- loaderSetup load
-            loaderIO $ printf "done\n"
+            gameIO $ printf "Loading %s..." key
+            resource <- load
+            gameIO $ printf "done\n"
             modifyResources key resource
             return resource
-
 
 addShader name shader = modify $ \sceneData ->
     sceneData { shaders = M.insert name shader $ shaders sceneData }
 
-
 addCustomProgram name prog = modify $ \sceneData ->
     sceneData { customPrograms = M.insert name prog $ customPrograms sceneData }
-
 
 addStaticProgram name prog = modify $ \sceneData ->
     sceneData { staticPrograms = M.insert name prog $ staticPrograms sceneData }
 
-
 addAnimatedProgram name prog = modify $ \sceneData ->
     sceneData { animatedPrograms = M.insert name prog $ animatedPrograms sceneData }
-
 
 addTexture name tex = modify $ \sceneData ->
     sceneData { textures = M.insert name tex $ textures sceneData }
 
-
 addStaticModel name model = modify $
     \sceneData -> sceneData { staticModels = M.insert name model $ staticModels sceneData }
 
-
 addAnimatedModel name model = modify $
     \sceneData -> sceneData { animatedModels = M.insert name model $ animatedModels sceneData }
-
 
 -- Get the given resource from the data pool.
 getResource :: (SceneResources -> Map String a) -> String -> Loader a
@@ -139,10 +119,7 @@ getResource field key = do
     sceneData <- get
     case M.lookup key $ field sceneData of
         Just val -> return val
-        Nothing  -> loaderSetup . setupError $ "Oops, the given resource has not been loaded: " ++ key
-
-
-
+        Nothing  -> gameError $ "Oops, the given resource has not been loaded: " ++ key
 
 ----------------------
 -- Resource Loading --
@@ -163,9 +140,9 @@ newModel (SceneLeaf _ props) = do
     let rotation = asRotation $ value "rotation" props
         scale    = asVec3 $ value "scale" props
     
-    loaderIO $ printf "Loading model %s..." name
-    model    <- loaderSetup $ loadModel' file rotation scale
-    loaderIO . putStrLn $ "done"
+    gameIO $ printf "Loading model %s..." name
+    model    <- loadModel' file rotation scale
+    gameIO .  putStrLn $ "done"
     texture  <- loadTexture  tex
     sceneRes <- get
     
@@ -174,25 +151,24 @@ newModel (SceneLeaf _ props) = do
     case animated model of
         False ->
             case M.lookup prog $ staticPrograms sceneRes of
-                Nothing -> (loaderError $ "Static shader program " ++ prog ++ " does not exist") >> return ()
+                Nothing -> (gameError $ "Static shader program " ++ prog ++ " does not exist") >> return ()
                 Just p  ->
                     let StaticProgram _ channels _ = p
                     in do
-                        model' <- loaderSetup $ staticModelResource channels material texture model
+                        model' <- staticModelResource channels material texture model
                         loadResource name staticModels addStaticModel (return model')
                         return ()
         True ->
             case M.lookup prog $ animatedPrograms sceneRes of
-                Nothing -> (loaderError $ "Animated shader program " ++ prog ++ " does not exist") >> return ()
+                Nothing -> (gameError $ "Animated shader program " ++ prog ++ " does not exist") >> return ()
                 Just p  ->
                     let AnimatedProgram _ channels _ = p
                     in do
-                        model' <- loaderSetup $ animatedModelResource channels material texture model
+                        model' <- animatedModelResource channels material texture model
                         loadResource name animatedModels addAnimatedModel (return model')
                         return ()
 
-
-loadModel' :: FilePath -> Maybe Rotation -> Maybe Vector3 -> Setup Model
+loadModel' :: FilePath -> Maybe Rotation -> Maybe Vector3 -> Game s Model
 loadModel' file rotation scale = do
     let transform =
             (case rotation of
@@ -204,8 +180,7 @@ loadModel' file rotation scale = do
                 Just s  -> flip Model.transformVerts $
                     \(Vec3 x' y' z') -> Vec3 (x s * x') (y s * y') (z s * z'))
     
-    (fmap transform $ Model.loadModel file) >>= setupIO . toGround
-
+    (fmap transform $ Model.loadModel file) >>= gameIO . toGround
 
 rotateModel :: Rotation -> Model -> Model
 rotateModel (Rotation ax ay az order) model =
@@ -226,12 +201,10 @@ rotateModel (Rotation ax ay az order) model =
     in
         flip Model.transformVerts vTransform . flip Model.transformNormals nTransform $ model
 
-
 loadTexture :: FilePath -> Loader GLSL.Texture
 loadTexture file =
     loadResource file textures addTexture $
         GLSL.loadTextureImage file gl_LINEAR gl_LINEAR
-
 
 newShaderProgram :: SceneGraph -> Loader ()
 newShaderProgram (SceneLeaf _ props) = do
@@ -239,9 +212,9 @@ newShaderProgram (SceneLeaf _ props) = do
     (fsName, fragShader) <- Spear.Scene.Loader.loadShader GLSL.FragmentShader props
     name       <- asString $ mandatory' "name" props
     stype      <- asString $ mandatory' "type" props
-    prog       <- loaderSetup $ GLSL.newProgram [vertShader, fragShader]
+    prog       <- GLSL.newProgram [vertShader, fragShader]
     
-    let getUniformLoc name = loaderSetup $ (setupIO . SV.get $ GLSL.uniformLocation prog name) `GLSL.assertGL` name
+    let getUniformLoc name = (gameIO . SV.get $ GLSL.uniformLocation prog name) `GLSL.assertGL` name
     
     case stype of
         "static" -> do
@@ -312,12 +285,8 @@ newShaderProgram (SceneLeaf _ props) = do
             loadResource name customPrograms addCustomProgram $ return prog
             return ()
 
-
-
-
-
 loadShader :: GLSL.ShaderType -> [Property] -> Loader (String, GLSL.GLSLShader)
-loadShader _ [] = loaderSetup . setupError $ "Loader::vertexShader: empty list"
+loadShader _ [] = gameError $ "Loader::vertexShader: empty list"
 loadShader shaderType ((stype, file):xs) =
     if shaderType == GLSL.VertexShader   && stype == "vertex-shader" ||
        shaderType == GLSL.FragmentShader && stype == "fragment-shader"
@@ -325,22 +294,17 @@ loadShader shaderType ((stype, file):xs) =
          in loadShader' f shaderType >>= \shader -> return (f, shader)
     else Spear.Scene.Loader.loadShader shaderType xs
 
-
 loadShader' :: String -> GLSL.ShaderType -> Loader GLSL.GLSLShader
 loadShader' file shaderType = loadResource file shaders addShader $ GLSL.loadShader file shaderType
 
-
 newLight :: SceneGraph -> Loader ()
 newLight _ = return ()
-
-
-
 
 --------------------
 -- Object Loading --
 --------------------
 
-loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Setup GameObject
+loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Game s GameObject
 loadGO style sceneRes props transf = do
     modelName <- asString . mandatory "model"    $ props
     axis <- asVec3 . mandatory "axis" $ props
@@ -353,11 +317,10 @@ loadGO style sceneRes props transf = do
                 Just model ->
                     return $ goNew style (Left model) [] transf axis
                 Nothing ->
-                    setupError $ "model " ++ modelName ++ " not found"
+                    gameError $ "model " ++ modelName ++ " not found"
     return $ case animSpeed of
         Nothing -> go
         Just s  -> GO.setAnimationSpeed s go
-
 
 type CreateGameObject m a
     = String -- ^ The object's name.
@@ -366,14 +329,12 @@ type CreateGameObject m a
     -> Matrix3 -- ^ The object's transform.
     -> m a
 
-
 -- | Load objects from the given 'SceneGraph'.
 loadObjects :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> m [a]
 loadObjects newGO sceneRes g =
     case node "layout" g of
         Nothing -> return []
         Just n  -> sequence . concat . fmap (newObject newGO sceneRes) $ children n
-
 
 -- to-do: use a strict accumulator and make loadObjects tail recursive.
 newObject :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> [m a]
@@ -382,7 +343,6 @@ newObject newGO sceneRes (SceneNode nid props children) =
     in o : (concat $ fmap (newObject newGO sceneRes) children)
 
 newObject newGO sceneRes (SceneLeaf nid props) = [newObject' newGO sceneRes nid props]
-
 
 newObject' :: Monad m => CreateGameObject m a -> SceneResources -> String -> [Property] -> m a
 newObject' newGO sceneRes nid props = do
@@ -399,14 +359,10 @@ newObject' newGO sceneRes nid props = do
     
     newGO goType sceneRes props (M3.transform right up position)
 
-
 vectors :: Maybe Vector2 -> (Vector2, Vector2)
 vectors up = case up of
     Nothing -> (unitx2, unity2)
     Just u  -> (perp u, u)
-
-
-
 
 ----------------------
 -- Helper functions --
@@ -418,52 +374,42 @@ value name props = case L.find ((==) name . fst) props of
     Nothing   -> Nothing
     Just prop -> Just . snd $ prop
 
-
 unspecified :: Maybe a -> a -> a
 unspecified (Just x) _ = x
 unspecified Nothing  x = x
 
-
-mandatory :: String -> [Property] -> Setup [String]
+mandatory :: String -> [Property] -> Game s [String]
 mandatory name props = case value name props of
-    Nothing -> setupError $ "Loader::mandatory: key not found: " ++ name
+    Nothing -> gameError $ "Loader::mandatory: key not found: " ++ name
     Just x  -> return x
 
-
 mandatory' :: String -> [Property] -> Loader [String]
-mandatory' name props = loaderSetup $ mandatory name props
-
+mandatory' name props = mandatory name props
 
 asString :: Functor f => f [String] -> f String
 asString = fmap concat
 
-
 asFloat :: Functor f => f [String] -> f Float
 asFloat = fmap (read . concat)
-
 
 asVec2 :: Functor f => f [String] -> f Vector2
 asVec2 val = fmap toVec2 val
     where toVec2 (x:y:_) = vec2 (read x) (read y)
           toVec2 (x:[])    = let x' = read x in vec2 x' x'
 
-
 asVec3 :: Functor f => f [String] -> f Vector3
 asVec3 val = fmap toVec3 val
     where toVec3 (x:y:z:_) = vec3 (read x) (read y) (read z)
           toVec3 (x:[])    = let x' = read x in vec3 x' x' x'
-
 
 asVec4 :: Functor f => f [String] -> f Vector4
 asVec4 val = fmap toVec4 val
     where toVec4 (x:y:z:w:_) = vec4 (read x) (read y) (read z) (read w)
           toVec4 (x:[])      = let x' = read x in vec4 x' x' x' x'
 
-
 asRotation :: Functor f => f [String] -> f Rotation
 asRotation val = fmap parseRotation val
     where parseRotation (ax:ay:az:order:_) = Rotation (read ax) (read ay) (read az) (readOrder order)
-
 
 data Rotation = Rotation
     { ax    :: Float
@@ -472,9 +418,7 @@ data Rotation = Rotation
     , order :: RotationOrder
     }
 
-
 data RotationOrder = XYZ | XZY | YXZ | YZX | ZXY | ZYX deriving Eq
-
 
 readOrder :: String -> RotationOrder
 readOrder "xyz" = XYZ

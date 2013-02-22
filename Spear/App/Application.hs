@@ -13,8 +13,8 @@ module Spear.App.Application
 ,   setup
 ,   quit
     -- * Main loop
-,   run
-,   runCapped
+,   loop
+,   loopCapped
     -- * Helpers
 ,   swapBuffers
 ,   getParam
@@ -83,29 +83,29 @@ quit = GLFW.terminate
 type Update s = Float -> Game s (Bool)
 
 -- | Run the application's main loop.
-run :: Update s -> Game s ()
-run update = do
-    timer <- gameIO $ start newTimer
-    run' timer update
+loop :: Update s -> Game s ()
+loop update = do
+     timer <- gameIO $ start newTimer
+     run timer update
 
-run' :: Timer -> Update s -> Game s ()
-run' timer update = do
+run :: Timer -> Update s -> Game s ()
+run timer update = do
     timer' <- gameIO $ tick timer
     continue <- update $ getDelta timer'
     opened <- gameIO $ getParam Opened
     case continue && opened of
         False -> return ()
-        True  -> run' timer' update
+        True  -> run timer' update
 
 -- | Run the application's main loop, with a limit on the frame rate.
-runCapped :: Int -> Update s -> Game s ()
-runCapped maxFPS update = do
+loopCapped :: Int -> Update s -> Game s ()
+loopCapped maxFPS update = do
     let ddt = 1.0 / (fromIntegral maxFPS)
     timer <- gameIO $ start newTimer
-    runCapped' ddt timer update
+    runCapped ddt timer update
 
-runCapped' :: Float -> Timer -> Update s -> Game s ()
-runCapped' ddt timer update = do
+runCapped :: Float -> Timer -> Update s -> Game s ()
+runCapped ddt timer update = do
     timer' <- gameIO $ tick timer
     continue <- update $ getDelta timer'
     opened <- gameIO $ getParam Opened
@@ -115,7 +115,7 @@ runCapped' ddt timer update = do
             t'' <- gameIO $ tick timer'
             let dt = getDelta t''
             when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
-            runCapped' ddt timer' update
+            runCapped ddt timer' update
 
 onResize :: WindowSizeCallback -> Size -> IO ()
 onResize callback s@(Size w h) = do

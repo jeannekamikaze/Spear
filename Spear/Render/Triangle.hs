@@ -4,7 +4,5 @@ module Spear.Render.Triangle
 where
 
 
-import Graphics.Rendering.OpenGL.Raw.Core31
-
-
+import Spear.GL
 

@@ -39,7 +39,6 @@ import Control.Monad.Trans (lift)
 import Data.List as L (find)
 import Data.Map as M
 import qualified Data.StateVar as SV (get)
-import Graphics.Rendering.OpenGL.Raw.Core31
 import Text.Printf (printf)
 
 type Loader = Game SceneResources
@@ -204,7 +203,7 @@ rotateModel (Rotation ax ay az order) model =
 loadTexture :: FilePath -> Loader GL.Texture
 loadTexture file =
     loadResource file textures addTexture $
-        GL.loadTextureImage file gl_LINEAR gl_LINEAR
+        GL.loadTextureImage file GL.gl_LINEAR GL.gl_LINEAR
 
 newShaderProgram :: SceneGraph -> Loader ()
 newShaderProgram (SceneLeaf _ props) = do

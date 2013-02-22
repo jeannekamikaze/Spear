@@ -40,7 +40,6 @@ import Spear.Render.Program
 
 import Control.Applicative ((<$>), (<*>))
 import qualified Data.Vector as V
-import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
 
 type AnimationSpeed = Float

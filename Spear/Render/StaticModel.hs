@@ -29,7 +29,6 @@ import Spear.Render.Model
 import Spear.Render.Program
 
 import qualified Data.Vector as V
-import Graphics.Rendering.OpenGL.Raw.Core31
 import Unsafe.Coerce (unsafeCoerce)
 
 data StaticModelResource = StaticModelResource

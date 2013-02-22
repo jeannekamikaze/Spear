@@ -74,7 +74,7 @@ module Spear.GL
 ,   printGLError
 ,   assertGL
     -- * OpenGL
-,   module Graphics.Rendering.OpenGL.Raw.Core31
+,   module Graphics.Rendering.OpenGL.Raw.Core32
 ,   Ptr
 ,   nullPtr
 )
@@ -99,7 +99,7 @@ import Foreign.Marshal.Utils as Foreign (with)
 import Foreign.Marshal.Alloc (alloca)
 import Foreign.Marshal.Array (withArray)
 import Foreign.Storable (peek)
-import Graphics.Rendering.OpenGL.Raw.Core31
+import Graphics.Rendering.OpenGL.Raw.Core32
 import System.Directory (doesFileExist, getCurrentDirectory, setCurrentDirectory)
 import System.IO (hPutStrLn, stderr)
 import Unsafe.Coerce
@@ -127,11 +127,12 @@ instance ResourceClass GLSLProgram where
          getResource = getProgramKey
 
 -- | Supported shader types.
-data ShaderType = VertexShader | FragmentShader deriving (Eq, Show)
+data ShaderType = VertexShader | FragmentShader | GeometryShader deriving (Eq, Show)
 
 toGLShader :: ShaderType -> GLenum
 toGLShader VertexShader   = gl_VERTEX_SHADER
 toGLShader FragmentShader = gl_FRAGMENT_SHADER
+toGLShader GeometryShader = gl_GEOMETRY_SHADER
 
 -- | Apply the given function to the program's id.
 withGLSLProgram :: GLSLProgram -> (GLuint -> a) -> a

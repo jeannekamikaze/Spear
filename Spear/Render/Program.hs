@@ -11,9 +11,7 @@ module Spear.Render.Program
 )
 where
 
-import Spear.GL (GLSLProgram)
-
-import Graphics.Rendering.OpenGL.Raw.Core31
+import Spear.GL
 
 data StaticProgram = StaticProgram
     { staticProgram         :: GLSLProgram

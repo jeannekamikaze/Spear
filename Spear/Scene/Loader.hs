@@ -20,7 +20,7 @@ where
 import Spear.Assets.Model as Model
 import Spear.Collision
 import Spear.Game
-import qualified Spear.GLSL as GLSL
+import qualified Spear.GL as GL
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
@@ -201,20 +201,20 @@ rotateModel (Rotation ax ay az order) model =
     in
         flip Model.transformVerts vTransform . flip Model.transformNormals nTransform $ model
 
-loadTexture :: FilePath -> Loader GLSL.Texture
+loadTexture :: FilePath -> Loader GL.Texture
 loadTexture file =
     loadResource file textures addTexture $
-        GLSL.loadTextureImage file gl_LINEAR gl_LINEAR
+        GL.loadTextureImage file gl_LINEAR gl_LINEAR
 
 newShaderProgram :: SceneGraph -> Loader ()
 newShaderProgram (SceneLeaf _ props) = do
-    (vsName, vertShader) <- Spear.Scene.Loader.loadShader GLSL.VertexShader props
-    (fsName, fragShader) <- Spear.Scene.Loader.loadShader GLSL.FragmentShader props
+    (vsName, vertShader) <- Spear.Scene.Loader.loadShader GL.VertexShader props
+    (fsName, fragShader) <- Spear.Scene.Loader.loadShader GL.FragmentShader props
     name       <- asString $ mandatory' "name" props
     stype      <- asString $ mandatory' "type" props
-    prog       <- GLSL.newProgram [vertShader, fragShader]
+    prog       <- GL.newProgram [vertShader, fragShader]
     
-    let getUniformLoc name = (gameIO . SV.get $ GLSL.uniformLocation prog name) `GLSL.assertGL` name
+    let getUniformLoc name = (gameIO . SV.get $ GL.uniformLocation prog name) `GL.assertGL` name
     
     case stype of
         "static" -> do
@@ -285,17 +285,17 @@ newShaderProgram (SceneLeaf _ props) = do
             loadResource name customPrograms addCustomProgram $ return prog
             return ()
 
-loadShader :: GLSL.ShaderType -> [Property] -> Loader (String, GLSL.GLSLShader)
+loadShader :: GL.ShaderType -> [Property] -> Loader (String, GL.GLSLShader)
 loadShader _ [] = gameError $ "Loader::vertexShader: empty list"
 loadShader shaderType ((stype, file):xs) =
-    if shaderType == GLSL.VertexShader   && stype == "vertex-shader" ||
-       shaderType == GLSL.FragmentShader && stype == "fragment-shader"
+    if shaderType == GL.VertexShader   && stype == "vertex-shader" ||
+       shaderType == GL.FragmentShader && stype == "fragment-shader"
     then let f = concat file
          in loadShader' f shaderType >>= \shader -> return (f, shader)
     else Spear.Scene.Loader.loadShader shaderType xs
 
-loadShader' :: String -> GLSL.ShaderType -> Loader GLSL.GLSLShader
-loadShader' file shaderType = loadResource file shaders addShader $ GLSL.loadShader file shaderType
+loadShader' :: String -> GL.ShaderType -> Loader GL.GLSLShader
+loadShader' file shaderType = loadResource file shaders addShader $ GL.loadShader file shaderType
 
 newLight :: SceneGraph -> Loader ()
 newLight _ = return ()

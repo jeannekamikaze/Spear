@@ -32,7 +32,7 @@ where
 
 
 import Spear.Collision as Col
-import Spear.GLSL
+import Spear.GL
 import Spear.Math.AABB
 import qualified Spear.Math.Camera as Cam
 import qualified Spear.Math.Matrix3 as M3

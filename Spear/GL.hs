@@ -1,4 +1,4 @@
-module Spear.GLSL
+module Spear.GL
 (
     -- * General Management
     GLSLShader

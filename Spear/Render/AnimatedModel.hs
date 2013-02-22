@@ -30,7 +30,7 @@ where
 import Spear.Assets.Model
 import Spear.Collision
 import Spear.Game
-import Spear.GLSL
+import Spear.GL
 import Spear.Math.AABB
 import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector

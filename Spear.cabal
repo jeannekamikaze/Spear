@@ -20,7 +20,7 @@ library
                      Spear.Physics.Types Spear.App Spear.App.Application Spear.App.Input
                      Spear.Assets.Image Spear.Assets.Model Spear.Collision
                      Spear.Math.AABB Spear.Math.Circle Spear.Math.Triangle Spear.Game
-                     Spear.GLSL Spear.Math.Camera Spear.Math.Entity Spear.Math.Matrix3
+                     Spear.GL Spear.Math.Camera Spear.Math.Entity Spear.Math.Matrix3
                      Spear.Math.Matrix4 Spear.Math.MatrixUtils Spear.Math.Plane
                      Spear.Math.Quaternion Spear.Math.Vector Spear.Math.Vector.Class
                      Spear.Math.Vector.Vector3 Spear.Math.Vector.Vector4

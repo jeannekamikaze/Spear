@@ -11,12 +11,9 @@ module Spear.Render.Program
 )
 where
 
-
-import Spear.GLSL (GLSLProgram)
-
+import Spear.GL (GLSLProgram)
 
 import Graphics.Rendering.OpenGL.Raw.Core31
-
 
 data StaticProgram = StaticProgram
     { staticProgram         :: GLSLProgram
@@ -24,20 +21,17 @@ data StaticProgram = StaticProgram
     , staticProgramUniforms :: StaticProgramUniforms
     }
 
-
 data AnimatedProgram = AnimatedProgram
     { animatedProgram         :: GLSLProgram
     , animatedProgramChannels :: AnimatedProgramChannels
     , animatedProgramUniforms :: AnimatedProgramUniforms
     }
 
-
 data StaticProgramChannels = StaticProgramChannels
     { vertexChannel  :: GLuint -- ^ Vertex channel.
     , normalChannel  :: GLuint -- ^ Normal channel.
     , stexChannel    :: GLuint -- ^ Texture channel.
     }
-
 
 data AnimatedProgramChannels = AnimatedProgramChannels
     { vertexChannel1 :: GLuint -- ^ Vertex channel 1.
@@ -46,7 +40,6 @@ data AnimatedProgramChannels = AnimatedProgramChannels
     , normalChannel2 :: GLuint -- ^ Normal channel 2.
     , atexChannel    :: GLuint -- ^ Texture channel.
     }
-
 
 data StaticProgramUniforms = StaticProgramUniforms
     { skaLoc         :: GLint -- ^ Material ambient uniform location.
@@ -58,7 +51,6 @@ data StaticProgramUniforms = StaticProgramUniforms
     , snormalmatLoc  :: GLint -- ^ Normal matrix location.
     , sprojLoc       :: GLint -- ^ Projection matrix location.
     }
-
 
 data AnimatedProgramUniforms = AnimatedProgramUniforms
     { akaLoc         :: GLint -- ^ Material ambient uniform location.
@@ -72,18 +64,14 @@ data AnimatedProgramUniforms = AnimatedProgramUniforms
     , aprojLoc       :: GLint -- ^ Projection matrix location.
     }
 
-
 class Program a where
     program :: a -> GLSLProgram
-
 
 instance Program StaticProgram where
     program = staticProgram
 
-
 instance Program AnimatedProgram where
     program = animatedProgram
-
 
 class ProgramUniforms a where
     kaLoc        :: a -> GLint
@@ -95,7 +83,6 @@ class ProgramUniforms a where
     normalmatLoc :: a -> GLint
     projLoc      :: a -> GLint
 
-
 instance ProgramUniforms StaticProgramUniforms where
     kaLoc        = skaLoc
     kdLoc        = skdLoc
@@ -106,8 +93,6 @@ instance ProgramUniforms StaticProgramUniforms where
     normalmatLoc = snormalmatLoc
     projLoc      = sprojLoc
     
-
-
 instance ProgramUniforms AnimatedProgramUniforms where
     kaLoc        = akaLoc
     kdLoc        = akdLoc

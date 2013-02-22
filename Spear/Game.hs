@@ -15,6 +15,8 @@ module Spear.Game
     -- * Running and IO
 ,   runGame
 ,   runGame'
+,   runSubGame
+,   runSubGame'
 ,   evalSubGame
 ,   execSubGame
 ,   gameIO
@@ -74,6 +76,14 @@ runGame game state = runErrorT . R.runResourceT . runStateT game $ state
 -- | Run the given game.
 runGame' :: Game s a -> s -> IO ()
 runGame' game state = runGame game state >> return ()
+
+-- | Run the given game.
+runSubGame :: Game s a -> s -> Game t (a,s)
+runSubGame game state = lift $ runStateT game state
+
+-- | Run the given game.
+runSubGame' :: Game s a -> s -> Game t ()
+runSubGame' game state = runSubGame game state >> return ()
 
 -- | Run the given game and return its result.
 evalSubGame :: Game s a -> s -> Game t a

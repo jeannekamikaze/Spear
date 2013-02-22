@@ -294,7 +294,7 @@ loadShader shaderType ((stype, file):xs) =
     else Spear.Scene.Loader.loadShader shaderType xs
 
 loadShader' :: String -> GL.ShaderType -> Loader GL.GLSLShader
-loadShader' file shaderType = loadResource file shaders addShader $ GL.loadShader file shaderType
+loadShader' file shaderType = loadResource file shaders addShader $ GL.loadShader shaderType file
 
 newLight :: SceneGraph -> Loader ()
 newLight _ = return ()

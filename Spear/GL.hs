@@ -213,8 +213,8 @@ detachShader prog shader = glDetachShader (getProgram prog) (getShader shader)
 --
 -- This function creates a new shader. To load source code into an existing shader,
 -- see 'loadSource', 'shaderSource' and 'readSource'.
-loadShader :: FilePath -> ShaderType -> Game s GLSLShader
-loadShader file shaderType = do
+loadShader :: ShaderType -> FilePath -> Game s GLSLShader
+loadShader shaderType file = do
     shader <- newShader shaderType
     loadSource file shader
     compile file shader

@@ -54,5 +54,6 @@ library
     include-dirs: Spear/Assets/Image Spear/Assets/Model Spear/Render
                   Spear/Sys
     hs-source-dirs: .
-    ghc-options: -O2 -rtsopts
+    ghc-options: -O2
+    ghc-prof-options: -rtsopts -fprof-auto -fprof-cafs
  

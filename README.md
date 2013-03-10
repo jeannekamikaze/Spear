@@ -16,11 +16,6 @@ $ cd Spear
 $ cabal install
 ```
 
-Documentation
--------------
-
-An online copy of the haddocks can be found [here][0].
-
 Features
 --------
 
@@ -51,5 +46,3 @@ Features
 
 ### Scene
 * Automated loading of scenes and scene resources as described by scene files.
-
-[0]: http://shellblade.net/docs/Spear/index.html

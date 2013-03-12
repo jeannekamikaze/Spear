@@ -81,12 +81,12 @@ data GameObject = GameObject
 
 
 instance S2.Spatial2 GameObject where
-    
+
     move v go = go
         { collisioners = fmap (Col.move v) $ collisioners go
         , transform  = M3.translv v * transform go
         }
-    
+
     moveFwd s go =
         let m = transform go
             v = scale s $ M3.forward m
@@ -94,7 +94,7 @@ instance S2.Spatial2 GameObject where
            { collisioners = fmap (Col.move v) $ collisioners go
            , transform = M3.translv v * m
            }
-    
+
     moveBack s go =
         let m = transform go
             v = scale (-s) $ M3.forward m
@@ -102,7 +102,7 @@ instance S2.Spatial2 GameObject where
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
-    
+
     strafeLeft s go =
         let m = transform go
             v = scale (-s) $ M3.right m
@@ -110,7 +110,7 @@ instance S2.Spatial2 GameObject where
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
-    
+
     strafeRight s go =
         let m = transform go
             v = scale s $ M3.right m
@@ -118,35 +118,35 @@ instance S2.Spatial2 GameObject where
             { collisioners = fmap (Col.move v) $ collisioners go
             , transform = M3.translv v * m
             }
-    
+
     rotate a go =
         go
         { transform = transform go * M3.rot a
         , angle = (angle go + a) `mod'` 360
         }
-    
+
     setRotation a go =
         go
         { transform = M3.translation (transform go) * M3.rot a
         , angle = a
         }
-    
+
     pos go = M3.position . transform $ go
-    
+
     fwd go = M3.forward . transform $ go
-    
+
     up go = M3.up . transform $ go
-    
+
     right go = M3.right . transform $ go
-    
+
     transform go = Spear.Scene.GameObject.transform go
-    
+
     setTransform mat go = go { transform = mat }
-    
+
     setPos pos go =
         let m = transform go
         in go { transform = M3.transform (M3.right m) (M3.forward m) pos }
-    
+
     lookAt p go =
         let position = S2.pos go
             fwd      = normalise $ p - position
@@ -213,7 +213,7 @@ goRPGtransform go =
 currentAnimation :: Enum a => GameObject -> a
 currentAnimation go = case renderer go of
     Left _ -> toEnum 0
-    Right amr -> AM.currentAnimation amr 
+    Right amr -> AM.currentAnimation amr
 
 
 -- | Return the game object's number of collisioners.
@@ -297,12 +297,12 @@ goRender' :: (ProgramUniforms u, Program p)
           -> Render
           -> IO ()
 goRender' style a axis prog uniforms modelview proj normal bindRenderer render =
-    let 
+    let
     in do
         useProgram . program $ prog
-        uniformMat4 (projLoc uniforms) proj
-        uniformMat4 (modelviewLoc uniforms) modelview
-        uniformMat3 (normalmatLoc uniforms) normal
+        uniform (projLoc uniforms) proj
+        uniform (modelviewLoc uniforms) modelview
+        uniform (normalmatLoc uniforms) normal
         bindRenderer
         render
 

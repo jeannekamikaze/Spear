@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Spear.GL
 (
     -- * Programs
@@ -12,12 +13,7 @@ module Spear.GL
 ,   fragLocation
 ,   uniformLocation
     -- ** Uniforms
-,   uniformVec2
-,   uniformVec3
-,   uniformVec4
-,   uniformMat3
-,   uniformMat4
-,   LoadUniforms(..)
+,   Uniform(..)
     -- * Shaders
 ,   GLSLShader
 ,   ShaderType(..)
@@ -327,53 +323,71 @@ readSource' file = do
 
     return code
 
--- | Load a 2D vector.
-uniformVec2 :: GLint -> Vector2 -> IO ()
-uniformVec2 loc v = glUniform2f loc x' y'
-    where x' = unsafeCoerce $ x v
-          y' = unsafeCoerce $ y v
-
--- | Load a 3D vector.
-uniformVec3 :: GLint -> Vector3 -> IO ()
-uniformVec3 loc v = glUniform3f loc x' y' z'
-    where x' = unsafeCoerce $ x v
-          y' = unsafeCoerce $ y v
-          z' = unsafeCoerce $ z v
-
--- | Load a 4D vector.
-uniformVec4 :: GLint -> Vector4 -> IO ()
-uniformVec4 loc v = glUniform4f loc x' y' z' w'
-    where x' = unsafeCoerce $ x v
-          y' = unsafeCoerce $ y v
-          z' = unsafeCoerce $ z v
-          w' = unsafeCoerce $ w v
-
--- | Load a 3x3 matrix.
-uniformMat3 :: GLint -> Matrix3 -> IO ()
-uniformMat3 loc mat =
-    with mat $ \ptrMat ->
-        glUniformMatrix3fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
-
--- | Load a 4x4 matrix.
-uniformMat4 :: GLint -> Matrix4 -> IO ()
-uniformMat4 loc mat =
-    with mat $ \ptrMat ->
-        glUniformMatrix4fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
-
-class LoadUniforms a where
+class Uniform a where
       -- | Load a list of uniform values.
-      uniforml :: GLint -> [a] -> IO ()
+      uniform :: GLint -> a -> IO ()
 
-instance LoadUniforms Float where
-         uniforml loc vals = withArray (map unsafeCoerce vals) $ \ptr ->
+instance Uniform Int where uniform loc a = glUniform1i loc (fromIntegral a)
+instance Uniform Float where uniform loc a = glUniform1f loc (unsafeCoerce a)
+
+instance Uniform (Int,Int) where
+         uniform loc (x,y) = glUniform2i loc (fromIntegral x) (fromIntegral y)
+
+instance Uniform (Float,Float) where
+         uniform loc (x,y) = glUniform2f loc (unsafeCoerce x) (unsafeCoerce y)
+
+instance Uniform (Int,Int,Int) where
+         uniform loc (x,y,z) = glUniform3i loc (fromIntegral x) (fromIntegral y) (fromIntegral z)
+
+instance Uniform (Float,Float,Float) where
+         uniform loc (x,y,z) = glUniform3f loc (unsafeCoerce x) (unsafeCoerce y) (unsafeCoerce z)
+
+instance Uniform (Int,Int,Int,Int) where
+         uniform loc (x,y,z,w) = glUniform4i loc
+                 (fromIntegral x) (fromIntegral y) (fromIntegral z) (fromIntegral w)
+
+instance Uniform (Float,Float,Float,Float) where
+         uniform loc (x,y,z,w) = glUniform4f loc
+                 (unsafeCoerce x) (unsafeCoerce y) (unsafeCoerce z) (unsafeCoerce w)
+
+instance Uniform Vector2 where
+         uniform loc v = glUniform2f loc x' y'
+                 where x' = unsafeCoerce $ x v
+                       y' = unsafeCoerce $ y v
+
+instance Uniform Vector3 where
+         uniform loc v = glUniform3f loc x' y' z'
+                 where x' = unsafeCoerce $ x v
+                       y' = unsafeCoerce $ y v
+                       z' = unsafeCoerce $ z v
+
+instance Uniform Vector4 where
+         uniform loc v = glUniform4f loc x' y' z' w'
+                 where x' = unsafeCoerce $ x v
+                       y' = unsafeCoerce $ y v
+                       z' = unsafeCoerce $ z v
+                       w' = unsafeCoerce $ w v
+
+instance Uniform Matrix3 where
+         uniform loc mat =
+                 with mat $ \ptrMat ->
+                 glUniformMatrix3fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
+
+instance Uniform Matrix4 where
+         uniform loc mat =
+                 with mat $ \ptrMat ->
+                 glUniformMatrix4fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
+
+instance Uniform [Float] where
+         uniform loc vals = withArray (map unsafeCoerce vals) $ \ptr ->
                    case length vals of
                         1 -> glUniform1fv loc 1 ptr
                         2 -> glUniform2fv loc 1 ptr
                         3 -> glUniform3fv loc 1 ptr
                         4 -> glUniform4fv loc 1 ptr
 
-instance LoadUniforms Int where
-         uniforml loc vals = withArray (map fromIntegral vals) $ \ptr ->
+instance Uniform [Int] where
+         uniform loc vals = withArray (map fromIntegral vals) $ \ptr ->
                   case length vals of
                        1 -> glUniform1iv loc 1 ptr
                        2 -> glUniform2iv loc 1 ptr

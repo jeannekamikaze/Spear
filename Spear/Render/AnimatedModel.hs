@@ -205,9 +205,9 @@ render uniforms (AnimatedModelRenderer model _ _ _ curFrame fp _) =
     let n = nVertices model
         (Material _ ka kd ks shi) = material model
     in do
-        uniformVec4 (kaLoc uniforms) ka
-        uniformVec4 (kdLoc uniforms) kd
-        uniformVec4 (ksLoc uniforms) ks
+        uniform (kaLoc uniforms) ka
+        uniform (kdLoc uniforms) kd
+        uniform (ksLoc uniforms) ks
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         glUniform1f (fpLoc uniforms) (unsafeCoerce fp)
         drawArrays gl_TRIANGLES (n*curFrame) n

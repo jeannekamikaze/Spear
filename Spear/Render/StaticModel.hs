@@ -124,9 +124,9 @@ render :: StaticProgramUniforms -> StaticModelRenderer -> IO ()
 render uniforms (StaticModelRenderer model) =
     let (Material _ ka kd ks shi) = material model
     in do
-        uniformVec4 (kaLoc uniforms) ka
-        uniformVec4 (kdLoc uniforms) kd
-        uniformVec4 (ksLoc uniforms) ks
+        uniform (kaLoc uniforms) ka
+        uniform (kdLoc uniforms) kd
+        uniform (ksLoc uniforms) ks
         glUniform1f (shiLoc uniforms) $ unsafeCoerce shi
         drawArrays gl_TRIANGLES 0 $ nVertices model
 

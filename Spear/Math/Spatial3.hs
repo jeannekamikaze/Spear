@@ -11,50 +11,99 @@ import Spear.Math.Vector
 import Spear.Math.Matrix4 as M hiding (scale)
 
 class Spatial3 s where
+    -- | Gets the spatial's internal Obj3.
+    getObj3 :: s -> Obj3
+
+    -- | Set the spatial's internal Obj3.
+    setObj3 :: s -> Obj3 -> s
+
     -- | Move the spatial.
     move :: Vector3 -> s -> s
+    move d s = let o = getObj3 s in setObj3 s $ o { p = p o + d }
 
     -- | Move the spatial forwards.
     moveFwd :: Float -> s -> s
+    moveFwd a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (f o) }
 
     -- | Move the spatial backwards.
     moveBack :: Float -> s -> s
+    moveBack a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (f o) }
 
     -- | Make the spatial strafe left.
     strafeLeft :: Float -> s -> s
+    strafeLeft a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (r o) }
 
     -- | Make the spatial Strafe right.
     strafeRight :: Float -> s -> s
+    strafeRight a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (r o) }
 
     -- | Rotate the spatial about its local X axis.
     pitch :: Float -> s -> s
+    pitch a s =
+          let o  = getObj3 s
+              a' = toRAD a
+              sa = sin a'
+              ca = cos a'
+              f' = normalise $ scale ca (f o) + scale sa (u o)
+              u' = normalise $ r o `cross` f'
+          in  setObj3 s $ o { u = u', f = f' }
 
     -- | Rotate the spatial about its local Y axis.
     yaw :: Float -> s -> s
+    yaw a s =
+        let o  = getObj3 s
+            a' = toRAD a
+            sa = sin a'
+            ca = cos a'
+            r' = normalise $ scale ca (r o) + scale sa (f o)
+            f' = normalise $ u o `cross` r'
+        in  setObj3 s $ o { r = r', f = f' }
 
     -- | Rotate the spatial about its local Z axis.
     roll :: Float -> s -> s
+    roll a s =
+         let o  = getObj3 s
+             a' = toRAD a
+             sa = sin a'
+             ca = cos a'
+             u' = normalise $ scale ca (u o) - scale sa (r o)
+             r' = normalise $ f o `cross` u'
+         in  setObj3 s $ o { r = r', u = u' }
 
     -- | Get the spatial's position.
     pos :: s -> Vector3
+    pos = p . getObj3
 
     -- | Get the spatial's forward vector.
     fwd :: s -> Vector3
+    fwd = f . getObj3
 
     -- | Get the spatial's up vector.
     up :: s -> Vector3
+    up = u . getObj3
 
     -- | Get the spatial's right vector.
     right :: s -> Vector3
+    right = r . getObj3
 
     -- | Get the spatial's transform.
     transform :: s -> Matrix4
+    transform s = let o = getObj3 s in M.transform (r o) (u o) (scale (-1) $ f o) (p o)
 
     -- | Set the spatial's transform.
     setTransform :: Matrix4 -> s -> s
+    setTransform t s =
+                 let o = Obj3
+                       { r = M.right t
+                       , u = M.up t
+                       , f = scale (-1) $ M.forward t
+                       , p = M.position t
+                       }
+                 in setObj3 s o
 
     -- | Set the spatial's position.
     setPos :: Vector3 -> s -> s
+    setPos pos s = setObj3 s $ (getObj3 s) { p = pos }
 
     -- | Make the spatial look at the given point.
     lookAt :: Vector3 -> s -> s
@@ -94,46 +143,6 @@ data Obj3 = Obj3
      , f :: Vector3
      , p :: Vector3
      } deriving Show
-
-instance Spatial3 Obj3 where
-         move        d o = o { p = p o + d }
-         moveFwd     s o = o { p = p o + scale (-s) (f o) }
-         moveBack    s o = o { p = p o + scale s (f o) }
-         strafeLeft  s o = o { p = p o + scale (-s) (r o) }
-         strafeRight s o = o { p = p o + scale s (r o) }
-         pitch       a o =
-                     let a' = toRAD a
-                         sa = sin a'
-                         ca = cos a'
-                         r' = normalise $ scale ca (r o) + scale sa (f o)
-                         f' = normalise $ r' `cross` u o
-                     in  o { r = r', f = f' }
-         yaw         a o =
-                     let a' = toRAD a
-                         sa = sin a'
-                         ca = cos a'
-                         f' = normalise $ scale ca (f o) + scale sa (u o)
-                         u' = normalise $ r o `cross` f'
-                     in  o { u = u', f = f' }
-         roll        a o =
-                     let a' = toRAD a
-                         sa = sin a'
-                         ca = cos a'
-                         u' = normalise $ scale ca (u o) - scale sa (r o)
-                         f' = normalise $ f o `cross` u'
-                     in  o { u = u', f = f' }
-         pos   = p
-         fwd   = f
-         up    = u
-         right = r
-         transform o = M.transform (r o) (u o) (f o) (p o)
-         setTransform t o = Obj3
-                      { r = M.right t
-                      , u = M.up t
-                      , f = M.forward t
-                      , p = M.position t
-                      }
-         setPos pos o = o { p = pos }
 
 fromVectors :: Right3 -> Up3 -> Forward3 -> Position3 -> Obj3
 fromVectors = Obj3

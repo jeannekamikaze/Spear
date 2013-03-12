@@ -5,6 +5,7 @@ module Spear.GL
 ,   newProgram
 ,   linkProgram
 ,   useProgram
+,   unuseProgram
 ,   withGLSLProgram
     -- ** Locations
 ,   attribLocation
@@ -36,6 +37,7 @@ module Spear.GL
 ,   VAO
 ,   newVAO
 ,   bindVAO
+,   unbindVAO
 ,   enableVAOAttrib
 ,   attribVAOPointer
     -- ** Rendering
@@ -47,6 +49,7 @@ module Spear.GL
 ,   BufferUsage(..)
 ,   newBuffer
 ,   bindBuffer
+,   unbindBuffer
 ,   BufferData(..)
 ,   bufferData'
 ,   withGLBuffer
@@ -59,6 +62,7 @@ module Spear.GL
 ,   loadTextureImage
     -- ** Manipulation
 ,   bindTexture
+,   unbindTexture
 ,   loadTextureData
 ,   texParami
 ,   texParamf
@@ -162,10 +166,8 @@ newProgram shaders = do
     when (h == 0) $ gameError "glCreateProgram failed"
     rkey <- register $ deleteProgram h
     let program = GLSLProgram h rkey
-
     mapM_ (gameIO . attachShader program) shaders
     linkProgram program
-
     return program
 
 -- | Delete the program.
@@ -195,6 +197,10 @@ linkProgram prog = do
 -- | Use the program.
 useProgram :: GLSLProgram -> IO ()
 useProgram prog = glUseProgram $ getProgram prog
+
+-- | Deactivate the active program.
+unuseProgram :: IO ()
+unuseProgram = glUseProgram 0
 
 -- | Attach the given shader to the given program.
 attachShader :: GLSLProgram -> GLSLShader -> IO ()
@@ -411,6 +417,10 @@ deleteVAO vao = Foreign.with vao $ glDeleteVertexArrays 1
 bindVAO :: VAO -> IO ()
 bindVAO = glBindVertexArray . getVAO
 
+-- | Unbind the bound vao.
+unbindVAO :: IO ()
+unbindVAO = glBindVertexArray 0
+
 -- | Enable the given vertex attribute of the bound vao.
 --
 -- See also 'bindVAO'.
@@ -516,6 +526,10 @@ deleteBuffer buf = Foreign.with buf $ glDeleteBuffers 1
 bindBuffer :: GLBuffer -> TargetBuffer -> IO ()
 bindBuffer buf target = glBindBuffer (fromTarget target) $ getBuffer buf
 
+-- | Unbind the bound buffer.
+unbindBuffer :: TargetBuffer -> IO ()
+unbindBuffer target = glBindBuffer (fromTarget target) 0
+
 class Storable a => BufferData a where
       -- | Set the buffer's data.
       bufferData :: TargetBuffer -> [a] -> BufferUsage -> IO ()
@@ -615,6 +629,10 @@ loadTextureImage file minFilter magFilter = do
 -- | Bind the texture.
 bindTexture :: Texture -> IO ()
 bindTexture = glBindTexture gl_TEXTURE_2D . getTex
+
+-- | Unbind the bound texture.
+unbindTexture :: IO ()
+unbindTexture = glBindTexture gl_TEXTURE_2D 0
 
 -- | Load data onto the bound texture.
 --

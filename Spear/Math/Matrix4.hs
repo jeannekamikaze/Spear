@@ -66,7 +66,7 @@ data Matrix4 = Matrix4
 
 
 instance Show Matrix4 where
-    
+
     show (Matrix4 m00 m10 m20 m30 m01 m11 m21 m31 m02 m12 m22 m32 m03 m13 m23 m33) =
         show' m00 ++ ", " ++ show' m10 ++ ", " ++ show' m20 ++ ", " ++ show' m30 ++ "\n" ++
         show' m01 ++ ", " ++ show' m11 ++ ", " ++ show' m21 ++ ", " ++ show' m31 ++ "\n" ++
@@ -83,58 +83,58 @@ instance Num Matrix4 where
                       (a04 + b04) (a05 + b05) (a06 + b06) (a07 + b07)
                       (a08 + b08) (a09 + b09) (a10 + b10) (a11 + b11)
                       (a12 + b12) (a13 + b13) (a14 + b14) (a15 + b15)
-    
+
     (Matrix4 a00 a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 a11 a12 a13 a14 a15)
         - (Matrix4 b00 b01 b02 b03 b04 b05 b06 b07 b08 b09 b10 b11 b12 b13 b14 b15)
             = Matrix4 (a00 - b00) (a01 - b01) (a02 - b02) (a03 - b03)
                       (a04 - b04) (a05 - b05) (a06 - b06) (a07 - b07)
                       (a08 - b08) (a09 - b09) (a10 - b10) (a11 - b11)
                       (a12 - b12) (a13 - b13) (a14 - b14) (a15 - b15)
-    
+
     (Matrix4 a00 a10 a20 a30 a01 a11 a21 a31 a02 a12 a22 a32 a03 a13 a23 a33)
         * (Matrix4 b00 b10 b20 b30 b01 b11 b21 b31 b02 b12 b22 b32 b03 b13 b23 b33)
             = Matrix4 (a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03)
                       (a00 * b10 + a10 * b11 + a20 * b12 + a30 * b13)
                       (a00 * b20 + a10 * b21 + a20 * b22 + a30 * b23)
                       (a00 * b30 + a10 * b31 + a20 * b32 + a30 * b33)
-                      
+
                       (a01 * b00 + a11 * b01 + a21 * b02 + a31 * b03)
                       (a01 * b10 + a11 * b11 + a21 * b12 + a31 * b13)
                       (a01 * b20 + a11 * b21 + a21 * b22 + a31 * b23)
                       (a01 * b30 + a11 * b31 + a21 * b32 + a31 * b33)
-                      
+
                       (a02 * b00 + a12 * b01 + a22 * b02 + a32 * b03)
                       (a02 * b10 + a12 * b11 + a22 * b12 + a32 * b13)
                       (a02 * b20 + a12 * b21 + a22 * b22 + a32 * b23)
                       (a02 * b30 + a12 * b31 + a22 * b32 + a32 * b33)
-                      
+
                       (a03 * b00 + a13 * b01 + a23 * b02 + a33 * b03)
                       (a03 * b10 + a13 * b11 + a23 * b12 + a33 * b13)
                       (a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23)
                       (a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33)
-    
+
     abs = Spear.Math.Matrix4.map abs
-    
+
     signum = Spear.Math.Matrix4.map signum
-    
+
     fromInteger i = mat4 i' i' i' i' i' i' i' i' i' i' i' i' i' i' i' i' where i' = fromInteger i
-    
-    
+
+
 instance Storable Matrix4 where
     sizeOf    _ = 64
     alignment _ = 4
-    
+
     peek ptr = do
         a00 <- peekByteOff ptr 0;  a01 <- peekByteOff ptr 4;  a02 <- peekByteOff ptr 8;  a03 <- peekByteOff ptr 12;
         a10 <- peekByteOff ptr 16; a11 <- peekByteOff ptr 20; a12 <- peekByteOff ptr 24; a13 <- peekByteOff ptr 28;
         a20 <- peekByteOff ptr 32; a21 <- peekByteOff ptr 36; a22 <- peekByteOff ptr 40; a23 <- peekByteOff ptr 44;
         a30 <- peekByteOff ptr 48; a31 <- peekByteOff ptr 52; a32 <- peekByteOff ptr 56; a33 <- peekByteOff ptr 60;
-        
+
         return $ Matrix4 a00 a10 a20 a30
                          a01 a11 a21 a31
                          a02 a12 a22 a32
                          a03 a13 a23 a33
-    
+
     poke ptr (Matrix4 a00 a10 a20 a30
                       a01 a11 a21 a31
                       a02 a12 a22 a32
@@ -187,7 +187,7 @@ transform right up fwd pos = mat4
     (x right) (x up) (x fwd) (x pos)
     (y right) (y up) (y fwd) (y pos)
     (z right) (z up) (z fwd) (z pos)
-    0                 0              0               1
+           0      0       0       1
 
 
 -- | Get the translation part of the given transformation matrix.
@@ -201,7 +201,7 @@ translation (Matrix4
     1   0   0   a30
     0   1   0   a31
     0   0   1   a32
-    0   0   0   a33    
+    0   0   0   a33
 
 
 -- | Get the rotation part of the given transformation matrix.
@@ -215,7 +215,7 @@ rotation (Matrix4
     a00 a10 a20 0
     a01 a11 a21 0
     a02 a12 a22 0
-    a03 a13 a23 1    
+    a03 a13 a23 1
 
 
 -- | Build a transformation 'Matrix4' defined by the given position and target.
@@ -345,8 +345,8 @@ scale sx sy sz = mat4
     0   sy  0   0
     0   0   sz  0
     0   0   0   1
-    
-    
+
+
 -- | Create a scale matrix.
 scalev :: Vector3 -> Matrix4
 scalev v = mat4
@@ -437,10 +437,10 @@ planeProj n d l =
         ly = y l
         lz = z l
     in mat4
-        (d + c - nx*lx) (-ny*lx)          (-nz*lx)        (-lx*d)
-        (-nx*ly)        (d + c - ny*ly)   (-nz*ly)        (-ly*d)
-        (-nx*lz)        (-ny*lz)          (d + c - nz*lz) (-lz*d)
-        (-nx)           (-ny)             (-nz)           c
+        (d + c - nx*lx) (-ny*lx)        (-nz*lx)        (-lx*d)
+        (-nx*ly)        (d + c - ny*ly) (-nz*ly)        (-ly*d)
+        (-nx*lz)        (-ny*lz)        (d + c - nz*lz) (-lz*d)
+        (-nx)           (-ny)           (-nz)           c
 
 
 -- | Transpose the specified matrix.
@@ -470,7 +470,7 @@ inverseTransform mat =
 
 -- | Invert the given matrix.
 inverse :: Matrix4 -> Matrix4
-inverse mat = 
+inverse mat =
     let
         a00 = m00 mat
         a01 = m01 mat
@@ -488,14 +488,14 @@ inverse mat =
         a13 = m31 mat
         a14 = m32 mat
         a15 = m33 mat
-        
+
         m00' = a05 * a10  * a15
              - a05 * a11  * a14
              - a09 * a06  * a15
              + a09 * a07  * a14
              + a13 * a06  * a11
              - a13 * a07  * a10
-        
+
         m04' = -a04 * a10 * a15
              +  a04 * a11 * a14
              +  a08 * a06 * a15
@@ -530,7 +530,7 @@ inverse mat =
              + a08 * a03 * a14
              + a12 * a02 * a11
              - a12 * a03 * a10
-        
+
         m09' = -a00 * a09 * a15
              +  a00 * a11 * a13
              +  a08 * a01 * a15
@@ -600,7 +600,7 @@ inverse mat =
              + a04 * a02 * a09
              + a08 * a01 * a06
              - a08 * a02 * a05
-        
+
         det' = a00 * m00' + a01 * m04' + a02 * m08' + a03 * m12'
     in
         if det' == 0 then Spear.Math.Matrix4.id

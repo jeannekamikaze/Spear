@@ -39,6 +39,7 @@ import qualified Spear.Math.Matrix3 as M3
 import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils
 import qualified Spear.Math.Spatial2 as S2
+import qualified Spear.Math.Spatial3 as S3
 import Spear.Math.Utils
 import Spear.Math.Vector
 import qualified Spear.Render.AnimatedModel as AM
@@ -264,7 +265,7 @@ goRender sprog aprog cam go =
         axis'  = axis go
         a      = angle go
         proj   = Cam.projection cam
-        view   = M4.inverseTransform $ Cam.transform cam
+        view   = M4.inverseTransform $ S3.transform cam
         transf = S2.transform go
         normal = fastNormalMatrix modelview
         modelview = case style of

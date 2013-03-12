@@ -452,7 +452,8 @@ attribVAOPointer
     -> Int     -- ^ Offset to the first component in the array.
     -> IO ()
 attribVAOPointer idx ncomp dattype normalise stride off =
-    glVertexAttribPointer idx ncomp dattype (unsafeCoerce normalise) stride (unsafeCoerce off)
+    glVertexAttribPointer idx ncomp dattype normalise' stride (unsafeCoerce off)
+                          where normalise' = if normalise then 1 else 0
 
 -- | Draw the bound vao.
 drawArrays

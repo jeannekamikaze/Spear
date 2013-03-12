@@ -15,6 +15,7 @@ where
 import Spear.Math.Camera as Cam
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
+import Spear.Math.Spatial3 as S
 import Spear.Math.Vector as V
 
 
@@ -112,7 +113,7 @@ pltTransform mat =
 
 
 -- | Map an object's transform in world space to view space.
--- 
+--
 -- The XY plane in 2D translates to the X(-Z) plane in 3D.
 --
 -- Use this in games such as RPGs and RTSs.
@@ -130,9 +131,9 @@ rpgInverse h a axis pos viewI =
 -- | Map an object's transform in world space to view space.
 --
 -- This function maps an object's transform in 2D to the object's inverse in 3D.
--- 
+--
 -- The XY plane in 2D translates to the XY plane in 3D.
--- 
+--
 -- Use this in games like platformers and space invaders style games.
 pltInverse :: Matrix3 -> Matrix4
 pltInverse = M4.inverseTransform . pltTransform
@@ -142,7 +143,7 @@ pltInverse = M4.inverseTransform . pltTransform
 objToClip :: Camera -> Matrix4 -> Vector3 -> Vector2
 objToClip cam model p =
     let
-        view = M4.inverseTransform $ Cam.transform cam
+        view = M4.inverseTransform $ S.transform cam
         proj = Cam.projection cam
         p' = (proj * view * model) `M4.mulp` p
     in

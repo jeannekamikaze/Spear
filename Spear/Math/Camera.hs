@@ -1,71 +1,89 @@
 module Spear.Math.Camera
+(
+    Camera
+,   Fovy
+,   Aspect
+,   Near
+,   Far
+,   Left
+,   Right
+,   Bottom
+,   Top
+,   projection
+)
 where
 
 
 import qualified Spear.Math.Matrix4 as M
-import qualified Spear.Math.Spatial3 as S
+import Spear.Math.Spatial3
 import Spear.Math.Vector
 
 
 data Camera = Camera
-    { projection :: M.Matrix4
-    , transform  :: M.Matrix4
+    { projection :: M.Matrix4 -- ^ Get the camera's projection.
+    , spatial    :: Obj3
     }
 
+type Fovy = Float
+type Aspect = Float
+type Near = Float
+type Far = Float
+type Left = Float
+type Right = Float
+type Bottom = Float
+type Top = Float
 
 -- | Build a perspective camera.
-perspective :: Float -- ^ Fovy - Vertical field of view angle in degrees.
-            -> Float -- ^ Aspect ratio.
-            -> Float -- ^ Near clip.
-            -> Float -- ^ Far clip.
-            -> Vector3 -- ^ Right vector.
-            -> Vector3 -- ^ Up vector.
-            -> Vector3 -- ^ Forward vector.
-            -> Vector3 -- ^ Position vector.
+perspective :: Fovy      -- ^ Fovy - Vertical field of view angle in degrees.
+            -> Aspect    -- ^ Aspect ratio.
+            -> Near      -- ^ Near clip.
+            -> Far       -- ^ Far clip.
+            -> Right3    -- ^ Right vector.
+            -> Up3       -- ^ Up vector.
+            -> Forward3  -- ^ Forward vector.
+            -> Position3 -- ^ Position vector.
             -> Camera
 
 perspective fovy r n f right up fwd pos =
     Camera
     { projection = M.perspective fovy r n f
-    , transform  = M.transform right up (neg fwd) pos
+    , spatial    = fromVectors right up fwd pos
     }
 
 
 -- | Build an orthogonal camera.
-ortho :: Float   -- ^ Left.
-      -> Float   -- ^ Right.
-      -> Float   -- ^ Bottom.
-      -> Float   -- ^ Top.
-      -> Float   -- ^ Near clip.
-      -> Float   -- ^ Far clip.
-      -> Vector3 -- ^ Right vector.
-      -> Vector3 -- ^ Up vector.
-      -> Vector3 -- ^ Forward vector.
-      -> Vector3 -- ^ Position vector.
+ortho :: Left      -- ^ Left.
+      -> Right     -- ^ Right.
+      -> Bottom    -- ^ Bottom.
+      -> Top       -- ^ Top.
+      -> Near      -- ^ Near clip.
+      -> Far       -- ^ Far clip.
+      -> Right3    -- ^ Right vector.
+      -> Up3       -- ^ Up vector.
+      -> Forward3  -- ^ Forward vector.
+      -> Position3 -- ^ Position vector.
       -> Camera
 
 ortho l r b t n f right up fwd pos =
     Camera
     { projection = M.ortho l r b t n f
-    , transform  = M.transform right up (neg fwd) pos
+    , spatial    = fromVectors right up fwd pos
     }
 
 
-instance S.Spatial3 Camera where
-    move        v cam = cam { transform = M.translv v * transform cam }
-    moveFwd     f cam = cam { transform = M.translv (scale f $ S.fwd cam) * transform cam }
-    moveBack    f cam = cam { transform = M.translv (scale (-f) $ S.fwd cam) * transform cam }
-    strafeLeft  f cam = cam { transform = M.translv (scale (-f) $ S.right cam) * transform cam }
-    strafeRight f cam = cam { transform = M.translv (scale f $ S.right cam) * transform cam }
-    pitch       a cam = cam { transform = transform cam * M.axisAngle (S.right cam) a }
-    yaw         a cam = cam { transform = transform cam * M.axisAngle (S.up cam)    a }
-    roll        a cam = cam { transform = transform cam * M.axisAngle (S.fwd cam)   a }
-    pos   = M.position . transform
-    fwd   = M.forward  . transform
-    up    = M.up       . transform
-    right = M.right    . transform
-    transform (Camera _ t) = t
-    setTransform t (Camera proj _) = Camera proj t
-    setPos pos (Camera proj t) = Camera proj $
-        M.transform (M.right t) (M.up t) (M.forward t) pos
-
+instance Spatial3 Camera where
+    move         v cam = cam { spatial = move v        $ spatial cam }
+    moveFwd      s cam = cam { spatial = moveFwd s     $ spatial cam }
+    moveBack     s cam = cam { spatial = moveBack s    $ spatial cam }
+    strafeLeft   s cam = cam { spatial = strafeLeft s  $ spatial cam }
+    strafeRight  s cam = cam { spatial = strafeRight s $ spatial cam }
+    pitch        a cam = cam { spatial = pitch a       $ spatial cam }
+    yaw          a cam = cam { spatial = yaw a         $ spatial cam }
+    roll         a cam = cam { spatial = roll a        $ spatial cam }
+    pos            cam = pos   $ spatial cam
+    fwd            cam = fwd   $ spatial cam
+    up             cam = up    $ spatial cam
+    right          cam = right $ spatial cam
+    transform      cam = transform $ spatial cam
+    setTransform m cam = cam { spatial = setTransform m $ spatial cam }
+    setPos       p cam = cam { spatial = setPos p $ spatial cam }

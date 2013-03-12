@@ -27,13 +27,11 @@ module Spear.App.Input
 )
 where
 
-
 import Data.Char (ord)
 import qualified Data.Vector.Unboxed as V
 import qualified Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL.GL.CoordTrans
 import Data.StateVar
-
 
 data Key
     = KEY_A | KEY_B | KEY_C | KEY_D | KEY_E | KEY_F | KEY_G | KEY_H
@@ -42,32 +40,27 @@ data Key
     | KEY_Y | KEY_Z | KEY_0 | KEY_1 | KEY_2 | KEY_3 | KEY_4 | KEY_5
     | KEY_6 | KEY_7 | KEY_8 | KEY_9 | KEY_F1 | KEY_F2 | KEY_F3
     | KEY_F4 | KEY_F5 | KEY_F6 | KEY_F7 | KEY_F8 | KEY_F9 | KEY_F10
-    | KEY_F11 | KEY_F12 | KEY_ESC | KEY_SPACE
+    | KEY_F11 | KEY_F12 | KEY_ESC | KEY_SPACE | KEY_UP | KEY_DOWN
+    | KEY_LEFT | KEY_RIGHT
     deriving (Enum, Bounded)
 
-
 type Keyboard = Key -> Bool
-
 
 data MouseButton = LMB | RMB | MMB
     deriving (Enum, Bounded)
 
-
 data MouseProp = MouseX | MouseY | MouseDX | MouseDY
     deriving Enum
-
 
 data Mouse = Mouse
     { button   :: MouseButton -> Bool
     , property :: MouseProp -> Float
     }
 
-
 data Input = Input
     { keyboard :: Keyboard
     , mouse    :: Mouse
     }
-
 
 -- | Return a new dummy keyboard.
 --
@@ -79,7 +72,6 @@ data Input = Input
 newKeyboard :: Keyboard
 newKeyboard = const False
 
-
 -- | Get the keyboard.
 getKeyboard :: IO Keyboard
 getKeyboard =
@@ -89,7 +81,6 @@ getKeyboard =
     in
         (fmap (V.fromList . fmap ((==) GLFW.Press)) . mapM GLFW.getKey . fmap toGLFWkey $ keys)
             >>= return . keyboard'
-
 
 -- | Return a new dummy mouse.
 --
@@ -101,7 +92,6 @@ getKeyboard =
 newMouse :: Mouse
 newMouse = Mouse (const False) (const 0)
 
-
 -- | Get the mouse.
 --
 -- The previous mouse state is required to compute position deltas.
@@ -109,21 +99,21 @@ getMouse :: Mouse -> IO Mouse
 getMouse oldMouse =
     let getButton :: V.Vector Bool -> MouseButton -> Bool
         getButton mousestate button = mousestate V.! fromEnum button
-        
+
         getProp :: V.Vector Float -> MouseProp -> Float
         getProp props prop = props V.! fromEnum prop
-        
+
         props xpos ypos = V.fromList
             [ xpos, ypos
             , xpos - property oldMouse MouseX
             , ypos - property oldMouse MouseY
             ]
-        
+
         getButtonState =
             fmap (V.fromList . fmap ((==) GLFW.Press)) .
             mapM GLFW.getMouseButton .
             fmap toGLFWbutton $ buttons
-        
+
         buttons = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
     in do
         Position xpos ypos <- get GLFW.mousePos
@@ -133,11 +123,9 @@ getMouse oldMouse =
             , property = getProp $ props (fromIntegral xpos) (fromIntegral ypos)
             }
 
-
 -- | Return a new dummy input.
 newInput :: Input
 newInput = Input newKeyboard newMouse
-
 
 -- | Get input devices.
 getInput :: Input -> IO Input
@@ -146,11 +134,9 @@ getInput (Input _ oldMouse) = do
     mouse    <- getMouse oldMouse
     return $ Input keyboard mouse
 
-
 -- | Poll input devices.
 pollInput :: IO ()
 pollInput = GLFW.pollEvents
-
 
 -- | Return a mouse that reacts to button toggles.
 toggledMouse :: Mouse -- ^ Previous mouse state.
@@ -159,16 +145,12 @@ toggledMouse :: Mouse -- ^ Previous mouse state.
 
 toggledMouse prev cur = cur { button = \bt -> button cur bt && not (button prev bt) }
 
-
 -- | Return a keyboard that reacts to key toggles.
 toggledKeyboard :: Keyboard -- ^ Previous keyboard state.
                 -> Keyboard -- ^ Current keyboard state.
                 -> Keyboard -- ^ Toggled keyboard.
 
 toggledKeyboard prev cur key = cur key && not (prev key)
-
-
-
 
 -- | Delay configuration for each mouse button.
 type ButtonDelay = MouseButton -> Float
@@ -181,12 +163,10 @@ data DelayedMouse = DelayedMouse
     , accum :: V.Vector Float
     }
 
-
 newDM :: ButtonDelay -- ^ Delay configuration for each button.
       -> DelayedMouse
 newDM delay = DelayedMouse newMouse delay $
     V.replicate (fromEnum (maxBound :: MouseButton)) 0
-
 
 updateDM :: DelayedMouse -- ^ Current mouse state.
          -> Float -- ^ Time elapsed since last udpate.
@@ -199,11 +179,9 @@ updateDM (DelayedMouse mouse delay accum) dt =
         button' b  = active b && button mouse b
         accum'     = accum V.// fmap newDelay [0 .. fromEnum (maxBound :: MouseButton)]
         newDelay x = let b = toEnum x
-                     in (x, if button' b then 0 else time b) 
+                     in (x, if button' b then 0 else time b)
     in
         DelayedMouse mouse { button = button' } delay accum'
-
-
 
 
 toGLFWkey :: Key -> Int
@@ -257,6 +235,10 @@ toGLFWkey KEY_F11 = fromEnum GLFW.F11
 toGLFWkey KEY_F12 = fromEnum GLFW.F12
 toGLFWkey KEY_ESC = fromEnum GLFW.ESC
 toGLFWkey KEY_SPACE = ord ' '
+toGLFWkey KEY_UP    = fromEnum GLFW.UP
+toGLFWkey KEY_DOWN  = fromEnum GLFW.DOWN
+toGLFWkey KEY_LEFT  = fromEnum GLFW.LEFT
+toGLFWkey KEY_RIGHT = fromEnum GLFW.RIGHT
 
 
 toGLFWbutton :: MouseButton -> GLFW.MouseButton

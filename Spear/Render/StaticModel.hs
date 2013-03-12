@@ -69,31 +69,31 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
     elementBuf <- newBuffer
     vao        <- newVAO
     boxes      <- gameIO $ modelBoxes model
-    
+
     gameIO $ do
-        
+
         let elemSize  = 32
             elemSize' = fromIntegral elemSize
             n         = numVertices
-        
+
         bindVAO vao
-        
+
         bindBuffer elementBuf ArrayBuffer
-        bufferData ArrayBuffer (fromIntegral $ elemSize*n) elements StaticDraw
-    
+        bufferData' ArrayBuffer (fromIntegral $ elemSize*n) elements StaticDraw
+
         attribVAOPointer vertChan 3 gl_FLOAT False elemSize' 0
         attribVAOPointer normChan 3 gl_FLOAT False elemSize' 12
         attribVAOPointer texChan  2 gl_FLOAT False elemSize' 24
-        
+
         enableVAOAttrib vertChan
         enableVAOAttrib normChan
         enableVAOAttrib texChan
-    
+
     rkey <- register $ do
         putStrLn "Releasing static model resource"
         clean vao
         clean elementBuf
-    
+
     return $ StaticModelResource
         vao (unsafeCoerce numVertices) material texture boxes rkey
 

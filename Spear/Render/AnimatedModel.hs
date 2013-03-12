@@ -107,35 +107,35 @@ animatedModelResource
         elementBuf <- newBuffer
         vao        <- newVAO
         boxes      <- gameIO $ modelBoxes model
-        
+
         gameIO $ do
-        
+
             let elemSize  = 56
                 elemSize' = fromIntegral elemSize
-                n         = numVertices * numFrames            
-            
+                n         = numVertices * numFrames
+
             bindVAO vao
-            
+
             bindBuffer elementBuf ArrayBuffer
-            bufferData ArrayBuffer (unsafeCoerce $ elemSize * n) elements StaticDraw
-            
+            bufferData' ArrayBuffer (unsafeCoerce $ elemSize * n) elements StaticDraw
+
             attribVAOPointer vertChan1 3 gl_FLOAT False elemSize' 0
             attribVAOPointer vertChan2 3 gl_FLOAT False elemSize' 12
             attribVAOPointer normChan1 3 gl_FLOAT False elemSize' 24
             attribVAOPointer normChan2 3 gl_FLOAT False elemSize' 36
             attribVAOPointer texChan   2 gl_FLOAT False elemSize' 48
-            
+
             enableVAOAttrib vertChan1
             enableVAOAttrib vertChan2
             enableVAOAttrib normChan1
             enableVAOAttrib normChan2
             enableVAOAttrib texChan
-            
+
         rkey <- register $ do
              putStrLn "Releasing animated model resource"
              clean vao
              clean elementBuf
-        
+
         return $ AnimatedModelResource
             model vao (unsafeCoerce numFrames) (unsafeCoerce numVertices)
             material texture boxes rkey

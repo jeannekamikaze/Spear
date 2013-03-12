@@ -1,24 +1,11 @@
 module Spear.GL
 (
-    -- * General Management
-    GLSLShader
-,   GLSLProgram
-,   ShaderType(..)
-    -- ** Programs
+    -- * Programs
+    GLSLProgram
 ,   newProgram
 ,   linkProgram
 ,   useProgram
 ,   withGLSLProgram
-    -- ** Shaders
-,   attachShader
-,   detachShader
-,   loadShader
-,   newShader
-    -- *** Source loading
-,   loadSource
-,   shaderSource
-,   readSource
-,   compile
     -- ** Locations
 ,   attribLocation
 ,   fragLocation
@@ -29,16 +16,25 @@ module Spear.GL
 ,   uniformVec4
 ,   uniformMat3
 ,   uniformMat4
-,   uniformfl
-,   uniformil
-    -- ** Helper functions
+,   LoadUniforms(..)
+    -- * Shaders
+,   GLSLShader
+,   ShaderType(..)
+,   attachShader
+,   detachShader
+,   loadShader
+,   newShader
+    -- ** Source loading
+,   loadSource
+,   shaderSource
+,   readSource
+,   compile
+    -- * Helper functions
 ,   ($=)
 ,   Data.StateVar.get
     -- * VAOs
 ,   VAO
-    -- ** Creation and destruction
 ,   newVAO
-    -- ** Manipulation
 ,   bindVAO
 ,   enableVAOAttrib
 ,   attribVAOPointer
@@ -49,12 +45,10 @@ module Spear.GL
 ,   GLBuffer
 ,   TargetBuffer(..)
 ,   BufferUsage(..)
-    -- ** Creation and destruction
 ,   newBuffer
-    -- ** Manipulation
 ,   bindBuffer
-,   bufferData
-,   bufferDatal
+,   BufferData(..)
+,   bufferData'
 ,   withGLBuffer
     -- * Textures
 ,   Texture
@@ -92,7 +86,9 @@ import Control.Monad.Trans.Error
 import Control.Monad.Trans.State as State
 import qualified Data.ByteString.Char8 as B
 import Data.StateVar
+import Data.Word
 import Foreign.C.String
+import Foreign.C.Types
 import Foreign.Ptr
 import Foreign.Storable
 import Foreign.Marshal.Utils as Foreign (with)
@@ -140,9 +136,8 @@ withGLSLProgram prog f = f $ getProgram prog
 
 -- | Get the location of the given uniform variable within the given program.
 uniformLocation :: GLSLProgram -> String -> GettableStateVar GLint
-uniformLocation prog var = makeGettableStateVar get
-    where
-        get = withCString var $ \str -> glGetUniformLocation (getProgram prog) (unsafeCoerce str)
+uniformLocation prog var = makeGettableStateVar $
+    withCString var $ \str -> glGetUniformLocation (getProgram prog) (unsafeCoerce str)
 
 -- | Get or set the location of the given variable to a fragment shader colour number.
 fragLocation :: GLSLProgram -> String -> StateVar GLint
@@ -167,10 +162,10 @@ newProgram shaders = do
     when (h == 0) $ gameError "glCreateProgram failed"
     rkey <- register $ deleteProgram h
     let program = GLSLProgram h rkey
-    
+
     mapM_ (gameIO . attachShader program) shaders
     linkProgram program
-    
+
     return program
 
 -- | Delete the program.
@@ -192,7 +187,7 @@ linkProgram prog = do
             case status of
                 0 -> getStatus glGetProgramiv glGetProgramInfoLog h
                 _ -> return ""
-    
+
     case length err of
         0 -> return ()
         _ -> gameError err
@@ -258,10 +253,10 @@ shaderSource shader str =
 compile :: FilePath -> GLSLShader -> Game s ()
 compile file shader = do
     let h = getShader shader
-    
+
     -- Compile
     gameIO $ glCompileShader h
-    
+
     -- Verify status
     err <- gameIO $ alloca $ \statusPtr -> do
         glGetShaderiv h gl_COMPILE_STATUS statusPtr
@@ -269,11 +264,11 @@ compile file shader = do
         case result of
             0 -> getStatus glGetShaderiv glGetShaderInfoLog h
             _ -> return ""
-    
+
     case length err of
         0 -> return ()
         _ -> gameError $ "Unable to compile shader " ++ file ++ ":\n" ++ err
-        
+
 type StatusCall = GLuint -> GLenum -> Ptr GLint -> IO ()
 type LogCall    = GLuint -> GLsizei -> Ptr GLsizei -> Ptr GLchar -> IO ()
 
@@ -314,16 +309,16 @@ readSource' file = do
             if isInclude l
             then readSource' $ B.unpack . clean . cleanInclude $ l
             else return l
-    
+
     contents <- B.readFile file
-    
+
     dir <- getCurrentDirectory
     let dir' = dir ++ "/" ++ (reverse . dropWhile (\c -> c /= '/') . reverse) file
-    
+
     setCurrentDirectory dir'
     code <- parse contents
     setCurrentDirectory dir
-    
+
     return code
 
 -- | Load a 2D vector.
@@ -338,7 +333,7 @@ uniformVec3 loc v = glUniform3f loc x' y' z'
     where x' = unsafeCoerce $ x v
           y' = unsafeCoerce $ y v
           z' = unsafeCoerce $ z v
-    
+
 -- | Load a 4D vector.
 uniformVec4 :: GLint -> Vector4 -> IO ()
 uniformVec4 loc v = glUniform4f loc x' y' z' w'
@@ -359,23 +354,25 @@ uniformMat4 loc mat =
     with mat $ \ptrMat ->
         glUniformMatrix4fv loc 1 (toEnum 0) (unsafeCoerce ptrMat)
 
--- | Load a list of floats.
-uniformfl :: GLint -> [GLfloat] -> IO ()
-uniformfl loc vals = withArray vals $ \ptr ->
-    case length vals of
-        1 -> glUniform1fv loc 1 ptr
-        2 -> glUniform2fv loc 1 ptr
-        3 -> glUniform3fv loc 1 ptr
-        4 -> glUniform4fv loc 1 ptr
+class LoadUniforms a where
+      -- | Load a list of uniform values.
+      uniforml :: GLint -> [a] -> IO ()
 
--- | Load a list of integers.
-uniformil :: GLint -> [GLint] -> IO ()
-uniformil loc vals = withArray vals $ \ptr ->
-    case length vals of
-        1 -> glUniform1iv loc 1 ptr
-        2 -> glUniform2iv loc 1 ptr
-        3 -> glUniform3iv loc 1 ptr
-        4 -> glUniform4iv loc 1 ptr
+instance LoadUniforms Float where
+         uniforml loc vals = withArray (map unsafeCoerce vals) $ \ptr ->
+                   case length vals of
+                        1 -> glUniform1fv loc 1 ptr
+                        2 -> glUniform2fv loc 1 ptr
+                        3 -> glUniform3fv loc 1 ptr
+                        4 -> glUniform4fv loc 1 ptr
+
+instance LoadUniforms Int where
+         uniforml loc vals = withArray (map fromIntegral vals) $ \ptr ->
+                  case length vals of
+                       1 -> glUniform1iv loc 1 ptr
+                       2 -> glUniform2iv loc 1 ptr
+                       3 -> glUniform3iv loc 1 ptr
+                       4 -> glUniform4iv loc 1 ptr
 
 --
 -- VAOs
@@ -402,7 +399,7 @@ newVAO = do
     h <- gameIO . alloca $ \ptr -> do
         glGenVertexArrays 1 ptr
         peek ptr
-    
+
     rkey <- register $ deleteVAO h
     return $ VAO h rkey
 
@@ -415,7 +412,7 @@ bindVAO :: VAO -> IO ()
 bindVAO = glBindVertexArray . getVAO
 
 -- | Enable the given vertex attribute of the bound vao.
--- 
+--
 -- See also 'bindVAO'.
 enableVAOAttrib :: GLuint -- ^ Attribute index.
                 -> IO ()
@@ -445,7 +442,7 @@ drawArrays mode first count = glDrawArrays mode (unsafeCoerce first) (unsafeCoer
 drawElements
     :: GLenum -- ^ The kind of primitives to render.
     -> Int    -- ^ The number of elements to be rendered.
-    -> GLenum -- ^ The type of the index values. Must be one of gl_UNSIGNED_BYTE, gl_UNSIGNED_SHORT, or gl_UNSIGNED_INT. 
+    -> GLenum -- ^ The type of the index values. Must be one of gl_UNSIGNED_BYTE, gl_UNSIGNED_SHORT, or gl_UNSIGNED_INT.
     -> Ptr a  -- ^ Pointer to the location where indices are stored, or offset into the index array when there is a bound ElementArrayBuffer.
     -> IO ()
 drawElements mode count t idxs = glDrawElements mode (unsafeCoerce count) t idxs
@@ -470,7 +467,7 @@ data TargetBuffer
     | PixelPackBuffer
     | PixelUnpackBuffer
     deriving (Eq, Show)
-    
+
 fromTarget :: TargetBuffer -> GLenum
 fromTarget ArrayBuffer        = gl_ARRAY_BUFFER
 fromTarget ElementArrayBuffer = gl_ELEMENT_ARRAY_BUFFER
@@ -507,7 +504,7 @@ newBuffer = do
     h <- gameIO . alloca $ \ptr -> do
         glGenBuffers 1 ptr
         peek ptr
-    
+
     rkey <- register $ deleteBuffer h
     return $ GLBuffer h rkey
 
@@ -519,23 +516,40 @@ deleteBuffer buf = Foreign.with buf $ glDeleteBuffers 1
 bindBuffer :: GLBuffer -> TargetBuffer -> IO ()
 bindBuffer buf target = glBindBuffer (fromTarget target) $ getBuffer buf
 
--- | Set the buffer's data.
-bufferData :: TargetBuffer
-           -> Int -- ^ Buffer size in bytes.
-           -> Ptr a
+class Storable a => BufferData a where
+      -- | Set the buffer's data.
+      bufferData :: TargetBuffer -> [a] -> BufferUsage -> IO ()
+      bufferData tgt vals usage =
+                 let n = sizeOf (undefined :: Word8) * length vals
+                 in withArray vals $ \ptr -> bufferData' tgt n ptr usage
+
+instance BufferData Word8
+instance BufferData Word16
+instance BufferData Word32
+instance BufferData CChar
+instance BufferData CInt
+instance BufferData CFloat
+instance BufferData CDouble
+instance BufferData Int
+instance BufferData Float
+instance BufferData Double
+
+{-bufferData :: Storable a
+           => TargetBuffer
+           -> Int -- ^ The size in bytes of an element in the data list.
+           -> [a] -- ^ The data list.
            -> BufferUsage
            -> IO ()
-bufferData target n bufData usage = glBufferData (fromTarget target) (unsafeCoerce n) bufData (fromUsage usage)
+bufferData target n bufData usage = withArray bufData $
+    \ptr -> bufferData target (n * length bufData) ptr usage-}
 
 -- | Set the buffer's data.
-bufferDatal :: Storable a
-            => TargetBuffer
-            -> Int -- ^ The size in bytes of an element in the data list.
-            -> [a] -- ^ The data list.
+bufferData' :: TargetBuffer
+            -> Int -- ^ Buffer size in bytes.
+            -> Ptr a
             -> BufferUsage
             -> IO ()
-bufferDatal target n bufData usage = withArray bufData $
-    \ptr -> bufferData target (n * length bufData) ptr usage
+bufferData' target n bufData usage = glBufferData (fromTarget target) (unsafeCoerce n) bufData (fromUsage usage)
 
 -- | Apply the given function the buffer's id.
 withGLBuffer :: GLBuffer -> (GLuint -> a) -> a
@@ -566,7 +580,7 @@ newTexture = do
     tex <- gameIO . alloca $ \ptr -> do
         glGenTextures 1 ptr
         peek ptr
-    
+
     rkey <- register $ deleteTexture tex
     return $ Texture tex rkey
 
@@ -590,12 +604,12 @@ loadTextureImage file minFilter magFilter = do
             h    = height image
             pix  = pixels image
             rgb  = fromIntegral . fromEnum $ gl_RGB
-        
+
         bindTexture tex
         loadTextureData gl_TEXTURE_2D 0 rgb w h 0 gl_RGB gl_UNSIGNED_BYTE pix
         texParami gl_TEXTURE_2D gl_TEXTURE_MIN_FILTER $= minFilter
         texParami gl_TEXTURE_2D gl_TEXTURE_MAG_FILTER $= magFilter
-    
+
     return tex
 
 -- | Bind the texture.

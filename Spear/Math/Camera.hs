@@ -10,6 +10,8 @@ module Spear.Math.Camera
 ,   Bottom
 ,   Top
 ,   projection
+,   perspective
+,   ortho
 )
 where
 

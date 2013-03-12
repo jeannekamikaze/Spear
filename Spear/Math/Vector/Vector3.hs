@@ -1,6 +1,10 @@
 module Spear.Math.Vector.Vector3
 (
     Vector3
+,   Right3
+,   Up3
+,   Forward3
+,   Position3
     -- * Construction
 ,   unitx3
 ,   unity3
@@ -19,6 +23,11 @@ import Spear.Math.Vector.Class
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
 
+type Right3 = Vector3
+type Up3 = Vector3
+type Forward3 = Vector3
+type Position3 = Vector3
+
 
 -- | Represents a vector in 3D.
 data Vector3 = Vector3
@@ -27,7 +36,6 @@ data Vector3 = Vector3
     {-# UNPACK #-} !Float
     deriving (Eq, Show)
 
-
 instance Num Vector3 where
     Vector3 ax ay az + Vector3 bx by bz = Vector3 (ax + bx) (ay + by) (az + bz)
     Vector3 ax ay az - Vector3 bx by bz = Vector3 (ax - bx) (ay - by) (az - bz)
@@ -35,29 +43,29 @@ instance Num Vector3 where
     abs (Vector3 ax ay az) = Vector3 (abs ax) (abs ay) (abs az)
     signum (Vector3 ax ay az) = Vector3 (signum ax) (signum ay) (signum az)
     fromInteger i = Vector3 i' i' i' where i' = fromInteger i
-    
-    
+
+
 instance Fractional Vector3 where
     Vector3 ax ay az / Vector3 bx by bz = Vector3 (ax / bx) (ay / by) (az / bz)
     fromRational r = Vector3 r' r' r' where r' = fromRational r
-    
-    
+
+
 instance Ord Vector3 where
     Vector3 ax ay az <= Vector3 bx by bz
         =  (ax <= bx)
         || (az == bx && ay <= by)
         || (ax == bx && ay == by && az <= bz)
-    
+
     Vector3 ax ay az >= Vector3 bx by bz
         =  (ax >= bx)
         || (ax == bx && ay >= by)
         || (ax == bx && ay == by && az >= bz)
-    
+
     Vector3 ax ay az < Vector3 bx by bz
         =  (ax < bx)
         || (az == bx && ay < by)
         || (ax == bx && ay == by && az < bz)
-    
+
     Vector3 ax ay az > Vector3 bx by bz
         =  (ax > bx)
         || (ax == bx && ay > by)
@@ -80,7 +88,7 @@ instance VectorClass Vector3 where
 
          {-# INLINABLE z #-}
          z (Vector3 _  _  az) = az
-         
+
          {-# INLINABLE (!) #-}
          (Vector3 ax _ _) ! 0 = ax
          (Vector3 _ ay _) ! 1 = ay
@@ -115,13 +123,13 @@ sizeFloat = sizeOf (undefined :: CFloat)
 instance Storable Vector3 where
     sizeOf _    = 3*sizeFloat
     alignment _ = alignment (undefined :: CFloat)
-    
+
     peek ptr = do
         ax <- peekByteOff ptr 0
         ay <- peekByteOff ptr $ 1*sizeFloat
         az <- peekByteOff ptr $ 2*sizeFloat
         return (Vector3 ax ay az)
-    
+
     poke ptr (Vector3 ax ay az) = do
         pokeByteOff ptr 0 ax
         pokeByteOff ptr (1*sizeFloat) ay

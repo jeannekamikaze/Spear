@@ -24,6 +24,9 @@ module Spear.App.Input
 ,   newDM
 ,   updateDM
 ,   delayedMouse
+    -- * Input modifiers
+,   setMousePosition
+,   setMouseWheel
 )
 where
 
@@ -49,7 +52,7 @@ type Keyboard = Key -> Bool
 data MouseButton = LMB | RMB | MMB
     deriving (Enum, Bounded)
 
-data MouseProp = MouseX | MouseY | MouseDX | MouseDY
+data MouseProp = MouseX | MouseY | MouseDX | MouseDY | Wheel | WheelDelta
     deriving Enum
 
 data Mouse = Mouse
@@ -103,10 +106,13 @@ getMouse oldMouse =
         getProp :: V.Vector Float -> MouseProp -> Float
         getProp props prop = props V.! fromEnum prop
 
-        props xpos ypos = V.fromList
-            [ xpos, ypos
+        props xpos ypos wheel = V.fromList
+            [ xpos
+            , ypos
             , xpos - property oldMouse MouseX
             , ypos - property oldMouse MouseY
+            , wheel
+            , wheel - property oldMouse Wheel
             ]
 
         getButtonState =
@@ -117,10 +123,11 @@ getMouse oldMouse =
         buttons = fmap toEnum [0..fromEnum (maxBound :: MouseButton)]
     in do
         Position xpos ypos <- get GLFW.mousePos
+        wheel <- get GLFW.mouseWheel
         buttonState <- getButtonState
         return $ Mouse
             { button   = getButton buttonState
-            , property = getProp $ props (fromIntegral xpos) (fromIntegral ypos)
+            , property = getProp $ props (fromIntegral xpos) (fromIntegral ypos) (fromIntegral wheel)
             }
 
 -- | Return a new dummy input.
@@ -183,6 +190,17 @@ updateDM (DelayedMouse mouse delay accum) dt =
     in
         DelayedMouse mouse { button = button' } delay accum'
 
+-- | Set the mouse position.
+setMousePosition :: Integral a => (a,a) -> Mouse -> IO Mouse
+setMousePosition (x,y) mouse = do
+                 GLFW.mousePos $= Position (fromIntegral x) (fromIntegral y)
+                 getMouse mouse
+
+-- | Set the mouse wheel.
+setMouseWheel :: Integral a => a -> Mouse -> IO Mouse
+setMouseWheel w mouse = do
+              GLFW.mouseWheel $= (fromIntegral w)
+              getMouse mouse
 
 toGLFWkey :: Key -> Int
 toGLFWkey KEY_A   = ord 'A'

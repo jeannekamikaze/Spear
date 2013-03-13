@@ -42,7 +42,7 @@ class Spatial3 s where
     -- | Rotate the spatial about the given axis.
     rotate :: Vector3 -> Float -> s -> s
     rotate axis a s =
-           let t  = transform s
+           let t = transform s
                axis' = M.inverseTransform t `M.muld` axis
            in setTransform (t * M.axisAngle axis' a) s
 

@@ -8,7 +8,9 @@ module Spear.Math.Spatial3
 where
 
 import Spear.Math.Vector
-import Spear.Math.Matrix4 as M hiding (scale)
+import qualified Spear.Math.Matrix4 as M
+
+type Matrix4 = M.Matrix4
 
 class Spatial3 s where
     -- | Gets the spatial's internal Obj3.
@@ -36,6 +38,13 @@ class Spatial3 s where
     -- | Make the spatial Strafe right.
     strafeRight :: Float -> s -> s
     strafeRight a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (r o) }
+
+    -- | Rotate the spatial about the given axis.
+    rotate :: Vector3 -> Float -> s -> s
+    rotate axis a s =
+           let t  = transform s
+               axis' = M.inverseTransform t `M.muld` axis
+           in setTransform (t * M.axisAngle axis' a) s
 
     -- | Rotate the spatial about its local X axis.
     pitch :: Float -> s -> s
@@ -93,12 +102,7 @@ class Spatial3 s where
     -- | Set the spatial's transform.
     setTransform :: Matrix4 -> s -> s
     setTransform t s =
-                 let o = Obj3
-                       { r = M.right t
-                       , u = M.up t
-                       , f = scale (-1) $ M.forward t
-                       , p = M.position t
-                       }
+                 let o = Obj3 (M.right t) (M.up t) (scale (-1) $ M.forward t) (M.position t)
                  in setObj3 s o
 
     -- | Set the spatial's position.
@@ -143,6 +147,10 @@ data Obj3 = Obj3
      , f :: Vector3
      , p :: Vector3
      } deriving Show
+
+instance Spatial3 Obj3 where
+         getObj3 = id
+         setObj3 _ o' = o'
 
 fromVectors :: Right3 -> Up3 -> Forward3 -> Position3 -> Obj3
 fromVectors = Obj3

@@ -549,7 +549,7 @@ class Storable a => BufferData a where
       -- | Set the buffer's data.
       bufferData :: TargetBuffer -> [a] -> BufferUsage -> IO ()
       bufferData tgt vals usage =
-                 let n = sizeOf (undefined :: Word8) * length vals
+                 let n = sizeOf (head vals) * length vals
                  in withArray vals $ \ptr -> bufferData' tgt n ptr usage
 
 instance BufferData Word8

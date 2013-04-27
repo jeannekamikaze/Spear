@@ -8,8 +8,8 @@ module Spear.Scene.GameObject
 ,   goNew
     -- * Accessors
 ,   currentAnimation
-,   goAABB
-,   goAABBs
+--,   goAABB
+--,   goAABBs
 ,   collisioners
 ,   goRPGtransform
 ,   numCollisioners
@@ -31,10 +31,10 @@ module Spear.Scene.GameObject
 where
 
 
-import Spear.Collision as Col
 import Spear.GL
 import Spear.Math.AABB
 import qualified Spear.Math.Camera as Cam
+import Spear.Math.Collision as Col
 import qualified Spear.Math.Matrix3 as M3
 import qualified Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils
@@ -73,7 +73,7 @@ dummyWindow = Window M4.id M4.id 0 0 640 480
 data GameObject = GameObject
     { gameStyle    :: !GameStyle
     , renderer     :: !(Either StaticModelRenderer AM.AnimatedModelRenderer)
-    , collisioners :: ![Collisioner]
+    , collisioners :: ![Collisioner2]
     , transform    :: !M3.Matrix3
     , axis         :: !Vector3
     , angle        :: !Float
@@ -170,7 +170,7 @@ instance S2.Spatial2 GameObject where
 -- | Create a new game object.
 goNew :: GameStyle
       -> Either StaticModelResource AM.AnimatedModelResource
-      -> [Collisioner]
+      -> [Collisioner2]
       -> M3.Matrix3 -- ^ Transform
       -> Vector3 -- ^ Axis of rotation
       -> GameObject
@@ -194,13 +194,13 @@ goUpdate dt go =
 
 
 -- | Get the game object's ith bounding box.
-goAABB :: Int -> GameObject -> AABB
-goAABB i = getAABB . flip (!!) i . collisioners
+--goAABB :: Int -> GameObject -> AABB2
+--goAABB i = getAABB . flip (!!) i . collisioners
 
 
 -- | Get the game object's bounding boxes.
-goAABBs :: GameObject -> [AABB]
-goAABBs = fmap getAABB . collisioners
+--goAABBs :: GameObject -> [AABB2]
+--goAABBs = fmap getAABB . collisioners
 
 
 -- | Get the game object's 3D transform.
@@ -242,7 +242,7 @@ setAxis ax go = go { axis = ax }
 
 
 -- | Set the game object's collisioners.
-setCollisioners :: [Collisioner] -> GameObject -> GameObject
+setCollisioners :: [Collisioner2] -> GameObject -> GameObject
 setCollisioners cols go = go { collisioners = cols }
 
 
@@ -252,7 +252,7 @@ setWindow wnd go = go { window = wnd }
 
 
 -- | Manipulate the game object's collisioners.
-withCollisioners :: GameObject -> ([Collisioner] -> [Collisioner]) -> GameObject
+withCollisioners :: GameObject -> ([Collisioner2] -> [Collisioner2]) -> GameObject
 withCollisioners go f = go { collisioners = f $ collisioners go }
 
 

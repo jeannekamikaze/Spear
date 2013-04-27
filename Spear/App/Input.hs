@@ -34,7 +34,7 @@ import Data.Char (ord)
 import qualified Data.Vector.Unboxed as V
 import qualified Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL.GL.CoordTrans
-import Data.StateVar
+import Graphics.Rendering.OpenGL.GL.StateVar
 
 data Key
     = KEY_A | KEY_B | KEY_C | KEY_D | KEY_E | KEY_F | KEY_G | KEY_H

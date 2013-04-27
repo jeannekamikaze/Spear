@@ -166,7 +166,7 @@ newProgram shaders = do
     linkProgram program
     return program
 
--- | Delete the program.
+--  Delete the program.
 deleteProgram :: GLuint -> IO ()
 --deleteProgram = glDeleteProgram
 deleteProgram prog = do

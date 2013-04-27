@@ -1,9 +1,7 @@
-module Spear.Physics.Types
+module Spear.Math.Physics.Types
 where
 
-
 import Spear.Math.Vector
-
 
 type Dt = Float
 type Force = Vector2

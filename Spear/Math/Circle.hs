@@ -1,33 +1,26 @@
 module Spear.Math.Circle
-(
-    Circle(..)
-,   circle
-,   circlept
-)
 where
-
 
 import Spear.Math.Vector
 
+import Data.List (foldl')
 
--- | A bounding volume.
+-- | A circle in 2D space.
 data Circle = Circle
     { center :: {-# UNPACK #-} !Vector2
     , radius :: {-# UNPACK #-} !Float
     }
 
-
--- | Create a 'Sphere' from the given points.
+-- | Create a circle from the given points.
 circle :: [Vector2] -> Circle
-circle [] = error "Attempting to build a Circle from an empty list!"
+circle [] = Circle zero2 0
 circle (x:xs) = Circle c r
     where
         c = pmin + (pmax-pmin)/2
         r = norm $ pmax - c
-        (pmin,pmax) = foldr update (x,x) xs
-        update p (pmin,pmax) = (min p pmin, max p pmax)
+        (pmin,pmax) = foldl' update (x,x) xs
+        update (pmin,pmax) p = (min p pmin, max p pmax)
 
-
--- | Return 'True' if the given 'Sphere' contains the given point, 'False' otherwise.         
+-- | Return 'True' if the given circle contains the given point, 'False' otherwise.
 circlept :: Circle -> Vector2 -> Bool
 circlept (Circle c r) p = r*r >= normSq (p - c)

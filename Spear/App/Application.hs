@@ -1,6 +1,6 @@
 module Spear.App.Application
 (
-    -- * Data types
+    -- * Setup
     Dimensions
 ,   Context
 ,   SpearWindow
@@ -9,7 +9,6 @@ module Spear.App.Application
 ,   DisplayBits(..)
 ,   WindowMode(..)
 ,   WindowSizeCallback
-    -- * Setup
 ,   setup
 ,   quit
     -- * Main loop
@@ -18,6 +17,9 @@ module Spear.App.Application
     -- * Helpers
 ,   swapBuffers
 ,   getParam
+,   SpecialFeature(..)
+,   enableSpecial
+,   disableSpecial
 )
 where
 
@@ -54,17 +56,17 @@ setup (w, h) displayBits windowMode (major, minor) onResize' = do
         openWindowHint OpenGLVersionMajor major
         openWindowHint OpenGLVersionMinor minor
         disableSpecial AutoPollEvent
-        
+
         let dimensions = GL.Size (unsafeCoerce w) (unsafeCoerce h)
         result <- openWindow dimensions displayBits windowMode
         windowTitle $= "Spear Game Framework"
         GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
-        
+
         windowSizeCallback $= (onResize onResize')
         onResize' (Size (fromIntegral w) (fromIntegral h))
-        
+
         initialiseTimingSubsystem
-    
+
     rkey <- register quit
     return $ SpearWindow rkey
 

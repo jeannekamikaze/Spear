@@ -18,9 +18,9 @@ module Spear.Scene.Loader
 where
 
 import Spear.Assets.Model as Model
-import Spear.Collision
 import Spear.Game
 import qualified Spear.GL as GL
+import Spear.Math.Collision
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.MatrixUtils (fastNormalMatrix)
@@ -135,18 +135,18 @@ newModel (SceneLeaf _ props) = do
     kd   <- asVec4   $ mandatory' "kd"             props
     ks   <- asVec4   $ mandatory' "ks"             props
     shi  <- asFloat  $ mandatory' "shi"            props
-    
+
     let rotation = asRotation $ value "rotation" props
         scale    = asVec3 $ value "scale" props
-    
+
     gameIO $ printf "Loading model %s..." name
     model    <- loadModel' file rotation scale
     gameIO .  putStrLn $ "done"
     texture  <- loadTexture  tex
     sceneRes <- get
-    
+
     let material = Material ke ka kd ks shi
-    
+
     case animated model of
         False ->
             case M.lookup prog $ staticPrograms sceneRes of
@@ -173,12 +173,12 @@ loadModel' file rotation scale = do
             (case rotation of
                 Nothing  -> Prelude.id
                 Just rot -> rotateModel rot) .
-            
+
             (case scale of
                 Nothing -> Prelude.id
                 Just s  -> flip Model.transformVerts $
                     \(Vec3 x' y' z') -> Vec3 (x s * x') (y s * y') (z s * z'))
-    
+
     (fmap transform $ Model.loadModel file) >>= gameIO . toGround
 
 rotateModel :: Rotation -> Model -> Model
@@ -191,10 +191,10 @@ rotateModel (Rotation ax ay az order) model =
             ZXY -> rotY ay * rotX ax * rotZ az
             ZYX -> rotX ax * rotY ay * rotZ az
         normalMat = fastNormalMatrix mat
-        
+
         vTransform (Vec3 x' y' z') =
             let v = mat `M4.mulp` (vec3 x' y' z') in Vec3 (x v) (y v) (z v)
-        
+
         nTransform (Vec3 x' y' z') =
             let v = normalMat `M3.mul` (vec3 x' y' z') in Vec3 (x v) (y v) (z v)
     in
@@ -212,9 +212,9 @@ newShaderProgram (SceneLeaf _ props) = do
     name       <- asString $ mandatory' "name" props
     stype      <- asString $ mandatory' "type" props
     prog       <- GL.newProgram [vertShader, fragShader]
-    
+
     let getUniformLoc name = (gameIO . SV.get $ GL.uniformLocation prog name) `GL.assertGL` name
-    
+
     case stype of
         "static" -> do
             ambient    <- asString $ mandatory' "ambient"    props
@@ -225,7 +225,7 @@ newShaderProgram (SceneLeaf _ props) = do
             modelview  <- asString $ mandatory' "modelview"  props
             normalmat  <- asString $ mandatory' "normalmat"  props
             projection <- asString $ mandatory' "projection" props
-            
+
             ka    <- getUniformLoc ambient
             kd    <- getUniformLoc diffuse
             ks    <- getUniformLoc specular
@@ -234,18 +234,18 @@ newShaderProgram (SceneLeaf _ props) = do
             mview <- getUniformLoc modelview
             nmat  <- getUniformLoc normalmat
             proj  <- getUniformLoc projection
-            
+
             vertChan  <- fmap read $ asString $ mandatory' "vertex-channel" props
             normChan  <- fmap read $ asString $ mandatory' "normal-channel" props
             texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
-            
+
             let channels = StaticProgramChannels vertChan normChan texChan
                 uniforms = StaticProgramUniforms ka kd ks shi tex mview nmat proj
-            
+
             loadResource name staticPrograms addStaticProgram $
                 return $ StaticProgram prog channels uniforms
             return ()
-        
+
         "animated" -> do
             ambient    <- asString $ mandatory' "ambient"    props
             diffuse    <- asString $ mandatory' "diffuse"    props
@@ -255,7 +255,7 @@ newShaderProgram (SceneLeaf _ props) = do
             modelview  <- asString $ mandatory' "modelview"  props
             normalmat  <- asString $ mandatory' "normalmat"  props
             projection <- asString $ mandatory' "projection" props
-            
+
             ka    <- getUniformLoc ambient
             kd    <- getUniformLoc diffuse
             ks    <- getUniformLoc specular
@@ -264,7 +264,7 @@ newShaderProgram (SceneLeaf _ props) = do
             mview <- getUniformLoc modelview
             nmat  <- getUniformLoc normalmat
             proj  <- getUniformLoc projection
-            
+
             vertChan1  <- fmap read $ asString $ mandatory' "vertex-channel1" props
             vertChan2  <- fmap read $ asString $ mandatory' "vertex-channel2" props
             normChan1  <- fmap read $ asString $ mandatory' "normal-channel1" props
@@ -272,14 +272,14 @@ newShaderProgram (SceneLeaf _ props) = do
             texChan    <- fmap read $ asString $ mandatory' "texture-channel" props
             fp <- asString $ mandatory' "fp" props
             p  <- getUniformLoc fp
-            
+
             let channels = AnimatedProgramChannels vertChan1 vertChan2 normChan1 normChan2 texChan
                 uniforms = AnimatedProgramUniforms ka kd ks shi tex p mview nmat proj
-            
+
             loadResource name animatedPrograms addAnimatedProgram $
                 return $ AnimatedProgram prog channels uniforms
             return ()
-        
+
         _ -> do
             loadResource name customPrograms addCustomProgram $ return prog
             return ()
@@ -352,10 +352,10 @@ newObject' newGO sceneRes nid props = do
         right'   = (asVec2   $ value "right"    props) `unspecified` vec2 1 0
         up'      =  asVec2   $ value "up"       props
         scale    = (asVec2   $ value "scale"    props) `unspecified` vec2 1 1
-    
+
     -- Compute the object's vectors if an up/forward vector has been specified.
     let (right, up) = vectors up'
-    
+
     newGO goType sceneRes props (M3.transform right up position)
 
 vectors :: Maybe Vector2 -> (Vector2, Vector2)

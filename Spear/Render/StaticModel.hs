@@ -18,10 +18,10 @@ module Spear.Render.StaticModel
 where
 
 import Spear.Assets.Model
-import Spear.Collision
 import Spear.Game
 import Spear.GL
 import Spear.Math.AABB
+import Spear.Math.Collision
 import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector
 import Spear.Render.Material
@@ -134,5 +134,5 @@ render uniforms (StaticModelRenderer model) =
 mkColsFromStatic
     :: Matrix4 -- ^ Modelview matrix
     -> StaticModelResource
-    -> [Collisioner]
+    -> [Collisioner2]
 mkColsFromStatic modelview modelRes = mkCols modelview (box 0 modelRes)

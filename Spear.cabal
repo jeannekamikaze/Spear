@@ -10,40 +10,86 @@ synopsis: A 2.5D game framework.
 category: Game
 author: Marc Sunet
 data-dir: ""
- 
+
 library
-    build-depends: GLFW -any, OpenGL -any, OpenGLRaw -any,
-                   StateVar -any, base -any, bytestring -any, directory -any,
-                   mtl -any, transformers -any, resourcet -any, parsec >= 3,
-                   containers -any, vector -any, array -any
-    exposed-modules: Spear.Scene.GameObject Spear.Math.QuadTree
-                     Spear.Physics.Types Spear.App Spear.App.Application Spear.App.Input
-                     Spear.Assets.Image Spear.Assets.Model Spear.Collision
-                     Spear.Math.AABB Spear.Math.Circle Spear.Math.Triangle Spear.Game
-                     Spear.GL Spear.Math.Camera Spear.Math.Entity Spear.Math.Matrix3
-                     Spear.Math.Matrix4 Spear.Math.MatrixUtils Spear.Math.Plane
-                     Spear.Math.Quaternion Spear.Math.Vector Spear.Math.Vector.Class
-                     Spear.Math.Vector.Vector3 Spear.Math.Vector.Vector4
-                     Spear.Math.Vector.Vector2
-                     Spear.Physics Spear.Physics.Rigid Spear.Render.AnimatedModel
-                     Spear.Render.Material Spear.Render.Model Spear.Render.Program
-                     Spear.Render.StaticModel Spear.Scene.Graph Spear.Scene.Light
-                     Spear.Scene.Loader Spear.Scene.Scene Spear.Scene.SceneResources
-                     Spear.Sys.Timer Spear.Sys.Store Spear.Sys.Store.ID
-                     Spear.Math.Quad Spear.Math.Ray
-                     Spear.Math.Segment Spear.Math.Utils Spear.Math.Spatial2
+    build-depends: GLFW -any,
+                   OpenGL -any,
+                   OpenGLRaw -any,
+                   StateVar -any,
+                   base -any,
+                   bytestring >= 0.10,
+                   directory -any,
+                   mtl -any,
+                   transformers -any,
+                   resourcet -any,
+                   parsec >= 3,
+                   containers -any,
+                   vector -any,
+                   array -any
+
+    exposed-modules: Spear.App
+                     Spear.App.Application
+                     Spear.App.Input
+                     Spear.Assets.Image
+                     Spear.Assets.Model
+                     Spear.Game
+                     Spear.GL
+                     Spear.Math.AABB
+                     Spear.Math.Camera
+                     Spear.Math.Circle
+                     Spear.Math.Collision
+                     Spear.Math.Entity
+                     Spear.Math.Frustum
+                     Spear.Math.Matrix3
+                     Spear.Math.Matrix4
+                     Spear.Math.MatrixUtils
+                     Spear.Math.Octree
+                     Spear.Math.Plane
+                     Spear.Math.Quaternion
+                     Spear.Math.Ray
+                     Spear.Math.Segment
+                     Spear.Math.Spatial2
                      Spear.Math.Spatial3
+                     Spear.Math.Triangle
+                     Spear.Math.Utils
+                     Spear.Math.Vector
+                     Spear.Math.Vector.Class
+                     Spear.Math.Vector.Vector2
+                     Spear.Math.Vector.Vector3
+                     Spear.Math.Vector.Vector4
+                     Spear.Render.AnimatedModel
+                     Spear.Render.Material
+                     Spear.Render.Model
+                     Spear.Render.Program
+                     Spear.Render.StaticModel
+                     Spear.Scene.GameObject
+                     Spear.Scene.Graph
+                     Spear.Scene.Light
+                     Spear.Scene.Loader
+                     Spear.Scene.SceneResources
+                     Spear.Sys.Store
+                     Spear.Sys.Store.ID
+                     Spear.Sys.Timer
+
     exposed: True
+
     buildable: True
+
     build-tools: hsc2hs -any
+
     cc-options: -O2 -g -Wno-unused-result
+
     c-sources: Spear/Assets/Image/Image.c
-               Spear/Assets/Image/BMP/BMP_load.c Spear/Assets/Model/Model.c
-               Spear/Assets/Model/MD2/MD2_load.c Spear/Assets/Model/OBJ/cvector.c
-               Spear/Assets/Model/OBJ/OBJ_load.c Spear/Render/RenderModel.c
+               Spear/Assets/Image/BMP/BMP_load.c
+               Spear/Assets/Model/Model.c
+               Spear/Assets/Model/MD2/MD2_load.c
+               Spear/Assets/Model/OBJ/cvector.c
+               Spear/Assets/Model/OBJ/OBJ_load.c
+               Spear/Render/RenderModel.c
                Spear/Sys/Timer/ctimer.c
+
     extensions: TypeFamilies
-    extra-libraries: stdc++
+
     includes: Spear/Assets/Image/BMP/BMP_load.h
               Spear/Assets/Image/Image.h Spear/Assets/Image/Image_error_code.h
               Spear/Assets/Image/sys_types.h Spear/Assets/Model/MD2/MD2_load.h
@@ -51,9 +97,12 @@ library
               Spear/Assets/Model/Model.h Spear/Assets/Model/Model_error_code.h
               Spear/Assets/Model/sys_types.h Spear/Render/RenderModel.h
               Timer/Timer.h
+
     include-dirs: Spear/Assets/Image Spear/Assets/Model Spear/Render
                   Spear/Sys
+
     hs-source-dirs: .
+
     ghc-options: -O2
-    ghc-prof-options: -rtsopts -fprof-auto -fprof-cafs
- 
+
+    ghc-prof-options: -O2 -rtsopts -fprof-auto -fprof-cafs

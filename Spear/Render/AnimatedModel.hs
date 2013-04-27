@@ -28,10 +28,10 @@ module Spear.Render.AnimatedModel
 where
 
 import Spear.Assets.Model
-import Spear.Collision
 import Spear.Game
 import Spear.GL
 import Spear.Math.AABB
+import Spear.Math.Collision
 import Spear.Math.Matrix4 (Matrix4)
 import Spear.Math.Vector
 import Spear.Render.Material
@@ -219,7 +219,7 @@ mkColsFromAnimated
     -> Float   -- ^ Frame progress
     -> Matrix4 -- ^ Modelview matrix
     -> AnimatedModelResource
-    -> [Collisioner]
+    -> [Collisioner2]
 mkColsFromAnimated f1 f2 fp modelview modelRes =
     let
         (Box (Vec3 xmin1 ymin1 zmin1) (Vec3 xmax1 ymax1 zmax1)) = box f1 modelRes

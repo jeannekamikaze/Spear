@@ -419,7 +419,7 @@ perspective fovy r near far =
     in mat4
         (f/r) 0    0              0
         0     f    0              0
-        0     0    ((near+far)/a) (2*near*far/a)
+        0     0    ((far+near)/a) (2*far*near/a)
         0     0    (-1)           0
 
 

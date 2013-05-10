@@ -47,7 +47,7 @@ data SpearWindow = SpearWindow
 withWindow :: MonadIO m
            => Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle
            -> WindowSizeCallback -> (SpearWindow -> Game () a) -> m (Either String a)
-withWindow dim displayBits windowMode glVersion windowTitle onResize game = do
+withWindow dim@(w,h) displayBits windowMode glVersion windowTitle onResize game = do
            result <- liftIO . flip runGame () $ do
                 glfwInit
                 window <- setup dim displayBits windowMode glVersion windowTitle onResize
@@ -62,25 +62,22 @@ withWindow dim displayBits windowMode glVersion windowTitle onResize game = do
 -- Set up an application 'SpearWindow'.
 setup :: Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle
       -> WindowSizeCallback -> Game s SpearWindow
-setup (w, h) displayBits windowMode (major, minor) wndTitle onResize' = do
+setup (w, h) displayBits windowMode (major, minor) wndTitle onResize = do
     closeRequest <- gameIO $ newEmptyMVar
     gameIO $ do
         openWindowHint OpenGLVersionMajor major
         openWindowHint OpenGLVersionMinor minor
         openWindowHint OpenGLProfile OpenGLCompatProfile
         disableSpecial AutoPollEvent
-
         let dimensions = GL.Size (fromIntegral w) (fromIntegral h)
         result <- openWindow dimensions displayBits windowMode
         windowTitle $= case wndTitle of
                     Nothing    -> "Spear Game Framework"
                     Just title -> title
         GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
-
-        windowSizeCallback $= (onResize onResize')
+        windowSizeCallback  $= onResize
         windowCloseCallback $= (onWindowClose closeRequest)
-        onResize' (Size (fromIntegral w) (fromIntegral h))
-
+        onResize (Size (fromIntegral w) (fromIntegral h))
     return $ SpearWindow closeRequest
 
 glfwInit :: Game s ()
@@ -137,11 +134,6 @@ getRequest :: MVar Bool -> IO Bool
 getRequest mvar = tryTakeMVar mvar >>= \x -> return $ case x of
            Nothing -> False
            Just x  -> x
-
-onResize :: WindowSizeCallback -> Size -> IO ()
-onResize callback s@(Size w h) = do
-    GL.viewport $= (Position 0 0, Size (fromIntegral w) (fromIntegral h))
-    callback s
 
 onWindowClose :: MVar Bool -> WindowCloseCallback
 onWindowClose closeRequest = putMVar closeRequest True >> return False

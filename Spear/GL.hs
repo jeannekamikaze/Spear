@@ -329,6 +329,7 @@ class Uniform a where
 
 instance Uniform Int where uniform loc a = glUniform1i loc (fromIntegral a)
 instance Uniform Float where uniform loc a = glUniform1f loc (unsafeCoerce a)
+instance Uniform CFloat where uniform loc a = glUniform1f loc a
 
 instance Uniform (Int,Int) where
          uniform loc (x,y) = glUniform2i loc (fromIntegral x) (fromIntegral y)
@@ -380,19 +381,27 @@ instance Uniform Matrix4 where
 
 instance Uniform [Float] where
          uniform loc vals = withArray (map unsafeCoerce vals) $ \ptr ->
-                   case length vals of
-                        1 -> glUniform1fv loc 1 ptr
-                        2 -> glUniform2fv loc 1 ptr
-                        3 -> glUniform3fv loc 1 ptr
-                        4 -> glUniform4fv loc 1 ptr
+                 case length vals of
+                      1 -> glUniform1fv loc 1 ptr
+                      2 -> glUniform2fv loc 1 ptr
+                      3 -> glUniform3fv loc 1 ptr
+                      4 -> glUniform4fv loc 1 ptr
+
+instance Uniform [CFloat] where
+         uniform loc vals = withArray vals $ \ptr ->
+                 case length vals of
+                      1 -> glUniform1fv loc 1 ptr
+                      2 -> glUniform2fv loc 1 ptr
+                      3 -> glUniform3fv loc 1 ptr
+                      4 -> glUniform4fv loc 1 ptr
 
 instance Uniform [Int] where
          uniform loc vals = withArray (map fromIntegral vals) $ \ptr ->
-                  case length vals of
-                       1 -> glUniform1iv loc 1 ptr
-                       2 -> glUniform2iv loc 1 ptr
-                       3 -> glUniform3iv loc 1 ptr
-                       4 -> glUniform4iv loc 1 ptr
+                 case length vals of
+                      1 -> glUniform1iv loc 1 ptr
+                      2 -> glUniform2iv loc 1 ptr
+                      3 -> glUniform3iv loc 1 ptr
+                      4 -> glUniform4iv loc 1 ptr
 
 --
 -- VAOs
@@ -538,8 +547,8 @@ deleteBuffer :: GLuint -> IO ()
 deleteBuffer buf = Foreign.with buf $ glDeleteBuffers 1
 
 -- | Bind the buffer.
-bindBuffer :: GLBuffer -> TargetBuffer -> IO ()
-bindBuffer buf target = glBindBuffer (fromTarget target) $ getBuffer buf
+bindBuffer :: TargetBuffer -> GLBuffer -> IO ()
+bindBuffer target buf = glBindBuffer (fromTarget target) $ getBuffer buf
 
 -- | Unbind the bound buffer.
 unbindBuffer :: TargetBuffer -> IO ()

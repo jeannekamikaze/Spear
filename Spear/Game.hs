@@ -3,20 +3,21 @@ module Spear.Game
     Game
 ,   Resource
 ,   ResourceClass(..)
-    -- * Game State
+    -- * Game state
 ,   getGameState
 ,   saveGameState
 ,   modifyGameState
-    -- * Game Resources
+    -- * Game resources
 ,   register
 ,   unregister
+    -- * Error handling
 ,   gameError
 ,   assertMaybe
+,   catchGameError
+,   catchGameErrorFinally
     -- * Running and IO
 ,   runGame
-,   runGame'
 ,   runSubGame
-,   runSubGame'
 ,   evalSubGame
 ,   execSubGame
 ,   gameIO
@@ -33,10 +34,10 @@ type Game s = StateT s (R.ResourceT (ErrorT String IO))
 
 class ResourceClass a where
       getResource :: a -> Resource
-      
+
       release :: a -> Game s ()
       release = unregister . getResource
-      
+
       clean :: a -> IO ()
       clean = R.release . getResource
 
@@ -69,29 +70,31 @@ assertMaybe :: Maybe a -> String -> Game s a
 assertMaybe Nothing err = gameError err
 assertMaybe (Just x) _  = return x
 
+-- | Run the given game with the given error handler.
+catchGameError :: Game s a -> (String -> Game s a) -> Game s a
+catchGameError game catch = catchError game catch
+
+-- | Run the given game, catch any error, run the given finaliser and rethrow the error.
+catchGameErrorFinally :: Game s a -> Game s a -> Game s a
+catchGameErrorFinally game finally = catchError game $ \err -> finally >> gameError err
+
 -- | Run the given game.
 runGame :: Game s a -> s -> IO (Either String (a,s))
 runGame game state = runErrorT . R.runResourceT . runStateT game $ state
 
--- | Run the given game.
-runGame' :: Game s a -> s -> IO ()
-runGame' game state = runGame game state >> return ()
-
--- | Run the given game.
+-- | Fully run the given sub game, unrolling the entire monad stack.
 runSubGame :: Game s a -> s -> Game t (a,s)
-runSubGame game state = lift $ runStateT game state
-
--- | Run the given game.
-runSubGame' :: Game s a -> s -> Game t ()
-runSubGame' game state = runSubGame game state >> return ()
+runSubGame game state = gameIO (runGame game state) >>= \result -> case result of
+           Left err -> gameError err
+           Right x  -> return x
 
 -- | Run the given game and return its result.
 evalSubGame :: Game s a -> s -> Game t a
-evalSubGame g s = lift $ evalStateT g s
+evalSubGame g s = runSubGame g s >>= \(a,_) -> return a
 
 -- | Run the given game and return its state.
 execSubGame :: Game s a -> s -> Game t s
-execSubGame g s = lift $ execStateT g s
+execSubGame g s = runSubGame g s >>= \(_,s) -> return s
 
 -- | Perform the given IO action in the 'Game' monad.
 gameIO :: IO a -> Game s a

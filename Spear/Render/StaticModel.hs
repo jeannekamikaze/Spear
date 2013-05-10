@@ -78,7 +78,7 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
 
         bindVAO vao
 
-        bindBuffer elementBuf ArrayBuffer
+        bindBuffer ArrayBuffer elementBuf
         bufferData' ArrayBuffer (fromIntegral $ elemSize*n) elements StaticDraw
 
         attribVAOPointer vertChan 3 gl_FLOAT False elemSize' 0

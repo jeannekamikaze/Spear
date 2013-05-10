@@ -116,7 +116,7 @@ animatedModelResource
 
             bindVAO vao
 
-            bindBuffer elementBuf ArrayBuffer
+            bindBuffer ArrayBuffer elementBuf
             bufferData' ArrayBuffer (unsafeCoerce $ elemSize * n) elements StaticDraw
 
             attribVAOPointer vertChan1 3 gl_FLOAT False elemSize' 0

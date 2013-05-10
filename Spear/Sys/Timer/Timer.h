@@ -1,73 +1,130 @@
-#ifndef _SPEAR_TIMER_H
-#define _SPEAR_TIMER_H
-
-#ifdef _MSC_VER
-	#ifdef DLL_EXPORT
-		#define DECLDIR __declspec(dllexport)
-	#else
-		#define DECLDIR __declspec(dllimport)
-	#endif
-#else
-	#define DECLDIR
-#endif
+#pragma once
 
 #ifdef WIN32
-	#ifdef _MSC_VER
-		typedef __int64 timeReading;
-	#else
-		typedef __UINT64_TYPE__ timeReading;
-	#endif
+#ifdef _MSC_VER
+typedef __int64 timeReading;
 #else
-	typedef double timeReading;
+typedef __UINT64_TYPE__ timeReading;
+#endif
+#else
+typedef __UINT64_TYPE__  timeReading;
 #endif
 
 #ifdef __cplusplus
-extern C {
+extern "C" {
 #endif
-	
+
+/*
+  Header: Timer
+  A high resolution timer module.
+*/
+
+/*
+  Struct: Timer
+*/
 typedef struct
-{	
-	timeReading baseTime;
-	timeReading pausedTime;
-	timeReading stopTime;
-	timeReading prevTime;
-	timeReading curTime;
-	float deltaTime;
-	char stopped;
-} timer;
+{
+    timeReading baseTime;   // The instant since we start timing.
+    timeReading stopTime;   // The instant the timer is stopped.
+    timeReading prevTime;   // The instant the timer was ticked prior to the last tick.
+    timeReading curTime;    // The instant the timer was last ticked.
+    timeReading pausedTime; // Amount of time the timer has been stopped for.
+    float deltaTime; // Amount of time elapsed since the last call to tick.
+    char stopped;
+} Timer;
 
-/// Initialises the timing subsystem.
-void DECLDIR timer_initialise_subsystem ();
+/*
+  Function: timer_init
+  Construct a new timer.
 
-/// Initialises a timer.
-void DECLDIR timer_initialise_timer (timer* t);
+  The timer is initialised by making a call to reset(). Since time
+  calculations are measured from the instant the timer is reset (base time),
+  you probably want to make a manual call to reset() at the start of
+  your application, otherwise the application will be measuring times
+  from the instant the timer's constructor is called, which can be error prone.
 
-/// Call every frame.
-void DECLDIR timer_tick (timer* t);
+  A call to start() must be made prior to any time calculations, as the
+  timer is initialised as stopped.
+*/
+void timer_init (Timer*);
 
-/// Call before message loop.
-void DECLDIR timer_reset (timer* t);
+/*
+  Function: timer_tick
+  Update the timer's values.
 
-/// Call when paused.
-void DECLDIR timer_stop (timer* t);
+  This function updates the timer's running time and caches the time
+  elapsed since the last tick or since the start if this is the first
+  tick after the last call to start().
 
-/// Call when unpaused.
-void DECLDIR timer_start (timer* t);
+  This function has no effect on a stopped ticker.
+*/
+void timer_tick (Timer*);
 
-/// Puts the caller thread to sleep for the given number of seconds.
-void DECLDIR timer_sleep (float seconds);
+/*
+  Function: timer_start
+  Start the timer.
 
-/// Returns total running time in seconds.
-float DECLDIR timer_get_time (timer* t);
+  This function starts the timer for the first time or resumes it
+  after a call to stop().
 
-/// Returns the elapsed time in seconds.
-float DECLDIR timer_get_delta (timer* t);
+  Note that this function does not reset the timer's base time;
+  it's only a mechanism to resume a stopped timer.
+*/
+void timer_start (Timer*);
 
-/// Gets the timer's running state.
-char DECLDIR timer_is_running (timer* t);
+/*
+  Function: timer_stop
+  Stop the timer.
+
+  This function essentially freezes time; any values dependent on
+  the timer will behave as if time had not passed since the moment
+  the timer was stopped.
+
+  To resume the timer call start().
+*/
+void timer_stop (Timer*);
+
+/*
+  Function: timer_reset
+  Reset the timer.
+
+  This function resets all of the timer's values such as running and
+  stop times and sets the timer to stopped. The total running time is
+  then measured from the instant the timer is reset, making the timer
+  behave as a newly constructed one.
+
+  A call to start() must be made prior to any further time calculations.
+*/
+void timer_reset (Timer*);
+
+/*
+  Function: timer_get_time
+  Get the total running time.
+
+  The amount of time the timer has been stopped for is not taken
+  into account.
+*/
+double timer_get_time (const Timer*);
+
+/*
+  Function: timer_get_delta
+  Get the time elapsed since the last tick, or since the start if
+  this is the first tick.
+*/
+float timer_get_delta (const Timer*);
+
+/*
+  Function: timer_is_running
+  Return true if the timer is running (not stopped), false otherwise.
+*/
+char timer_is_running (const Timer*);
+
+/*
+  Function: timer_sleep
+  Put the caller thread to sleep for the given number of seconds.
+*/
+void timer_sleep (float seconds);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif // _SPEAR_TIMER_H

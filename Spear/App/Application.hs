@@ -24,6 +24,7 @@ import Spear.Sys.Timer as Timer
 
 import Control.Concurrent.MVar
 import Control.Monad (when)
+import Control.Monad.IO.Class
 import Graphics.UI.GLFW as GLFW
 import Graphics.Rendering.OpenGL as GL
 
@@ -43,17 +44,20 @@ data SpearWindow = SpearWindow
      { closeRequest :: CloseRequested
      }
 
-withWindow :: Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle
-           -> WindowSizeCallback -> (SpearWindow -> Game s a) -> Game s a
-withWindow dim displayBits windowMode glVersion windowTitle onResize run = do
-           glfwInit
-           window <- setup dim displayBits windowMode glVersion windowTitle onResize
-           gs <- getGameState
-           (a,s) <- runSubGame (run window) gs
-           gameIO GLFW.closeWindow
-           gameIO GLFW.terminate
-           saveGameState s
-           return a
+withWindow :: MonadIO m
+           => Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle
+           -> WindowSizeCallback -> (SpearWindow -> Game () a) -> m (Either String a)
+withWindow dim displayBits windowMode glVersion windowTitle onResize game = do
+           result <- liftIO . flip runGame () $ do
+                glfwInit
+                window <- setup dim displayBits windowMode glVersion windowTitle onResize
+                result <- evalSubGame (game window) ()
+                gameIO GLFW.closeWindow
+                gameIO GLFW.terminate
+                return result
+           case result of
+                Left err    -> return $ Left err
+                Right (a,_) -> return $ Right a
 
 -- Set up an application 'SpearWindow'.
 setup :: Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle

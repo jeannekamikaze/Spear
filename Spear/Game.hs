@@ -18,6 +18,7 @@ module Spear.Game
     -- * Running and IO
 ,   runGame
 ,   runSubGame
+,   runSubGame'
 ,   evalSubGame
 ,   execSubGame
 ,   gameIO
@@ -87,6 +88,10 @@ runSubGame :: Game s a -> s -> Game t (a,s)
 runSubGame game state = gameIO (runGame game state) >>= \result -> case result of
            Left err -> gameError err
            Right x  -> return x
+
+-- | Like 'runSubGame', but discarding the result.
+runSubGame' :: Game s a -> s -> Game t ()
+runSubGame' game state = runSubGame game state >> return ()
 
 -- | Run the given game and return its result.
 evalSubGame :: Game s a -> s -> Game t a

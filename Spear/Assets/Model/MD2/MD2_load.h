@@ -20,4 +20,3 @@ Model_error_code MD2_load (const char* filename, char clockwise, char left_hande
 
 
 #endif // _MD2_LOAD_H
-

@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, BangPatterns #-}
+{-# LANGUAGE CPP, ForeignFunctionInterface #-}
 module Spear.Sys.Timer
 (
     Timer

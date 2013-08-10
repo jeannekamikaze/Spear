@@ -1,12 +1,9 @@
 module Spear.Scene.Loader
 (
     SceneResources(..)
-,   CreateGameObject
 ,   loadScene
 ,   validate
 ,   resourceMap
-,   loadGO
-,   loadObjects
 ,   value
 ,   unspecified
 ,   mandatory
@@ -29,9 +26,7 @@ import Spear.Render.AnimatedModel as AM
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel as SM
-import Spear.Scene.GameObject as GO
 import Spear.Scene.Graph
-import Spear.Scene.Light
 import Spear.Scene.SceneResources
 
 import Control.Monad.State.Strict
@@ -68,7 +63,6 @@ resourceMap' node@(SceneLeaf nid props) = do
     case nid of
         "shader-program" -> newShaderProgram node
         "model"          -> newModel         node
-        "light"          -> newLight         node
         x                -> return ()
 
 resourceMap' node@(SceneNode nid props children) = do
@@ -295,73 +289,6 @@ loadShader shaderType ((stype, file):xs) =
 
 loadShader' :: String -> GL.ShaderType -> Loader GL.GLSLShader
 loadShader' file shaderType = loadResource file shaders addShader $ GL.loadShader shaderType file
-
-newLight :: SceneGraph -> Loader ()
-newLight _ = return ()
-
---------------------
--- Object Loading --
---------------------
-
-loadGO :: GameStyle -> SceneResources -> [Property] -> Matrix3 -> Game s GameObject
-loadGO style sceneRes props transf = do
-    modelName <- asString . mandatory "model"    $ props
-    axis <- asVec3 . mandatory "axis" $ props
-    let animSpeed = asFloat  . value "animation-speed" $ props
-    go <- case getAnimatedModel sceneRes modelName of
-        Just model ->
-            return $ goNew style (Right model) [] transf axis
-        Nothing ->
-            case getStaticModel sceneRes modelName of
-                Just model ->
-                    return $ goNew style (Left model) [] transf axis
-                Nothing ->
-                    gameError $ "model " ++ modelName ++ " not found"
-    return $ case animSpeed of
-        Nothing -> go
-        Just s  -> GO.setAnimationSpeed s go
-
-type CreateGameObject m a
-    = String -- ^ The object's name.
-    -> SceneResources
-    -> [Property]
-    -> Matrix3 -- ^ The object's transform.
-    -> m a
-
--- | Load objects from the given 'SceneGraph'.
-loadObjects :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> m [a]
-loadObjects newGO sceneRes g =
-    case node "layout" g of
-        Nothing -> return []
-        Just n  -> sequence . concat . fmap (newObject newGO sceneRes) $ children n
-
--- to-do: use a strict accumulator and make loadObjects tail recursive.
-newObject :: Monad m => CreateGameObject m a -> SceneResources -> SceneGraph -> [m a]
-newObject newGO sceneRes (SceneNode nid props children) =
-    let o = newObject' newGO sceneRes nid props
-    in o : (concat $ fmap (newObject newGO sceneRes) children)
-
-newObject newGO sceneRes (SceneLeaf nid props) = [newObject' newGO sceneRes nid props]
-
-newObject' :: Monad m => CreateGameObject m a -> SceneResources -> String -> [Property] -> m a
-newObject' newGO sceneRes nid props = do
-    -- Optional properties.
-    let goType   = (asString $ value "type"     props) `unspecified` "unknown"
-        position = (asVec2   $ value "position" props) `unspecified` vec2 0 0
-        rotation = (asVec2   $ value "rotation" props) `unspecified` vec2 0 0
-        right'   = (asVec2   $ value "right"    props) `unspecified` vec2 1 0
-        up'      =  asVec2   $ value "up"       props
-        scale    = (asVec2   $ value "scale"    props) `unspecified` vec2 1 1
-
-    -- Compute the object's vectors if an up/forward vector has been specified.
-    let (right, up) = vectors up'
-
-    newGO goType sceneRes props (M3.transform right up position)
-
-vectors :: Maybe Vector2 -> (Vector2, Vector2)
-vectors up = case up of
-    Nothing -> (unitx2, unity2)
-    Just u  -> (perp u, u)
 
 ----------------------
 -- Helper functions --

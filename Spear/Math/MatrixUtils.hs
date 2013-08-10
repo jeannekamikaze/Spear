@@ -11,13 +11,11 @@ module Spear.Math.MatrixUtils
 )
 where
 
-
 import Spear.Math.Camera as Cam
 import Spear.Math.Matrix3 as M3
 import Spear.Math.Matrix4 as M4
 import Spear.Math.Spatial3 as S
 import Spear.Math.Vector as V
-
 
 -- | Compute the normal matrix of the given matrix.
 fastNormalMatrix :: Matrix4 -> Matrix3
@@ -27,7 +25,6 @@ fastNormalMatrix m =
         (M4.m00 m') (M4.m10 m') (M4.m20 m')
         (M4.m01 m') (M4.m11 m') (M4.m21 m')
         (M4.m02 m') (M4.m12 m') (M4.m22 m')
-
 
 -- | Transform the given point in window coordinates to object coordinates.
 unproject :: Matrix4 -- ^ Inverse projection matrix
@@ -47,7 +44,6 @@ unproject projI modelviewI vpx vpy w h x y z =
         zmouse = 2*z - 1
     in
         (modelviewI * projI) `M4.mulp` vec3 xmouse ymouse zmouse
-
 
 -- | Transform the given point in window coordinates to 2d coordinates.
 --
@@ -71,7 +67,6 @@ rpgUnproject projI viewI vpx vpy w h wx wy =
         p' = p1 + V.scale lambda (p2 - p1)
     in
         vec2 (x p') (-(z p'))
-
 
 -- | Map an object's transform in view space to world space.
 rpgTransform
@@ -97,7 +92,6 @@ rpgTransform h a axis pos viewI =
          (z r) (z u) (z f) (z t)
          0        0        0        1
 
-
 -- | Map an object's transform in view space to world space.
 pltTransform :: Matrix3 -> Matrix4
 pltTransform mat =
@@ -110,7 +104,6 @@ pltTransform mat =
         (y r) (y u) (y f) (y t)
         (z r) (z u) (z f) (z t)
         0        0        0        1
-
 
 -- | Map an object's transform in world space to view space.
 --
@@ -127,7 +120,6 @@ rpgInverse
 rpgInverse h a axis pos viewI =
     M4.inverseTransform $ rpgTransform h a axis pos viewI
 
-
 -- | Map an object's transform in world space to view space.
 --
 -- This function maps an object's transform in 2D to the object's inverse in 3D.
@@ -137,7 +129,6 @@ rpgInverse h a axis pos viewI =
 -- Use this in games like platformers and space invaders style games.
 pltInverse :: Matrix3 -> Matrix4
 pltInverse = M4.inverseTransform . pltTransform
-
 
 -- | Transform an object from object to clip space coordinates.
 objToClip :: Camera -> Matrix4 -> Vector3 -> Vector2

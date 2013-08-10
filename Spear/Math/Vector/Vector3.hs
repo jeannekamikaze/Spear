@@ -1,6 +1,6 @@
 module Spear.Math.Vector.Vector3
 (
-    Vector3
+    Vector3(..)
 ,   Right3
 ,   Up3
 ,   Forward3

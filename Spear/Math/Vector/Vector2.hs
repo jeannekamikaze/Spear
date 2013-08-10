@@ -1,6 +1,9 @@
 module Spear.Math.Vector.Vector2
 (
-    Vector2
+    Vector2(..)
+,   Right2
+,   Up2
+,   Position2
     -- * Construction
 ,   unitx2
 ,   unity2
@@ -11,13 +14,14 @@ module Spear.Math.Vector.Vector2
 )
 where
 
-
 import Spear.Math.Vector.Class
-
 
 import Foreign.C.Types (CFloat)
 import Foreign.Storable
 
+type Right2 = Vector2
+type Up2 = Vector2
+type Position2 = Vector2
 
 -- | Represents a vector in 2D.
 data Vector2 = Vector2 {-# UNPACK #-} !Float {-# UNPACK #-} !Float deriving (Eq, Show)
@@ -30,13 +34,13 @@ instance Num Vector2 where
     abs (Vector2 ax ay) = Vector2 (abs ax) (abs ay)
     signum (Vector2 ax ay) = Vector2 (signum ax) (signum ay)
     fromInteger i = Vector2 i' i' where i' = fromInteger i
-    
-    
+
+
 instance Fractional Vector2 where
     Vector2 ax ay / Vector2 bx by = Vector2 (ax / bx) (ay / by)
     fromRational r = Vector2 r' r' where r' = fromRational r
-    
-    
+
+
 instance Ord Vector2 where
     Vector2 ax ay <= Vector2 bx by =  (ax <= bx) || (ax == bx && ay <= by)
     Vector2 ax ay >= Vector2 bx by =  (ax >= bx) || (ax == bx && ay >= by)
@@ -89,18 +93,18 @@ sizeFloat = sizeOf (undefined :: CFloat)
 instance Storable Vector2 where
     sizeOf _    = 2*sizeFloat
     alignment _ = alignment (undefined :: CFloat)
-    
+
     peek ptr = do
         ax <- peekByteOff ptr 0
         ay <- peekByteOff ptr $ sizeFloat
         return (Vector2 ax ay)
-    
+
     poke ptr (Vector2 ax ay) = do
         pokeByteOff ptr 0 ax
         pokeByteOff ptr sizeFloat ay
 
 
--- | Get the vector's x coordinate.    
+-- | Get the vector's x coordinate.
 
 
 
@@ -122,9 +126,9 @@ vec2 ax ay = Vector2 ax ay
 
 
 -- | Compute a vector perpendicular to the given one, satisfying:
--- 
+--
 -- perp (Vector2 0 1) = Vector2 1 0
--- 
+--
 -- perp (Vector2 1 0) = Vector2 0 (-1)
 perp :: Vector2 -> Vector2
 perp (Vector2 x y) = Vector2 y (-x)

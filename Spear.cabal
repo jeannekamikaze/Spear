@@ -17,7 +17,7 @@ library
                    OpenGLRaw -any,
                    StateVar -any,
                    base -any,
-                   bytestring >= 0.10,
+                   bytestring -any,
                    directory -any,
                    mtl -any,
                    transformers -any,
@@ -27,10 +27,7 @@ library
                    vector -any,
                    array -any
 
-    exposed-modules: Spear.App
-                     Spear.App.Application
-                     Spear.App.Input
-                     Spear.Assets.Image
+    exposed-modules: Spear.Assets.Image
                      Spear.Assets.Model
                      Spear.Game
                      Spear.GL
@@ -38,7 +35,6 @@ library
                      Spear.Math.Camera
                      Spear.Math.Circle
                      Spear.Math.Collision
-                     Spear.Math.Entity
                      Spear.Math.Frustum
                      Spear.Math.Matrix3
                      Spear.Math.Matrix4
@@ -62,14 +58,13 @@ library
                      Spear.Render.Model
                      Spear.Render.Program
                      Spear.Render.StaticModel
-                     Spear.Scene.GameObject
                      Spear.Scene.Graph
-                     Spear.Scene.Light
                      Spear.Scene.Loader
                      Spear.Scene.SceneResources
                      Spear.Sys.Store
                      Spear.Sys.Store.ID
                      Spear.Sys.Timer
+                     Spear.Window
 
     exposed: True
 

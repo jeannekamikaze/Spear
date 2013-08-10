@@ -24,7 +24,6 @@ import Spear.Render.AnimatedModel
 import Spear.Render.Material
 import Spear.Render.Program
 import Spear.Render.StaticModel
-import Spear.Scene.Light
 
 import Data.Map as M
 
@@ -36,12 +35,11 @@ data SceneResources = SceneResources
     , textures         :: Map String Texture
     , staticModels     :: Map String StaticModelResource
     , animatedModels   :: Map String AnimatedModelResource
-    , lights           :: [Light]
     }
 
 -- | Build an empty instance of 'SceneResources'.
 emptySceneResources =
-    SceneResources M.empty M.empty M.empty M.empty M.empty M.empty M.empty []
+    SceneResources M.empty M.empty M.empty M.empty M.empty M.empty M.empty
 
 -- | Get the shader specified by the given string.
 getShader :: SceneResources -> String -> Maybe GLSLShader

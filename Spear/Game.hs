@@ -17,6 +17,7 @@ module Spear.Game
 ,   catchGameErrorFinally
     -- * Running and IO
 ,   runGame
+,   runGame'
 ,   runSubGame
 ,   runSubGame'
 ,   evalSubGame
@@ -82,6 +83,12 @@ catchGameErrorFinally game finally = catchError game $ \err -> finally >> gameEr
 -- | Run the given game.
 runGame :: Game s a -> s -> IO (Either String (a,s))
 runGame game state = runErrorT . R.runResourceT . runStateT game $ state
+
+-- | Run the given game and discard its state.
+runGame' :: Game s a -> s -> IO (Either String a)
+runGame' g s = runGame g s >>= \result -> return $ case result of
+         Right (a,s) -> Right a
+         Left err -> Left err
 
 -- | Fully run the given sub game, unrolling the entire monad stack.
 runSubGame :: Game s a -> s -> Game t (a,s)

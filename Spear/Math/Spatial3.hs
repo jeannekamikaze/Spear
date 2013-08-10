@@ -2,6 +2,24 @@ module Spear.Math.Spatial3
 (
     Spatial3(..)
 ,   Obj3
+,   move
+,   moveFwd
+,   moveBack
+,   moveLeft
+,   moveRight
+,   rotate
+,   pitch
+,   yaw
+,   roll
+,   pos
+,   fwd
+,   up
+,   right
+,   transform
+,   setTransform
+,   setPos
+,   lookAt
+,   Spear.Math.Spatial3.orbit
 ,   fromVectors
 ,   fromTransform
 )
@@ -13,132 +31,132 @@ import qualified Spear.Math.Matrix4 as M
 type Matrix4 = M.Matrix4
 
 class Spatial3 s where
-    -- | Gets the spatial's internal Obj3.
-    getObj3 :: s -> Obj3
 
-    -- | Set the spatial's internal Obj3.
-    setObj3 :: s -> Obj3 -> s
+      -- | Gets the spatial's Obj3.
+      getObj3 :: s -> Obj3
 
-    -- | Move the spatial.
-    move :: Vector3 -> s -> s
-    move d s = let o = getObj3 s in setObj3 s $ o { p = p o + d }
+      -- | Set the spatial's Obj3.
+      setObj3 :: s -> Obj3 -> s
 
-    -- | Move the spatial forwards.
-    moveFwd :: Float -> s -> s
-    moveFwd a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (f o) }
+-- | Move the spatial.
+move :: Spatial3 s => Vector3 -> s -> s
+move d s = let o = getObj3 s in setObj3 s $ o { p = p o + d }
 
-    -- | Move the spatial backwards.
-    moveBack :: Float -> s -> s
-    moveBack a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (f o) }
+-- | Move the spatial forwards.
+moveFwd :: Spatial3 s => Float -> s -> s
+moveFwd a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (f o) }
 
-    -- | Make the spatial strafe left.
-    strafeLeft :: Float -> s -> s
-    strafeLeft a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (r o) }
+-- | Move the spatial backwards.
+moveBack :: Spatial3 s => Float -> s -> s
+moveBack a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (f o) }
 
-    -- | Make the spatial Strafe right.
-    strafeRight :: Float -> s -> s
-    strafeRight a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (r o) }
+-- | Make the spatial strafe left.
+moveLeft :: Spatial3 s => Float -> s -> s
+moveLeft a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (r o) }
 
-    -- | Rotate the spatial about the given axis.
-    rotate :: Vector3 -> Float -> s -> s
-    rotate axis a s =
-           let t = transform s
-               axis' = M.inverseTransform t `M.muld` axis
-           in setTransform (t * M.axisAngle axis' a) s
+-- | Make the spatial Strafe right.
+moveRight :: Spatial3 s => Float -> s -> s
+moveRight a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (r o) }
 
-    -- | Rotate the spatial about its local X axis.
-    pitch :: Float -> s -> s
-    pitch a s =
-          let o  = getObj3 s
-              a' = toRAD a
-              sa = sin a'
-              ca = cos a'
-              f' = normalise $ scale ca (f o) + scale sa (u o)
-              u' = normalise $ r o `cross` f'
-          in  setObj3 s $ o { u = u', f = f' }
+-- | Rotate the spatial about the given axis.
+rotate :: Spatial3 s => Vector3 -> Float -> s -> s
+rotate axis a s =
+       let t = transform s
+           axis' = M.inverseTransform t `M.muld` axis
+       in setTransform (t * M.axisAngle axis' a) s
 
-    -- | Rotate the spatial about its local Y axis.
-    yaw :: Float -> s -> s
-    yaw a s =
-        let o  = getObj3 s
-            a' = toRAD a
-            sa = sin a'
-            ca = cos a'
-            r' = normalise $ scale ca (r o) + scale sa (f o)
-            f' = normalise $ u o `cross` r'
-        in  setObj3 s $ o { r = r', f = f' }
+-- | Rotate the spatial about its local X axis.
+pitch :: Spatial3 s => Float -> s -> s
+pitch a s =
+      let o  = getObj3 s
+          a' = toRAD a
+          sa = sin a'
+          ca = cos a'
+          f' = normalise $ scale ca (f o) + scale sa (u o)
+          u' = normalise $ r o `cross` f'
+      in  setObj3 s $ o { u = u', f = f' }
 
-    -- | Rotate the spatial about its local Z axis.
-    roll :: Float -> s -> s
-    roll a s =
-         let o  = getObj3 s
-             a' = toRAD a
-             sa = sin a'
-             ca = cos a'
-             u' = normalise $ scale ca (u o) - scale sa (r o)
-             r' = normalise $ f o `cross` u'
-         in  setObj3 s $ o { r = r', u = u' }
+-- | Rotate the spatial about its local Y axis.
+yaw :: Spatial3 s => Float -> s -> s
+yaw a s =
+    let o  = getObj3 s
+        a' = toRAD a
+        sa = sin a'
+        ca = cos a'
+        r' = normalise $ scale ca (r o) + scale sa (f o)
+        f' = normalise $ u o `cross` r'
+    in  setObj3 s $ o { r = r', f = f' }
 
-    -- | Get the spatial's position.
-    pos :: s -> Vector3
-    pos = p . getObj3
+-- | Rotate the spatial about its local Z axis.
+roll :: Spatial3 s => Float -> s -> s
+roll a s =
+     let o  = getObj3 s
+         a' = toRAD a
+         sa = sin a'
+         ca = cos a'
+         u' = normalise $ scale ca (u o) - scale sa (r o)
+         r' = normalise $ f o `cross` u'
+     in  setObj3 s $ o { r = r', u = u' }
 
-    -- | Get the spatial's forward vector.
-    fwd :: s -> Vector3
-    fwd = f . getObj3
+-- | Get the spatial's position.
+pos :: Spatial3 s => s -> Vector3
+pos = p . getObj3
 
-    -- | Get the spatial's up vector.
-    up :: s -> Vector3
-    up = u . getObj3
+-- | Get the spatial's forward vector.
+fwd :: Spatial3 s => s -> Vector3
+fwd = f . getObj3
 
-    -- | Get the spatial's right vector.
-    right :: s -> Vector3
-    right = r . getObj3
+-- | Get the spatial's up vector.
+up :: Spatial3 s => s -> Vector3
+up = u . getObj3
 
-    -- | Get the spatial's transform.
-    transform :: s -> Matrix4
-    transform s = let o = getObj3 s in M.transform (r o) (u o) (scale (-1) $ f o) (p o)
+-- | Get the spatial's right vector.
+right :: Spatial3 s => s -> Vector3
+right = r . getObj3
 
-    -- | Set the spatial's transform.
-    setTransform :: Matrix4 -> s -> s
-    setTransform t s =
-                 let o = Obj3 (M.right t) (M.up t) (scale (-1) $ M.forward t) (M.position t)
-                 in setObj3 s o
+-- | Get the spatial's transform.
+transform :: Spatial3 s => s -> Matrix4
+transform s = let o = getObj3 s in M.transform (r o) (u o) (scale (-1) $ f o) (p o)
 
-    -- | Set the spatial's position.
-    setPos :: Vector3 -> s -> s
-    setPos pos s = setObj3 s $ (getObj3 s) { p = pos }
+-- | Set the spatial's transform.
+setTransform :: Spatial3 s => Matrix4 -> s -> s
+setTransform t s =
+             let o = Obj3 (M.right t) (M.up t) (scale (-1) $ M.forward t) (M.position t)
+             in setObj3 s o
 
-    -- | Make the spatial look at the given point.
-    lookAt :: Vector3 -> s -> s
-    lookAt pt s =
-        let position = pos s
-            fwd      = normalise $ pt - position
-            r        = fwd `cross` unity3
-            u        = r `cross` fwd
-        in
-            setTransform (M.transform r u (-fwd) position) s
+-- | Set the spatial's position.
+setPos :: Spatial3 s => Vector3 -> s -> s
+setPos pos s = setObj3 s $ (getObj3 s) { p = pos }
 
-    -- | Make the spatial orbit around the given point
-    orbit :: Vector3 -- ^ Target point
-          -> Float   -- ^ Horizontal angle
-          -> Float   -- ^ Vertical angle
-          -> Float   -- ^ Orbit radius.
-          -> s
-          -> s
+-- | Make the spatial look at the given point.
+lookAt :: Spatial3 s => Vector3 -> s -> s
+lookAt pt s =
+       let position = pos s
+           fwd      = normalise $ pt - position
+           r        = fwd `cross` unity3
+           u        = r `cross` fwd
+       in setTransform (M.transform r u (-fwd) position) s
 
-    orbit pt anglex angley radius s =
-        let ax = anglex * pi / 180
-            ay = angley * pi / 180
-            sx = sin ax
-            sy = sin ay
-            cx = cos ax
-            cy = cos ay
-            px = (x pt) + radius*cy*sx
-            py = (y pt) + radius*sy
-            pz = (z pt) + radius*cx*cy
-        in
-            setPos (vec3 px py pz) s
+-- | Make the spatial orbit around the given point
+orbit :: Spatial3 s
+      => Vector3 -- ^ Target point
+      -> Float   -- ^ Horizontal angle
+      -> Float   -- ^ Vertical angle
+      -> Float   -- ^ Orbit radius.
+      -> s
+      -> s
+
+orbit pt anglex angley radius s =
+      let ax = anglex * pi / 180
+          ay = angley * pi / 180
+          sx = sin ax
+          sy = sin ay
+          cx = cos ax
+          cy = cos ay
+          px = (x pt) + radius*cy*sx
+          py = (y pt) + radius*sy
+          pz = (z pt) + radius*cx*cy
+      in setPos (vec3 px py pz) s
 
 -- | An object in 3D space.
 data Obj3 = Obj3

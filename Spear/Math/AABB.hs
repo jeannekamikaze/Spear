@@ -14,10 +14,10 @@ import Spear.Math.Vector
 import Data.List (foldl')
 
 -- | An axis-aligned bounding box in 2D space.
-data AABB2 = AABB2 {-# UNPACK #-} !Vector2 {-# UNPACK #-} !Vector2
+data AABB2 = AABB2 {-# UNPACK #-} !Vector2 {-# UNPACK #-} !Vector2 deriving Show
 
 -- | An axis-aligned bounding box in 3D space.
-data AABB3 = AABB3 {-# UNPACK #-} !Vector3 {-# UNPACK #-} !Vector3
+data AABB3 = AABB3 {-# UNPACK #-} !Vector3 {-# UNPACK #-} !Vector3 deriving Show
 
 -- | Create a AABB from the given points.
 aabb2 :: [Vector2] -> AABB2

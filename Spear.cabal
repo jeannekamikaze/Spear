@@ -61,6 +61,7 @@ library
                      Spear.Scene.Graph
                      Spear.Scene.Loader
                      Spear.Scene.SceneResources
+                     Spear.Step
                      Spear.Sys.Store
                      Spear.Sys.Store.ID
                      Spear.Sys.Timer

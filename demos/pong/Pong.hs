@@ -11,43 +11,11 @@ where
 import Spear.Math.AABB
 import Spear.Math.Spatial2
 import Spear.Math.Vector
+import Spear.Step
 
 import Data.List (foldl')
 import Data.Monoid
 import GHC.Float (double2Float)
-
-type Elapsed = Double
-type Dt = Float
-
--- Step function
-
-data Step a b = Step { step :: Elapsed -> Dt -> a -> (b, Step a b) }
-
-sid :: Step a a
-sid = Step $ \_ _ a -> (a, sid)
-
-spure :: (a -> b) -> Step a b
-spure f = Step $ \_ _ x -> (f x, spure f)
-
-smap :: (a -> b) -> Step c a -> Step c b
-smap f (Step s1) = Step $ \elapsed dt x ->
-     let (a, s') = s1 elapsed dt x
-     in (f a, smap f s')
-
-(.>) :: Step a b -> Step b c -> Step a c
-(Step s1) .> (Step s2) = Step $ \elapsed dt a ->
-      let (b, s1') = s1 elapsed dt a
-          (c, s2') = s2 elapsed dt b
-      in (c, s1' .> s2')
-
-(.<) :: Step a b -> Step c a -> Step c b
-(.<) = flip (.>)
-
-sfst :: Step (a,b) a
-sfst = spure $ \(a,_) -> a
-
-ssnd :: Step (a,b) b
-ssnd = spure $ \(_,b) -> b
 
 -- Game events
 

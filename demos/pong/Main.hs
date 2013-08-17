@@ -18,14 +18,9 @@ data GameState = GameState
      , world   :: [GameObject]
      }
 
-main = do
-     result <- run
-     case result of
-          Left err -> putStrLn err
-          Right _  -> return ()
-
-run = withWindow (640,480) [] Window (2,0) (Just "Pong") initGame
-    $ loop (Just 30) step
+main = run
+     $ withWindow (640,480) [] Window (2,0) (Just "Pong") initGame
+     $ loop (Just 30) step
 
 initGame wnd = do
          gameIO $ do

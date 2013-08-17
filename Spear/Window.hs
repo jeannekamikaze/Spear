@@ -12,6 +12,7 @@ module Spear.Window
 ,   Width
 ,   Height
 ,   Init
+,   run
 ,   withWindow
 ,   events
     -- * Animation
@@ -70,6 +71,13 @@ events wnd = liftIO $ do
 
 -- | Game initialiser.
 type Init s = Window -> Game () s
+
+run :: MonadIO m => m (Either String a) -> m ()
+run r = do
+      result <- r
+      case result of
+           Left err -> liftIO $ putStrLn err
+           Right _ -> return ()
 
 withWindow :: MonadIO m
            => Dimensions -> [DisplayBits] -> WindowMode -> Context
@@ -142,15 +150,15 @@ loop :: Maybe FrameCap -> Step s -> Window -> Game s ()
 loop (Just maxFPS) step wnd = loopCapped maxFPS step wnd
 loop Nothing step wnd = do
      timer <- gameIO $ start newTimer
-     run (closeRequest wnd) timer step
+     loop' (closeRequest wnd) timer step
      return ()
 
-run :: CloseRequest -> Timer -> Step s -> Game s ()
-run closeRequest timer step = do
-    timer'   <- gameIO $ tick timer
-    continue <- step   $ getDelta timer'
-    close    <- gameIO $ getRequest closeRequest
-    when (continue && (not close)) $ run closeRequest timer' step
+loop' :: CloseRequest -> Timer -> Step s -> Game s ()
+loop' closeRequest timer step = do
+      timer'   <- gameIO $ tick timer
+      continue <- step   $ getDelta timer'
+      close    <- gameIO $ getRequest closeRequest
+      when (continue && (not close)) $ loop' closeRequest timer' step
 
 loopCapped :: Int -> Step s -> Window -> Game s ()
 loopCapped maxFPS step wnd = do
@@ -158,20 +166,20 @@ loopCapped maxFPS step wnd = do
                closeReq = closeRequest wnd
            frameTimer   <- gameIO $ start newTimer
            controlTimer <- gameIO $ start newTimer
-           runCapped closeReq ddt frameTimer controlTimer step
+           loopCapped' closeReq ddt frameTimer controlTimer step
            return ()
 
-runCapped :: CloseRequest -> Float -> Timer -> Timer -> Step s -> Game s ()
-runCapped closeRequest ddt frameTimer controlTimer step = do
-          controlTimer'  <- gameIO $ tick controlTimer
-          frameTimer'    <- gameIO $ tick frameTimer
-          continue       <- step   $ getDelta frameTimer'
-          close          <- gameIO $ getRequest closeRequest
-          controlTimer'' <- gameIO $ tick controlTimer'
-          let dt = getDelta controlTimer''
-          when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
-          when (continue && (not close)) $
-               runCapped closeRequest ddt frameTimer' controlTimer'' step
+loopCapped' :: CloseRequest -> Float -> Timer -> Timer -> Step s -> Game s ()
+loopCapped' closeRequest ddt frameTimer controlTimer step = do
+            controlTimer'  <- gameIO $ tick controlTimer
+            frameTimer'    <- gameIO $ tick frameTimer
+            continue       <- step   $ getDelta frameTimer'
+            close          <- gameIO $ getRequest closeRequest
+            controlTimer'' <- gameIO $ tick controlTimer'
+            let dt = getDelta controlTimer''
+            when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
+            when (continue && (not close)) $
+                 loopCapped' closeRequest ddt frameTimer' controlTimer'' step
 
 getRequest :: MVar Bool -> IO Bool
 getRequest mvar = tryTakeMVar mvar >>= \x -> return $ case x of

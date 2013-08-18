@@ -13,8 +13,7 @@ import Spear.Math.Spatial2
 import Spear.Math.Vector
 import Spear.Step
 
-import Data.List (foldl')
-import Data.Monoid
+import Data.Monoid (mconcat)
 import GHC.Float (double2Float)
 
 -- Game events

@@ -24,14 +24,14 @@ data GameEvent
      | MoveRight
      | StopLeft
      | StopRight
-     deriving Eq
+     deriving (Eq, Ord)
 
 -- Game objects
 
 data GameObject = GameObject
      { aabb   :: AABB2
      , obj    :: Obj2
-     , gostep :: Step ([GameEvent], [GameObject], GameObject) GameObject
+     , gostep :: Step [GameObject] [GameEvent] GameObject GameObject
      }
 
 instance Spatial2 GameObject where
@@ -43,7 +43,7 @@ stepWorld elapsed dt evts gos = map (update elapsed dt evts gos) gos
 
 update :: Elapsed -> Dt -> [GameEvent] -> [GameObject] -> GameObject -> GameObject
 update elapsed dt evts gos go =
-       let (go', s') = step (gostep go) elapsed dt (evts, gos, go)
+       let (go', s') = runStep (gostep go) elapsed dt gos evts go
        in go' { gostep = s' }
 
 ballBox :: AABB2
@@ -63,23 +63,12 @@ newWorld =
          , GameObject padBox  (obj2 0.5 0.1) stepPlayer
          ]
 
--- Generic steppers
-
-ignore :: Step ([GameEvent], [GameObject], GameObject) GameObject
-ignore = spure $ \(_,_,go) -> go
-
-ignoreEvts :: Step ([GameEvent], [GameObject], GameObject) ([GameObject], GameObject)
-ignoreEvts = spure $ \(_, world, go) -> (world, go)
-
-ignoreGOs :: Step ([GameEvent], [GameObject], GameObject) ([GameEvent], GameObject)
-ignoreGOs = spure $ \(evts, _, go) -> (evts, go)
-
 -- Ball steppers
 
-stepBall vel = ignoreEvts .> collideBall vel .> moveBall
+stepBall vel = collideBall vel .> moveBall
 
-collideBall :: Vector2 -> Step ([GameObject], GameObject) (Vector2, GameObject)
-collideBall vel = Step $ \_ _ (gos, ball) ->
+collideBall :: Vector2 -> Step [GameObject] e GameObject (Vector2, GameObject)
+collideBall vel = step $ \_ _ gos _ ball ->
             let (AABB2 pmin pmax) = aabb ball `aabbAdd` pos ball
                 collideCol = x pmin < 0 || x pmax > 1
                 collideRow = y pmin < 0 || y pmax > 1
@@ -99,15 +88,15 @@ collide go1 go2 =
 
 aabbAdd (AABB2 pmin pmax) p = AABB2 (p+pmin) (p+pmax)
 
-moveBall :: Step (Vector2, GameObject) GameObject
-moveBall = Step $ \_ dt (vel,ball) -> (move (scale dt vel) ball, moveBall)
+moveBall :: Step s e (Vector2, GameObject) GameObject
+moveBall = step $ \_ dt _ _ (vel,ball) -> (move (scale dt vel) ball, moveBall)
 
 -- Enemy stepper
 
-stepEnemy = ignore .> movePad
+stepEnemy = movePad
 
-movePad :: Step GameObject GameObject
-movePad = Step $ \elapsed _ pad ->
+movePad :: Step s e GameObject GameObject
+movePad = step $ \elapsed _ _ _ pad ->
         let p  = vec2 px 0.9
             px = double2Float (sin elapsed * 0.5 + 0.5)
                * (1 - 2 * x padSize)
@@ -116,20 +105,17 @@ movePad = Step $ \elapsed _ pad ->
 
 -- Player stepper
 
-stepPlayer = ignoreGOs
-           .> moveGO False MoveLeft StopLeft
-           .> moveGO False MoveRight StopRight
-           .> ssnd
-           .> clamp
+stepPlayer = sfold moveGO .> clamp
 
-moveGO :: Bool -> GameEvent -> GameEvent
-       -> Step ([GameEvent], GameObject) ([GameEvent], GameObject)
-moveGO moving start stop = Step $ \_ dt (evts, go) ->
-       let moving' = (moving || any (==start) evts) && not (any (==stop) evts)
-           dir = scale dt $ toDir moving' start
-       in ((evts, move dir go), moveGO moving' start stop)
+moveGO = mconcat
+       [ switch StopLeft  sid MoveLeft  (moveGO' $ vec2 (-1) 0)
+       , switch StopRight sid MoveRight (moveGO' $ vec2 1 0)
+       ]
 
-clamp :: Step GameObject GameObject
+moveGO' :: Vector2 -> Step s e GameObject GameObject
+moveGO' dir = step $ \_ dt _ _ go -> (move (scale dt dir) go, moveGO' dir)
+
+clamp :: Step s e GameObject GameObject
 clamp = spure $ \go ->
       let p' = vec2 (clamp' x s (1 - s)) y
           (Vector2 x y) = pos go

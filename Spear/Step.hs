@@ -13,13 +13,13 @@ module Spear.Step
 ,   spure
 ,   sfst
 ,   ssnd
-,   switch
-,   multiSwitch
 ,   sfold
     -- * Combinators
 ,   (.>)
 ,   (<.)
 ,   szip
+,   switch
+,   multiSwitch
 )
 where
 
@@ -34,6 +34,19 @@ type Dt = Float
 -- | A step function.
 data Step s e a b =
      Step { runStep :: Elapsed -> Dt -> s -> e -> a -> (b, Step s e a b) }
+
+instance Functor (Step s e a) where
+         fmap f (Step s1) = Step $ \elapsed dt g e x ->
+              let (a, s') = s1 elapsed dt g e x
+              in (f a, fmap f s')
+
+instance Monoid (Step s e a a) where
+         mempty = sid
+
+         mappend (Step s1) (Step s2) = Step $ \elapsed dt g e a ->
+                 let (b, s1') = s1 elapsed dt g e a
+                     (c, s2') = s2 elapsed dt g e b
+                 in (c, mappend s1' s2')
 
 -- | Construct a step from a function.
 step :: (Elapsed -> Dt -> s -> e -> a -> (b, Step s e a b)) -> Step s e a b
@@ -54,6 +67,45 @@ sfst = spure $ \(a,_) -> a
 -- | The step that returns the second component in the tuple.
 ssnd :: Step s e (a,b) b
 ssnd = spure $ \(_,b) -> b
+
+-- | Construct a step that folds a given list of inputs.
+--
+-- The step is run N+1 times, where N is the size of the input list.
+sfold :: Step s (Maybe e) a a -> Step s [e] a a
+sfold s = Step $ \elapsed dt g es a ->
+      case es of
+           [] ->
+              let (b',s') = runStep s elapsed dt g Nothing a
+              in (b', sfold s')
+           es ->
+              let (b',s') = sfold' elapsed dt g s a es
+              in (b', sfold s')
+
+sfold' :: Elapsed -> Dt -> s -> Step s (Maybe e) a a -> a -> [e]
+       -> (a, Step s (Maybe e) a a)
+sfold' elapsed dt g s a es = foldl' f (a',s') es
+       where f (a,s) e = runStep s elapsed dt g (Just e) a
+             (a',s') = runStep s elapsed dt g Nothing a
+
+-- Combinators
+
+-- | Compose two steps.
+(.>) :: Step s e a b -> Step s e b c -> Step s e a c
+(Step s1) .> (Step s2) = Step $ \elapsed dt g e a ->
+      let (b, s1') = s1 elapsed dt g e a
+          (c, s2') = s2 elapsed dt g e b
+      in (c, s1' .> s2')
+
+-- | Compose two steps.
+(<.) :: Step s e a b -> Step s e c a -> Step s e c b
+(<.) = flip (.>)
+
+-- | Evaluate two steps and zip their results.
+szip :: (a -> b -> c) -> Step s e d a -> Step s e d b -> Step s e d c
+szip f (Step s1) (Step s2) = Step $ \elapsed dt g e d ->
+     let (a, s1') = s1 elapsed dt g e d
+         (b, s2') = s2 elapsed dt g e d
+     in (f a b, szip f s1' s2')
 
 -- | Construct a step that switches between two steps based on input.
 --
@@ -101,55 +153,3 @@ multiSwitch' curKey cur m = Step $ \elapsed dt g e a ->
                                              Nothing  -> m
                                              Just key -> Map.insert key cur m
                                in (a', multiSwitch' e s' m')
-
--- | Construct a step that folds a given list of inputs.
---
--- The step is run N+1 times, where N is the size of the input list.
-sfold :: Step s (Maybe e) a a -> Step s [e] a a
-sfold s = Step $ \elapsed dt g es a ->
-      case es of
-           [] ->
-              let (b',s') = runStep s elapsed dt g Nothing a
-              in (b', sfold s')
-           es ->
-              let (b',s') = sfold' elapsed dt g s a es
-              in (b', sfold s')
-
-sfold' :: Elapsed -> Dt -> s -> Step s (Maybe e) a a -> a -> [e]
-       -> (a, Step s (Maybe e) a a)
-sfold' elapsed dt g s a es = foldl' f (a',s') es
-       where f (a,s) e = runStep s elapsed dt g (Just e) a
-             (a',s') = runStep s elapsed dt g Nothing a
-
-instance Functor (Step s e a) where
-         fmap f (Step s1) = Step $ \elapsed dt g e x ->
-              let (a, s') = s1 elapsed dt g e x
-              in (f a, fmap f s')
-
-instance Monoid (Step s e a a) where
-         mempty = sid
-
-         mappend (Step s1) (Step s2) = Step $ \elapsed dt g e a ->
-                 let (b, s1') = s1 elapsed dt g e a
-                     (c, s2') = s2 elapsed dt g e b
-                 in (c, mappend s1' s2')
-
--- Combinators
-
--- | Compose two steps.
-(.>) :: Step s e a b -> Step s e b c -> Step s e a c
-(Step s1) .> (Step s2) = Step $ \elapsed dt g e a ->
-      let (b, s1') = s1 elapsed dt g e a
-          (c, s2') = s2 elapsed dt g e b
-      in (c, s1' .> s2')
-
--- | Compose two steps.
-(<.) :: Step s e a b -> Step s e c a -> Step s e c b
-(<.) = flip (.>)
-
--- | Evaluate two steps and zip their results.
-szip :: (a -> b -> c) -> Step s e d a -> Step s e d b -> Step s e d c
-szip f (Step s1) (Step s2) = Step $ \elapsed dt g e d ->
-     let (a, s1') = s1 elapsed dt g e d
-         (b, s2') = s2 elapsed dt g e d
-     in (f a b, szip f s1' s2')

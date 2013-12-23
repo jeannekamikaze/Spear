@@ -14,7 +14,6 @@ import Graphics.Rendering.OpenGL.GL (($=))
 
 data GameState = GameState
      { wnd     :: Window
-     , elapsed :: Double
      , world   :: [GameObject]
      }
 
@@ -27,17 +26,16 @@ initGame wnd = do
                 GL.clearColor $= GL.Color4 0.7 0.5 0.7 1.0
                 GL.matrixMode $= GL.Modelview 0
                 GL.loadIdentity
-         return $ GameState wnd 0 newWorld
+         return $ GameState wnd newWorld
 
-step :: Dt -> Game GameState Bool
-step dt = do
+step :: Elapsed -> Dt -> Game GameState Bool
+step elapsed dt = do
      gs <- getGameState
      evts <- events (wnd gs)
      gameIO . process $ evts
      let evts' = translate evts
      modifyGameState $ \ gs -> gs
-                     { world = stepWorld (elapsed gs) dt evts' (world gs)
-                     , elapsed = elapsed gs + realToFrac dt }
+                     { world = stepWorld elapsed dt evts' (world gs) }
      getGameState >>= \gs -> gameIO . render $ world gs
      return (not $ exitRequested evts)
 

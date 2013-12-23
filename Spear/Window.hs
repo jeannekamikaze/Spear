@@ -22,6 +22,10 @@ module Spear.Window
 ,   loop
 ,   GLFW.swapBuffers
     -- * Input
+,   whenKeyDown
+,   whenKeyUp
+,   processKeys
+,   processButtons
 ,   InputEvent(..)
 ,   Key(..)
 ,   MouseButton(..)
@@ -36,7 +40,7 @@ import Spear.Sys.Timer as Timer
 
 import Data.Char (ord)
 import Control.Concurrent.MVar
-import Control.Monad (when)
+import Control.Monad (when, foldM)
 import Control.Monad.IO.Class
 import GHC.Float
 import qualified Graphics.UI.GLFW as GLFW
@@ -238,6 +242,37 @@ addEvent mvar val = tryTakeMVar mvar >>= \xs -> case xs of
 
 -- Input
 
+-- | Run the game action when the key is down.
+whenKeyDown :: Key -> Game s a -> Game s ()
+whenKeyDown = whenKey (==GLFW.Press)
+
+-- | Run the game action when the key is up.
+whenKeyUp :: Key -> Game s a -> Game s ()
+whenKeyUp = whenKey (==GLFW.Release)
+
+whenKey :: (GLFW.KeyButtonState -> Bool) -> Key -> Game s a -> Game s ()
+whenKey pred key game = do
+            isDown <- fmap pred $ gameIO . GLFW.getKey . toGLFWkey $ key
+            when isDown $ game >> return ()
+
+-- | Process the keyboard keys, returning those values for which their
+-- corresponding key is pressed.
+processKeys :: [(Key,a)] -> Game s [a]
+processKeys = foldM f []
+            where f acc (key,res) = do
+                  isDown <- fmap (==GLFW.Press) $ gameIO . GLFW.getKey
+                         . toGLFWkey $ key
+                  return $ if isDown then (res:acc) else acc
+
+-- | Process the mouse buttons, returning those values for which their
+-- corresponding button is pressed.
+processButtons :: [(MouseButton,a)] -> Game s [a]
+processButtons = foldM f []
+               where f acc (bt,res) = do
+                     isDown <- fmap (==GLFW.Press) $ gameIO . GLFW.getMouseButton
+                            . toGLFWbutton $ bt
+                     return $ if isDown then (res:acc) else acc
+
 data InputEvent
      = Resize Width Height
      | KeyDown Key
@@ -328,3 +363,65 @@ fromGLFWbutton :: GLFW.MouseButton -> MouseButton
 fromGLFWbutton GLFW.ButtonLeft   = LMB
 fromGLFWbutton GLFW.ButtonRight  = RMB
 fromGLFWbutton GLFW.ButtonMiddle = MMB
+
+toGLFWkey :: Key -> GLFW.Key
+toGLFWkey KEY_A = GLFW.CharKey 'A'
+toGLFWkey KEY_B = GLFW.CharKey 'B'
+toGLFWkey KEY_C = GLFW.CharKey 'C'
+toGLFWkey KEY_D = GLFW.CharKey 'D'
+toGLFWkey KEY_E = GLFW.CharKey 'E'
+toGLFWkey KEY_F = GLFW.CharKey 'F'
+toGLFWkey KEY_G = GLFW.CharKey 'G'
+toGLFWkey KEY_H = GLFW.CharKey 'H'
+toGLFWkey KEY_I = GLFW.CharKey 'I'
+toGLFWkey KEY_J = GLFW.CharKey 'J'
+toGLFWkey KEY_K = GLFW.CharKey 'K'
+toGLFWkey KEY_L = GLFW.CharKey 'L'
+toGLFWkey KEY_M = GLFW.CharKey 'M'
+toGLFWkey KEY_N = GLFW.CharKey 'N'
+toGLFWkey KEY_O = GLFW.CharKey 'O'
+toGLFWkey KEY_P = GLFW.CharKey 'P'
+toGLFWkey KEY_Q = GLFW.CharKey 'Q'
+toGLFWkey KEY_R = GLFW.CharKey 'R'
+toGLFWkey KEY_S = GLFW.CharKey 'S'
+toGLFWkey KEY_T = GLFW.CharKey 'T'
+toGLFWkey KEY_U = GLFW.CharKey 'U'
+toGLFWkey KEY_V = GLFW.CharKey 'V'
+toGLFWkey KEY_W = GLFW.CharKey 'W'
+toGLFWkey KEY_X = GLFW.CharKey 'X'
+toGLFWkey KEY_Y = GLFW.CharKey 'Y'
+toGLFWkey KEY_Z = GLFW.CharKey 'Z'
+toGLFWkey KEY_0 = GLFW.CharKey '0'
+toGLFWkey KEY_1 = GLFW.CharKey '1'
+toGLFWkey KEY_2 = GLFW.CharKey '2'
+toGLFWkey KEY_3 = GLFW.CharKey '3'
+toGLFWkey KEY_4 = GLFW.CharKey '4'
+toGLFWkey KEY_5 = GLFW.CharKey '5'
+toGLFWkey KEY_6 = GLFW.CharKey '6'
+toGLFWkey KEY_7 = GLFW.CharKey '7'
+toGLFWkey KEY_8 = GLFW.CharKey '8'
+toGLFWkey KEY_9 = GLFW.CharKey '9'
+toGLFWkey KEY_SPACE = GLFW.CharKey ' '
+toGLFWkey KEY_F1 = GLFW.SpecialKey GLFW.F1
+toGLFWkey KEY_F2 = GLFW.SpecialKey GLFW.F2
+toGLFWkey KEY_F3 = GLFW.SpecialKey GLFW.F3
+toGLFWkey KEY_F4 = GLFW.SpecialKey GLFW.F4
+toGLFWkey KEY_F5 = GLFW.SpecialKey GLFW.F5
+toGLFWkey KEY_F6 = GLFW.SpecialKey GLFW.F6
+toGLFWkey KEY_F7 = GLFW.SpecialKey GLFW.F7
+toGLFWkey KEY_F8 = GLFW.SpecialKey GLFW.F8
+toGLFWkey KEY_F9 = GLFW.SpecialKey GLFW.F9
+toGLFWkey KEY_F10 = GLFW.SpecialKey GLFW.F10
+toGLFWkey KEY_F11 = GLFW.SpecialKey GLFW.F11
+toGLFWkey KEY_F12 = GLFW.SpecialKey GLFW.F12
+toGLFWkey KEY_ESC = GLFW.SpecialKey GLFW.ESC
+toGLFWkey KEY_UP    = GLFW.SpecialKey GLFW.UP
+toGLFWkey KEY_DOWN  = GLFW.SpecialKey GLFW.DOWN
+toGLFWkey KEY_LEFT  = GLFW.SpecialKey GLFW.LEFT
+toGLFWkey KEY_RIGHT = GLFW.SpecialKey GLFW.RIGHT
+toGLFWkey KEY_UNKNOWN = GLFW.SpecialKey GLFW.UNKNOWN
+
+toGLFWbutton :: MouseButton -> GLFW.MouseButton
+toGLFWbutton LMB = GLFW.ButtonLeft
+toGLFWbutton RMB = GLFW.ButtonRight
+toGLFWbutton MMB = GLFW.ButtonMiddle

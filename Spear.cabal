@@ -4,7 +4,7 @@ cabal-version: >=1.2
 build-type: Simple
 license: BSD3
 license-file: LICENSE
-maintainer: jeannekamikaze@gmail.com
+maintainer: 3gg@shellblade.net
 homepage: http://spear.shellblade.net
 synopsis: A 2.5D game framework.
 category: Game
@@ -12,13 +12,14 @@ author: Marc Sunet
 data-dir: ""
 
 library
-    build-depends: GLFW -any,
-                   OpenGL -any,
+    build-depends: GLFW-b -any,
+                   OpenGL >= 3,
                    OpenGLRaw -any,
                    StateVar -any,
                    base -any,
                    bytestring -any,
                    directory -any,
+                   exceptions -any,
                    mtl -any,
                    transformers -any,
                    resourcet -any,
@@ -46,6 +47,7 @@ library
                      Spear.Math.Segment
                      Spear.Math.Spatial2
                      Spear.Math.Spatial3
+                     Spear.Math.Sphere
                      Spear.Math.Triangle
                      Spear.Math.Utils
                      Spear.Math.Vector
@@ -87,18 +89,28 @@ library
     extensions: TypeFamilies
 
     includes: Spear/Assets/Image/BMP/BMP_load.h
-              Spear/Assets/Image/Image.h Spear/Assets/Image/Image_error_code.h
-              Spear/Assets/Image/sys_types.h Spear/Assets/Model/MD2/MD2_load.h
-              Spear/Assets/Model/OBJ/OBJ_load.h Spear/Assets/Model/OBJ/cvector.h
-              Spear/Assets/Model/Model.h Spear/Assets/Model/Model_error_code.h
-              Spear/Assets/Model/sys_types.h Spear/Render/RenderModel.h
+              Spear/Assets/Image/Image.h
+              Spear/Assets/Image/Image_error_code.h
+              Spear/Assets/Image/sys_types.h
+              Spear/Assets/Model/MD2/MD2_load.h
+              Spear/Assets/Model/OBJ/OBJ_load.h
+              Spear/Assets/Model/OBJ/cvector.h
+              Spear/Assets/Model/Model.h
+              Spear/Assets/Model/Model_error_code.h
+              Spear/Assets/Model/sys_types.h
+              Spear/Render/RenderModel.h
               Timer/Timer.h
 
-    include-dirs: Spear/Assets/Image Spear/Assets/Model Spear/Render
+    include-dirs: .
+                  Spear
+                  Spear/Assets/Image
+                  Spear/Assets/Image/BMP
+                  Spear/Assets/Model
+                  Spear/Render
                   Spear/Sys
 
     hs-source-dirs: .
 
     ghc-options: -O2
 
-    ghc-prof-options: -O2 -rtsopts -fprof-auto -fprof-cafs
+    ghc-prof-options: -O2 -fprof-auto -fprof-cafs

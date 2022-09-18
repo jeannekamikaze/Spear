@@ -1,53 +1,55 @@
 module Spear.Window
-(
-    -- * Setup
-    Dimensions
-,   Context
-,   WindowTitle
-,   FrameCap
-,   DisplayBits(..)
-,   WindowMode(..)
+  ( -- * Setup
+    Dimensions,
+    Context,
+    WindowTitle,
+    FrameCap,
+
     -- * Window
-,   Window
-,   Width
-,   Height
-,   Init
-,   run
-,   withWindow
-,   events
+    Window,
+    Width,
+    Height,
+    Init,
+    withWindow,
+    events,
+
     -- * Animation
-,   Elapsed
-,   Dt
-,   Step
-,   loop
-,   GLFW.swapBuffers
+    Elapsed,
+    Dt,
+    Step,
+    loop,
+    GLFW.swapBuffers,
+
     -- * Input
-,   whenKeyDown
-,   whenKeyUp
-,   processKeys
-,   processButtons
-,   InputEvent(..)
-,   Key(..)
-,   MouseButton(..)
-,   MouseProp(..)
-,   MousePos
-,   MouseDelta
-)
+    whenKeyDown,
+    whenKeyUp,
+    processKeys,
+    processButtons,
+    InputEvent (..),
+    Key (..),
+    MouseButton (..),
+    MouseProp (..),
+    MousePos,
+    MouseDelta,
+  )
 where
 
+import Control.Concurrent.MVar
+import Control.Exception
+import Control.Monad (foldM, unless, void, when)
+import Control.Monad.IO.Class
+import Data.Char (ord)
+import Data.Maybe (fromJust, fromMaybe, isJust)
+import GHC.Float
+import qualified Graphics.Rendering.OpenGL as GL
+import qualified Graphics.UI.GLFW as GLFW
 import Spear.Game
 import Spear.Sys.Timer as Timer
 
-import Data.Char (ord)
-import Control.Concurrent.MVar
-import Control.Monad (when, foldM)
-import Control.Monad.IO.Class
-import GHC.Float
-import qualified Graphics.UI.GLFW as GLFW
-import Graphics.UI.GLFW (DisplayBits(..), WindowMode(..))
-import qualified Graphics.Rendering.OpenGL as GL
+maxFPS = 60
 
-type Width  = Int
+type Width = Int
+
 type Height = Int
 
 -- | Window dimensions.
@@ -62,85 +64,75 @@ type CloseRequest = MVar Bool
 
 -- | A window.
 data Window = Window
-     { closeRequest :: CloseRequest
-     , inputEvents  :: MVar [InputEvent]
-     }
+  { glfwWindow :: GLFW.Window,
+    closeRequest :: CloseRequest,
+    inputEvents :: MVar [InputEvent]
+  }
 
 -- | Poll the window's events.
 events :: MonadIO m => Window -> m [InputEvent]
-events wnd = liftIO $ do
-       es <- tryTakeMVar (inputEvents wnd) >>= \xs -> case xs of
-                         Nothing -> return []
-                         Just es -> return es
-       putMVar (inputEvents wnd) []
-       return es
+events window = liftIO $ do
+  es <-
+    tryTakeMVar (inputEvents window) >>= \xs -> case xs of
+      Nothing -> return []
+      Just es -> return es
+  putMVar (inputEvents window) []
+  return es
 
 -- | Game initialiser.
 type Init s = Window -> Game () s
 
-run :: MonadIO m => m (Either String a) -> m ()
-run r = do
-      result <- r
-      case result of
-           Left err -> liftIO $ putStrLn err
-           Right _ -> return ()
+withWindow ::
+  Dimensions ->
+  Context ->
+  Maybe WindowTitle ->
+  Init s ->
+  (Window -> Game s a) ->
+  IO a
+withWindow dim@(w, h) glVersion windowTitle init run = do
+  flip runGame' () $ do
+    glfwInit
+    window <- setup dim glVersion windowTitle
+    gameIO $ GLFW.makeContextCurrent (Just . glfwWindow $ window)
+    gameState <- init window
+    result <- evalSubGame (run window) gameState
+    gameIO $ do
+      GLFW.destroyWindow $ glfwWindow window
+      GLFW.terminate
+    return result
 
-withWindow :: MonadIO m
-           => Dimensions -> [DisplayBits] -> WindowMode -> Context
-           -> Maybe WindowTitle
-           -> Init s
-           -> (Window -> Game s a)
-           -> m (Either String a)
-withWindow dim@(w,h) displayBits windowMode glVersion windowTitle init run =
-           liftIO $ flip runGame' () $ do
-                  glfwInit
-                  wnd <- setup dim displayBits windowMode glVersion windowTitle
-                  gameState <- init wnd
-                  result <- evalSubGame (run wnd) gameState
-                  gameIO GLFW.closeWindow
-                  gameIO GLFW.terminate
-                  return result
-
-setup :: Dimensions -> [DisplayBits] -> WindowMode -> Context -> Maybe WindowTitle
-      -> Game s Window
-setup (w, h) displayBits windowMode (major, minor) wndTitle = do
-        closeRequest <- liftIO newEmptyMVar
-        inputEvents  <- liftIO newEmptyMVar
-        let onResize' = onResize inputEvents
-        let dimensions = GL.Size (fromIntegral w) (fromIntegral h)
-        result <- liftIO $ do
-               GLFW.openWindowHint GLFW.OpenGLVersionMajor major
-               GLFW.openWindowHint GLFW.OpenGLVersionMinor minor
-               compat (major, minor)
-               GLFW.disableSpecial GLFW.AutoPollEvent
-               GLFW.openWindow dimensions (defaultBits displayBits) windowMode
-        when (not result) $ gameError "GLFW.openWindow failed"
-        liftIO $ do
-               GLFW.windowTitle GL.$= case wndTitle of
-                                      Nothing    -> "Spear Game Framework"
-                                      Just title -> title
-               GLFW.windowCloseCallback GL.$= (onWindowClose closeRequest)
-               GLFW.windowSizeCallback GL.$= onResize'
-               GLFW.keyCallback GL.$= onKey inputEvents
-               GLFW.charCallback GL.$= onChar inputEvents
-               GLFW.mouseButtonCallback GL.$= onMouseButton inputEvents
-               onMouseMove inputEvents >>= (GLFW.mousePosCallback GL.$=)
-               onResize' (GL.Size (fromIntegral w) (fromIntegral h))
-        return $ Spear.Window.Window closeRequest inputEvents
-
-defaultBits [] = [DisplayRGBBits 8 8 8]
-defaultBits xs = xs
-
-compat (major, minor)
-       | major >= 3 = GLFW.openWindowHint GLFW.OpenGLProfile GLFW.OpenGLCompatProfile
-       | otherwise  = return ()
+setup ::
+  Dimensions ->
+  Context ->
+  Maybe WindowTitle ->
+  Game s Window
+setup (w, h) (major, minor) windowTitle = do
+  closeRequest <- gameIO newEmptyMVar
+  inputEvents <- gameIO newEmptyMVar
+  let onResize' = onResize inputEvents
+  let title = fromMaybe "" windowTitle
+  let monitor = Nothing
+  maybeWindow <- gameIO $ do
+    GLFW.windowHint $ GLFW.WindowHint'ContextVersionMajor major
+    GLFW.windowHint $ GLFW.WindowHint'ContextVersionMinor minor
+    when (major >= 3) $ GLFW.windowHint $ GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Compat
+    GLFW.createWindow w h title monitor Nothing
+  unless (isJust maybeWindow) $ gameError "GLFW.openWindow failed"
+  let window = fromJust maybeWindow
+  liftIO $ do
+    GLFW.setWindowCloseCallback window . Just $ onWindowClose closeRequest
+    GLFW.setWindowSizeCallback window . Just $ onResize'
+    GLFW.setKeyCallback window . Just $ onKey inputEvents
+    GLFW.setCharCallback window . Just $ onChar inputEvents
+    GLFW.setMouseButtonCallback window . Just $ onMouseButton inputEvents
+    onMouseMove inputEvents >>= GLFW.setCursorPosCallback window . Just
+    onResize' window w h
+  return $ Spear.Window.Window window closeRequest inputEvents
 
 glfwInit :: Game s ()
 glfwInit = do
-         result <- liftIO GLFW.initialize
-         case result of
-              False -> gameError "GLFW.initialize failed"
-              True  -> return ()
+  result <- gameIO GLFW.init
+  if result then return () else gameError "GLFW.initialize failed"
 
 -- | Time elapsed since the application started.
 type Elapsed = Double
@@ -149,279 +141,331 @@ type Elapsed = Double
 type Dt = Float
 
 -- | Return true if the application should continue running, false otherwise.
-type Step s = Elapsed -> Dt -> Game s (Bool)
+type Step s = Elapsed -> Dt -> Game s Bool
 
 -- | Maximum frame rate.
 type FrameCap = Int
 
--- | Run the application's main loop.
-loop :: Maybe FrameCap -> Step s -> Window -> Game s ()
-loop (Just maxFPS) step wnd = loopCapped maxFPS step wnd
-loop Nothing step wnd = do
-     timer <- gameIO $ start newTimer
-     loop' (closeRequest wnd) timer 0 step
-     return ()
+loop :: Step s -> Window -> Game s ()
+loop step window = do
+  let ddt = 1.0 / fromIntegral maxFPS
+      closeReq = closeRequest window
+  frameTimer <- gameIO $ start newTimer
+  controlTimer <- gameIO $ start newTimer
+  loop' window closeReq ddt frameTimer controlTimer 0 step
+  return ()
 
-loop' :: CloseRequest -> Timer -> Elapsed -> Step s -> Game s ()
-loop' closeRequest timer elapsed step = do
-      timer' <- gameIO $ tick timer
-      let dt       = getDelta timer'
-      let elapsed' = elapsed + float2Double dt
-      continue <- step elapsed' dt
-      close    <- gameIO $ getRequest closeRequest
-      when (continue && (not close)) $ loop' closeRequest timer' elapsed' step
-
-loopCapped :: Int -> Step s -> Window -> Game s ()
-loopCapped maxFPS step wnd = do
-           let ddt = 1.0 / (fromIntegral maxFPS)
-               closeReq = closeRequest wnd
-           frameTimer   <- gameIO $ start newTimer
-           controlTimer <- gameIO $ start newTimer
-           loopCapped' closeReq ddt frameTimer controlTimer 0 step
-           return ()
-
-loopCapped' :: CloseRequest -> Float -> Timer -> Timer -> Elapsed -> Step s
-            -> Game s ()
-loopCapped' closeRequest ddt frameTimer controlTimer elapsed step = do
-            controlTimer'  <- gameIO $ tick controlTimer
-            frameTimer'    <- gameIO $ tick frameTimer
-            let dt         = getDelta frameTimer'
-            let elapsed'   = elapsed + float2Double dt
-            continue       <- step elapsed' dt
-            close          <- gameIO $ getRequest closeRequest
-            controlTimer'' <- gameIO $ tick controlTimer'
-            let dt = getDelta controlTimer''
-            when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
-            when (continue && (not close)) $
-                 loopCapped' closeRequest ddt frameTimer' controlTimer''
-                             elapsed' step
+loop' ::
+  Window ->
+  CloseRequest ->
+  Float ->
+  Timer ->
+  Timer ->
+  Elapsed ->
+  Step s ->
+  Game s ()
+loop' window closeRequest ddt frameTimer controlTimer elapsed step = do
+  controlTimer' <- gameIO $ tick controlTimer
+  frameTimer' <- gameIO $ tick frameTimer
+  let dt = getDelta frameTimer'
+  let elapsed' = elapsed + float2Double dt
+  gameIO GLFW.pollEvents
+  continue <- step elapsed' dt
+  gameIO . GLFW.swapBuffers $ glfwWindow window
+  close <- gameIO $ getRequest closeRequest
+  controlTimer'' <- gameIO $ tick controlTimer'
+  let dt = getDelta controlTimer''
+  when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
+  when (continue && not close) $
+    loop'
+      window
+      closeRequest
+      ddt
+      frameTimer'
+      controlTimer''
+      elapsed'
+      step
 
 getRequest :: MVar Bool -> IO Bool
-getRequest mvar = tryTakeMVar mvar >>= \x -> return $ case x of
-           Nothing -> False
-           Just x  -> x
+getRequest mvar =
+  tryTakeMVar mvar >>= \x -> return $ fromMaybe False x
 
 onWindowClose :: MVar Bool -> GLFW.WindowCloseCallback
-onWindowClose closeRequest = putMVar closeRequest True >> return False
+onWindowClose closeRequest window = do putMVar closeRequest True
 
 onResize :: MVar [InputEvent] -> GLFW.WindowSizeCallback
-onResize es (GL.Size w h) = addEvent es $ Resize (fromIntegral w) (fromIntegral h)
+onResize events window w h = addEvent events $ Resize w h
 
 onKey :: MVar [InputEvent] -> GLFW.KeyCallback
-onKey es key GLFW.Press   = addEvent es $ KeyDown (fromGLFWkey key)
-onKey es key GLFW.Release = addEvent es $ KeyUp   (fromGLFWkey key)
+onKey events window key _ GLFW.KeyState'Pressed _ = addEvent events $ KeyDown (fromGLFWkey key)
+onKey events window key _ GLFW.KeyState'Released _ = addEvent events $ KeyUp (fromGLFWkey key)
+onKey events window key _ GLFW.KeyState'Repeating _ = return ()
 
 onChar :: MVar [InputEvent] -> GLFW.CharCallback
-onChar es c GLFW.Press   = addEvent es $ KeyDown (fromGLFWkey (GLFW.CharKey c))
-onChar es c GLFW.Release = addEvent es $ KeyUp   (fromGLFWkey (GLFW.CharKey c))
+onChar events window char = addEvent events $ KeyDown . fromGLFWkey . read $ [char]
 
 onMouseButton :: MVar [InputEvent] -> GLFW.MouseButtonCallback
-onMouseButton es bt GLFW.Press   = addEvent es $ MouseDown (fromGLFWbutton bt)
-onMouseButton es bt GLFW.Release = addEvent es $ MouseUp   (fromGLFWbutton bt)
+onMouseButton events window button GLFW.MouseButtonState'Pressed _ = addEvent events $ MouseDown (fromGLFWbutton button)
+onMouseButton events window button GLFW.MouseButtonState'Released _ = addEvent events $ MouseUp (fromGLFWbutton button)
 
-onMouseMove :: MVar [InputEvent] -> IO GLFW.MousePosCallback
-onMouseMove es = newEmptyMVar >>= return . flip onMouseMove' es
+onMouseMove :: MVar [InputEvent] -> IO GLFW.CursorPosCallback
+onMouseMove events = newEmptyMVar >>= return . flip onMouseMove' events
 
-onMouseMove' :: MVar MousePos -> MVar [InputEvent] -> GLFW.MousePosCallback
-onMouseMove' oldPos es (GL.Position x y) = do
-             let (x',y') = (fromIntegral x, fromIntegral y)
-             (old_x, old_y) <- tryTakeMVar oldPos >>= \x -> case x of
-                  Nothing -> return (x',y')
-                  Just p  -> return p
-             let delta = (x'-old_x, y'-old_y)
-             putMVar oldPos (x',y')
-             addEvent es $ MouseMove (x',y') delta
+onMouseMove' :: MVar MousePos -> MVar [InputEvent] -> GLFW.CursorPosCallback
+onMouseMove' oldPos events window x y = do
+  (old_x, old_y) <-
+    tryTakeMVar oldPos >>= \old -> case old of
+      Nothing -> return (x, y)
+      Just p -> return p
+  let delta = (x - old_x, y - old_y)
+  putMVar oldPos (x, y)
+  addEvent events $ MouseMove (x, y) delta
 
 replaceMVar :: MVar a -> a -> IO ()
 replaceMVar mvar val = tryTakeMVar mvar >> putMVar mvar val
 
 addEvent :: MVar [a] -> a -> IO ()
-addEvent mvar val = tryTakeMVar mvar >>= \xs -> case xs of
-         Nothing -> putMVar mvar [val]
-         Just es -> putMVar mvar (val:es)
+addEvent mvar val =
+  tryTakeMVar mvar >>= \xs -> case xs of
+    Nothing -> putMVar mvar [val]
+    Just events -> putMVar mvar (val : events)
 
 -- Input
 
 -- | Run the game action when the key is down.
-whenKeyDown :: Key -> Game s a -> Game s ()
-whenKeyDown = whenKey (==GLFW.Press)
+whenKeyDown :: GLFW.Window -> Key -> Game s a -> Game s ()
+whenKeyDown = whenKeyInState (== GLFW.KeyState'Pressed)
 
 -- | Run the game action when the key is up.
-whenKeyUp :: Key -> Game s a -> Game s ()
-whenKeyUp = whenKey (==GLFW.Release)
+whenKeyUp :: GLFW.Window -> Key -> Game s a -> Game s ()
+whenKeyUp = whenKeyInState (== GLFW.KeyState'Released)
 
-whenKey :: (GLFW.KeyButtonState -> Bool) -> Key -> Game s a -> Game s ()
-whenKey pred key game = do
-            isDown <- fmap pred $ gameIO . GLFW.getKey . toGLFWkey $ key
-            when isDown $ game >> return ()
+whenKeyInState :: (GLFW.KeyState -> Bool) -> GLFW.Window -> Key -> Game s a -> Game s ()
+whenKeyInState pred window key game = do
+  isDown <- fmap pred $ gameIO . GLFW.getKey window . toGLFWkey $ key
+  when isDown $ void game
 
 -- | Process the keyboard keys, returning those values for which their
 -- corresponding key is pressed.
-processKeys :: [(Key,a)] -> Game s [a]
-processKeys = foldM f []
-            where f acc (key,res) = do
-                  isDown <- fmap (==GLFW.Press) $ gameIO . GLFW.getKey
-                         . toGLFWkey $ key
-                  return $ if isDown then (res:acc) else acc
+processKeys :: GLFW.Window -> [(Key, a)] -> Game s [a]
+processKeys window = foldM f []
+  where
+    f acc (key, result) = do
+      isDown <-
+        fmap (== GLFW.KeyState'Pressed) $
+          gameIO . GLFW.getKey window . toGLFWkey $ key
+      return $ if isDown then result : acc else acc
 
 -- | Process the mouse buttons, returning those values for which their
 -- corresponding button is pressed.
-processButtons :: [(MouseButton,a)] -> Game s [a]
-processButtons = foldM f []
-               where f acc (bt,res) = do
-                     isDown <- fmap (==GLFW.Press) $ gameIO . GLFW.getMouseButton
-                            . toGLFWbutton $ bt
-                     return $ if isDown then (res:acc) else acc
+processButtons :: GLFW.Window -> [(MouseButton, a)] -> Game s [a]
+processButtons window = foldM f []
+  where
+    f acc (button, result) = do
+      isDown <-
+        fmap (== GLFW.MouseButtonState'Pressed) $
+          gameIO . GLFW.getMouseButton window . toGLFWbutton $ button
+      return $ if isDown then result : acc else acc
 
 data InputEvent
-     = Resize Width Height
-     | KeyDown Key
-     | KeyUp Key
-     | MouseDown MouseButton
-     | MouseUp MouseButton
-     | MouseMove MousePos MouseDelta
-     deriving (Eq, Show)
+  = Resize Width Height
+  | KeyDown Key
+  | KeyUp Key
+  | MouseDown MouseButton
+  | MouseUp MouseButton
+  | MouseMove MousePos MouseDelta
+  deriving (Eq, Show)
 
 data Key
-     = KEY_A | KEY_B | KEY_C | KEY_D | KEY_E | KEY_F | KEY_G | KEY_H
-     | KEY_I | KEY_J | KEY_K | KEY_L | KEY_M | KEY_N | KEY_O | KEY_P
-     | KEY_Q | KEY_R | KEY_S | KEY_T | KEY_U | KEY_V | KEY_W | KEY_X
-     | KEY_Y | KEY_Z | KEY_0 | KEY_1 | KEY_2 | KEY_3 | KEY_4 | KEY_5
-     | KEY_6 | KEY_7 | KEY_8 | KEY_9 | KEY_F1 | KEY_F2 | KEY_F3
-     | KEY_F4 | KEY_F5 | KEY_F6 | KEY_F7 | KEY_F8 | KEY_F9 | KEY_F10
-     | KEY_F11 | KEY_F12 | KEY_ESC | KEY_SPACE | KEY_UP | KEY_DOWN
-     | KEY_LEFT | KEY_RIGHT | KEY_UNKNOWN
-     deriving (Eq, Enum, Bounded, Show)
+  = KEY_A
+  | KEY_B
+  | KEY_C
+  | KEY_D
+  | KEY_E
+  | KEY_F
+  | KEY_G
+  | KEY_H
+  | KEY_I
+  | KEY_J
+  | KEY_K
+  | KEY_L
+  | KEY_M
+  | KEY_N
+  | KEY_O
+  | KEY_P
+  | KEY_Q
+  | KEY_R
+  | KEY_S
+  | KEY_T
+  | KEY_U
+  | KEY_V
+  | KEY_W
+  | KEY_X
+  | KEY_Y
+  | KEY_Z
+  | KEY_0
+  | KEY_1
+  | KEY_2
+  | KEY_3
+  | KEY_4
+  | KEY_5
+  | KEY_6
+  | KEY_7
+  | KEY_8
+  | KEY_9
+  | KEY_F1
+  | KEY_F2
+  | KEY_F3
+  | KEY_F4
+  | KEY_F5
+  | KEY_F6
+  | KEY_F7
+  | KEY_F8
+  | KEY_F9
+  | KEY_F10
+  | KEY_F11
+  | KEY_F12
+  | KEY_ESC
+  | KEY_SPACE
+  | KEY_UP
+  | KEY_DOWN
+  | KEY_LEFT
+  | KEY_RIGHT
+  | KEY_UNKNOWN
+  deriving (Eq, Enum, Bounded, Show)
 
 data MouseButton = LMB | RMB | MMB
-    deriving (Eq, Enum, Bounded, Show)
+  deriving (Eq, Enum, Bounded, Show)
 
 data MouseProp = MouseX | MouseY | MouseDX | MouseDY | Wheel | WheelDelta
-    deriving (Eq, Enum, Bounded, Show)
+  deriving (Eq, Enum, Bounded, Show)
 
-type MousePos = (Int,Int)
-type MouseDelta = (Int,Int)
+type MousePos = (Double, Double)
+
+type MouseDelta = (Double, Double)
 
 fromGLFWkey :: GLFW.Key -> Key
-fromGLFWkey (GLFW.CharKey 'A') = KEY_A
-fromGLFWkey (GLFW.CharKey 'B') = KEY_B
-fromGLFWkey (GLFW.CharKey 'C') = KEY_C
-fromGLFWkey (GLFW.CharKey 'D') = KEY_D
-fromGLFWkey (GLFW.CharKey 'E') = KEY_E
-fromGLFWkey (GLFW.CharKey 'F') = KEY_F
-fromGLFWkey (GLFW.CharKey 'G') = KEY_G
-fromGLFWkey (GLFW.CharKey 'H') = KEY_H
-fromGLFWkey (GLFW.CharKey 'I') = KEY_I
-fromGLFWkey (GLFW.CharKey 'J') = KEY_J
-fromGLFWkey (GLFW.CharKey 'K') = KEY_K
-fromGLFWkey (GLFW.CharKey 'L') = KEY_L
-fromGLFWkey (GLFW.CharKey 'M') = KEY_M
-fromGLFWkey (GLFW.CharKey 'N') = KEY_N
-fromGLFWkey (GLFW.CharKey 'O') = KEY_O
-fromGLFWkey (GLFW.CharKey 'P') = KEY_P
-fromGLFWkey (GLFW.CharKey 'Q') = KEY_Q
-fromGLFWkey (GLFW.CharKey 'R') = KEY_R
-fromGLFWkey (GLFW.CharKey 'S') = KEY_S
-fromGLFWkey (GLFW.CharKey 'T') = KEY_T
-fromGLFWkey (GLFW.CharKey 'U') = KEY_U
-fromGLFWkey (GLFW.CharKey 'V') = KEY_V
-fromGLFWkey (GLFW.CharKey 'W') = KEY_W
-fromGLFWkey (GLFW.CharKey 'X') = KEY_X
-fromGLFWkey (GLFW.CharKey 'Y') = KEY_Y
-fromGLFWkey (GLFW.CharKey 'Z') = KEY_Z
-fromGLFWkey (GLFW.CharKey '0') = KEY_0
-fromGLFWkey (GLFW.CharKey '1') = KEY_1
-fromGLFWkey (GLFW.CharKey '2') = KEY_2
-fromGLFWkey (GLFW.CharKey '3') = KEY_3
-fromGLFWkey (GLFW.CharKey '4') = KEY_4
-fromGLFWkey (GLFW.CharKey '5') = KEY_5
-fromGLFWkey (GLFW.CharKey '6') = KEY_6
-fromGLFWkey (GLFW.CharKey '7') = KEY_7
-fromGLFWkey (GLFW.CharKey '8') = KEY_8
-fromGLFWkey (GLFW.CharKey '9') = KEY_9
-fromGLFWkey (GLFW.CharKey ' ') = KEY_SPACE
-fromGLFWkey (GLFW.SpecialKey GLFW.F1)  = KEY_F1
-fromGLFWkey (GLFW.SpecialKey GLFW.F2)  = KEY_F2
-fromGLFWkey (GLFW.SpecialKey GLFW.F3)  = KEY_F3
-fromGLFWkey (GLFW.SpecialKey GLFW.F4)  = KEY_F4
-fromGLFWkey (GLFW.SpecialKey GLFW.F5)  = KEY_F5
-fromGLFWkey (GLFW.SpecialKey GLFW.F6)  = KEY_F6
-fromGLFWkey (GLFW.SpecialKey GLFW.F7)  = KEY_F7
-fromGLFWkey (GLFW.SpecialKey GLFW.F8)  = KEY_F8
-fromGLFWkey (GLFW.SpecialKey GLFW.F9)  = KEY_F9
-fromGLFWkey (GLFW.SpecialKey GLFW.F10) = KEY_F10
-fromGLFWkey (GLFW.SpecialKey GLFW.F11) = KEY_F11
-fromGLFWkey (GLFW.SpecialKey GLFW.F12) = KEY_F12
-fromGLFWkey (GLFW.SpecialKey GLFW.ESC) = KEY_ESC
-fromGLFWkey (GLFW.SpecialKey GLFW.UP)    = KEY_UP
-fromGLFWkey (GLFW.SpecialKey GLFW.DOWN)  = KEY_DOWN
-fromGLFWkey (GLFW.SpecialKey GLFW.LEFT)  = KEY_LEFT
-fromGLFWkey (GLFW.SpecialKey GLFW.RIGHT) = KEY_RIGHT
+fromGLFWkey GLFW.Key'A = KEY_A
+fromGLFWkey GLFW.Key'B = KEY_B
+fromGLFWkey GLFW.Key'C = KEY_C
+fromGLFWkey GLFW.Key'D = KEY_D
+fromGLFWkey GLFW.Key'E = KEY_E
+fromGLFWkey GLFW.Key'F = KEY_F
+fromGLFWkey GLFW.Key'G = KEY_G
+fromGLFWkey GLFW.Key'H = KEY_H
+fromGLFWkey GLFW.Key'I = KEY_I
+fromGLFWkey GLFW.Key'J = KEY_J
+fromGLFWkey GLFW.Key'K = KEY_K
+fromGLFWkey GLFW.Key'L = KEY_L
+fromGLFWkey GLFW.Key'M = KEY_M
+fromGLFWkey GLFW.Key'N = KEY_N
+fromGLFWkey GLFW.Key'O = KEY_O
+fromGLFWkey GLFW.Key'P = KEY_P
+fromGLFWkey GLFW.Key'Q = KEY_Q
+fromGLFWkey GLFW.Key'R = KEY_R
+fromGLFWkey GLFW.Key'S = KEY_S
+fromGLFWkey GLFW.Key'T = KEY_T
+fromGLFWkey GLFW.Key'U = KEY_U
+fromGLFWkey GLFW.Key'V = KEY_V
+fromGLFWkey GLFW.Key'W = KEY_W
+fromGLFWkey GLFW.Key'X = KEY_X
+fromGLFWkey GLFW.Key'Y = KEY_Y
+fromGLFWkey GLFW.Key'Z = KEY_Z
+fromGLFWkey GLFW.Key'0 = KEY_0
+fromGLFWkey GLFW.Key'1 = KEY_1
+fromGLFWkey GLFW.Key'2 = KEY_2
+fromGLFWkey GLFW.Key'3 = KEY_3
+fromGLFWkey GLFW.Key'4 = KEY_4
+fromGLFWkey GLFW.Key'5 = KEY_5
+fromGLFWkey GLFW.Key'6 = KEY_6
+fromGLFWkey GLFW.Key'7 = KEY_7
+fromGLFWkey GLFW.Key'8 = KEY_8
+fromGLFWkey GLFW.Key'9 = KEY_9
+fromGLFWkey GLFW.Key'Space = KEY_SPACE
+fromGLFWkey GLFW.Key'F1 = KEY_F1
+fromGLFWkey GLFW.Key'F2 = KEY_F2
+fromGLFWkey GLFW.Key'F3 = KEY_F3
+fromGLFWkey GLFW.Key'F4 = KEY_F4
+fromGLFWkey GLFW.Key'F5 = KEY_F5
+fromGLFWkey GLFW.Key'F6 = KEY_F6
+fromGLFWkey GLFW.Key'F7 = KEY_F7
+fromGLFWkey GLFW.Key'F8 = KEY_F8
+fromGLFWkey GLFW.Key'F9 = KEY_F9
+fromGLFWkey GLFW.Key'F10 = KEY_F10
+fromGLFWkey GLFW.Key'F11 = KEY_F11
+fromGLFWkey GLFW.Key'F12 = KEY_F12
+fromGLFWkey GLFW.Key'Escape = KEY_ESC
+fromGLFWkey GLFW.Key'Up = KEY_UP
+fromGLFWkey GLFW.Key'Down = KEY_DOWN
+fromGLFWkey GLFW.Key'Left = KEY_LEFT
+fromGLFWkey GLFW.Key'Right = KEY_RIGHT
 fromGLFWkey _ = KEY_UNKNOWN
 
+-- https://www.glfw.org/docs/3.3/group__buttons.html
 fromGLFWbutton :: GLFW.MouseButton -> MouseButton
-fromGLFWbutton GLFW.ButtonLeft   = LMB
-fromGLFWbutton GLFW.ButtonRight  = RMB
-fromGLFWbutton GLFW.ButtonMiddle = MMB
+fromGLFWbutton GLFW.MouseButton'1 = LMB
+fromGLFWbutton GLFW.MouseButton'2 = RMB
+fromGLFWbutton GLFW.MouseButton'3 = MMB
 
 toGLFWkey :: Key -> GLFW.Key
-toGLFWkey KEY_A = GLFW.CharKey 'A'
-toGLFWkey KEY_B = GLFW.CharKey 'B'
-toGLFWkey KEY_C = GLFW.CharKey 'C'
-toGLFWkey KEY_D = GLFW.CharKey 'D'
-toGLFWkey KEY_E = GLFW.CharKey 'E'
-toGLFWkey KEY_F = GLFW.CharKey 'F'
-toGLFWkey KEY_G = GLFW.CharKey 'G'
-toGLFWkey KEY_H = GLFW.CharKey 'H'
-toGLFWkey KEY_I = GLFW.CharKey 'I'
-toGLFWkey KEY_J = GLFW.CharKey 'J'
-toGLFWkey KEY_K = GLFW.CharKey 'K'
-toGLFWkey KEY_L = GLFW.CharKey 'L'
-toGLFWkey KEY_M = GLFW.CharKey 'M'
-toGLFWkey KEY_N = GLFW.CharKey 'N'
-toGLFWkey KEY_O = GLFW.CharKey 'O'
-toGLFWkey KEY_P = GLFW.CharKey 'P'
-toGLFWkey KEY_Q = GLFW.CharKey 'Q'
-toGLFWkey KEY_R = GLFW.CharKey 'R'
-toGLFWkey KEY_S = GLFW.CharKey 'S'
-toGLFWkey KEY_T = GLFW.CharKey 'T'
-toGLFWkey KEY_U = GLFW.CharKey 'U'
-toGLFWkey KEY_V = GLFW.CharKey 'V'
-toGLFWkey KEY_W = GLFW.CharKey 'W'
-toGLFWkey KEY_X = GLFW.CharKey 'X'
-toGLFWkey KEY_Y = GLFW.CharKey 'Y'
-toGLFWkey KEY_Z = GLFW.CharKey 'Z'
-toGLFWkey KEY_0 = GLFW.CharKey '0'
-toGLFWkey KEY_1 = GLFW.CharKey '1'
-toGLFWkey KEY_2 = GLFW.CharKey '2'
-toGLFWkey KEY_3 = GLFW.CharKey '3'
-toGLFWkey KEY_4 = GLFW.CharKey '4'
-toGLFWkey KEY_5 = GLFW.CharKey '5'
-toGLFWkey KEY_6 = GLFW.CharKey '6'
-toGLFWkey KEY_7 = GLFW.CharKey '7'
-toGLFWkey KEY_8 = GLFW.CharKey '8'
-toGLFWkey KEY_9 = GLFW.CharKey '9'
-toGLFWkey KEY_SPACE = GLFW.CharKey ' '
-toGLFWkey KEY_F1 = GLFW.SpecialKey GLFW.F1
-toGLFWkey KEY_F2 = GLFW.SpecialKey GLFW.F2
-toGLFWkey KEY_F3 = GLFW.SpecialKey GLFW.F3
-toGLFWkey KEY_F4 = GLFW.SpecialKey GLFW.F4
-toGLFWkey KEY_F5 = GLFW.SpecialKey GLFW.F5
-toGLFWkey KEY_F6 = GLFW.SpecialKey GLFW.F6
-toGLFWkey KEY_F7 = GLFW.SpecialKey GLFW.F7
-toGLFWkey KEY_F8 = GLFW.SpecialKey GLFW.F8
-toGLFWkey KEY_F9 = GLFW.SpecialKey GLFW.F9
-toGLFWkey KEY_F10 = GLFW.SpecialKey GLFW.F10
-toGLFWkey KEY_F11 = GLFW.SpecialKey GLFW.F11
-toGLFWkey KEY_F12 = GLFW.SpecialKey GLFW.F12
-toGLFWkey KEY_ESC = GLFW.SpecialKey GLFW.ESC
-toGLFWkey KEY_UP    = GLFW.SpecialKey GLFW.UP
-toGLFWkey KEY_DOWN  = GLFW.SpecialKey GLFW.DOWN
-toGLFWkey KEY_LEFT  = GLFW.SpecialKey GLFW.LEFT
-toGLFWkey KEY_RIGHT = GLFW.SpecialKey GLFW.RIGHT
-toGLFWkey KEY_UNKNOWN = GLFW.SpecialKey GLFW.UNKNOWN
+toGLFWkey KEY_A = GLFW.Key'A
+toGLFWkey KEY_B = GLFW.Key'B
+toGLFWkey KEY_C = GLFW.Key'C
+toGLFWkey KEY_D = GLFW.Key'D
+toGLFWkey KEY_E = GLFW.Key'E
+toGLFWkey KEY_F = GLFW.Key'F
+toGLFWkey KEY_G = GLFW.Key'G
+toGLFWkey KEY_H = GLFW.Key'H
+toGLFWkey KEY_I = GLFW.Key'I
+toGLFWkey KEY_J = GLFW.Key'J
+toGLFWkey KEY_K = GLFW.Key'K
+toGLFWkey KEY_L = GLFW.Key'L
+toGLFWkey KEY_M = GLFW.Key'M
+toGLFWkey KEY_N = GLFW.Key'N
+toGLFWkey KEY_O = GLFW.Key'O
+toGLFWkey KEY_P = GLFW.Key'P
+toGLFWkey KEY_Q = GLFW.Key'Q
+toGLFWkey KEY_R = GLFW.Key'R
+toGLFWkey KEY_S = GLFW.Key'S
+toGLFWkey KEY_T = GLFW.Key'T
+toGLFWkey KEY_U = GLFW.Key'U
+toGLFWkey KEY_V = GLFW.Key'V
+toGLFWkey KEY_W = GLFW.Key'W
+toGLFWkey KEY_X = GLFW.Key'X
+toGLFWkey KEY_Y = GLFW.Key'Y
+toGLFWkey KEY_Z = GLFW.Key'Z
+toGLFWkey KEY_0 = GLFW.Key'0
+toGLFWkey KEY_1 = GLFW.Key'1
+toGLFWkey KEY_2 = GLFW.Key'2
+toGLFWkey KEY_3 = GLFW.Key'3
+toGLFWkey KEY_4 = GLFW.Key'4
+toGLFWkey KEY_5 = GLFW.Key'5
+toGLFWkey KEY_6 = GLFW.Key'6
+toGLFWkey KEY_7 = GLFW.Key'7
+toGLFWkey KEY_8 = GLFW.Key'8
+toGLFWkey KEY_9 = GLFW.Key'9
+toGLFWkey KEY_SPACE = GLFW.Key'Space
+toGLFWkey KEY_F1 = GLFW.Key'F1
+toGLFWkey KEY_F2 = GLFW.Key'F2
+toGLFWkey KEY_F3 = GLFW.Key'F3
+toGLFWkey KEY_F4 = GLFW.Key'F4
+toGLFWkey KEY_F5 = GLFW.Key'F5
+toGLFWkey KEY_F6 = GLFW.Key'F6
+toGLFWkey KEY_F7 = GLFW.Key'F7
+toGLFWkey KEY_F8 = GLFW.Key'F8
+toGLFWkey KEY_F9 = GLFW.Key'F9
+toGLFWkey KEY_F10 = GLFW.Key'F10
+toGLFWkey KEY_F11 = GLFW.Key'F11
+toGLFWkey KEY_F12 = GLFW.Key'F12
+toGLFWkey KEY_ESC = GLFW.Key'Escape
+toGLFWkey KEY_UP = GLFW.Key'Up
+toGLFWkey KEY_DOWN = GLFW.Key'Down
+toGLFWkey KEY_LEFT = GLFW.Key'Left
+toGLFWkey KEY_RIGHT = GLFW.Key'Right
+toGLFWkey KEY_UNKNOWN = GLFW.Key'Unknown
 
+-- https://www.glfw.org/docs/3.3/group__buttons.html
 toGLFWbutton :: MouseButton -> GLFW.MouseButton
-toGLFWbutton LMB = GLFW.ButtonLeft
-toGLFWbutton RMB = GLFW.ButtonRight
-toGLFWbutton MMB = GLFW.ButtonMiddle
+toGLFWbutton LMB = GLFW.MouseButton'1
+toGLFWbutton RMB = GLFW.MouseButton'2
+toGLFWbutton MMB = GLFW.MouseButton'3

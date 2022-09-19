@@ -14,6 +14,22 @@ import Spear.Math.Spatial2
 import Spear.Math.Vector
 import Spear.Step
 
+-- Configuration
+
+padSize = vec2 0.05 0.02
+
+ballSize = 0.01
+
+ballVelocity = vec2 0.3 0.3
+
+playerSpeed = 0.7
+
+initialEnemyPos = vec2 0.5 0.9
+
+initialPlayerPos = vec2 0.5 0.1
+
+initialBallPos = vec2 0.5 0.5
+
 -- Game events
 
 data GameEvent
@@ -43,21 +59,16 @@ update elapsed dt evts gos go =
   let (go', s') = runStep (gostep go) elapsed dt gos evts go
    in go' {gostep = s'}
 
-ballBox :: AABB2
-ballBox = AABB2 (vec2 (- s) (- s)) (vec2 s s) where s = 0.01
-
-padSize = vec2 0.05 0.02
-
+ballBox, padBox :: AABB2
+ballBox = AABB2 (vec2 (- s) (- s)) (vec2 s s) where s = ballSize
 padBox = AABB2 (- padSize) padSize
 
-obj2 x y = obj2FromVectors unitx2 unity2 (vec2 x y)
-
-ballVelocity = Vector2 0.3 0.3
+obj2 = obj2FromVectors unitx2 unity2
 
 newWorld =
-  [ GameObject ballBox (obj2 0.5 0.5) $ stepBall ballVelocity,
-    GameObject padBox (obj2 0.5 0.9) stepEnemy,
-    GameObject padBox (obj2 0.5 0.1) stepPlayer
+  [ GameObject ballBox (obj2 initialBallPos) $ stepBall ballVelocity,
+    GameObject padBox (obj2 initialEnemyPos) stepEnemy,
+    GameObject padBox (obj2 initialPlayerPos) stepPlayer
   ]
 
 -- Ball steppers
@@ -110,8 +121,8 @@ stepPlayer = sfold moveGO .> clamp
 
 moveGO =
   mconcat
-    [ switch StopLeft sid MoveLeft (moveGO' $ vec2 (-1) 0),
-      switch StopRight sid MoveRight (moveGO' $ vec2 1 0)
+    [ switch StopLeft sid MoveLeft (moveGO' $ vec2 (- playerSpeed) 0),
+      switch StopRight sid MoveRight (moveGO' $ vec2 playerSpeed 0)
     ]
 
 moveGO' :: Vector2 -> Step s e GameObject GameObject
@@ -121,10 +132,9 @@ clamp :: Step s e GameObject GameObject
 clamp = spure $ \go ->
   let p' = vec2 (clamp' x s (1 - s)) y
       (Vector2 x y) = pos go
-      clamp' x a b = if x < a then a else if x > b then b else x
+      clamp' x a b
+        | x < a = a
+        | x > b = b
+        | otherwise = x
       (Vector2 s _) = padSize
    in setPos p' go
-
-toDir True MoveLeft = vec2 (-1) 0
-toDir True MoveRight = vec2 1 0
-toDir _ _ = vec2 0 0

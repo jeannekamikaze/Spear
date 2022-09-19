@@ -3,7 +3,6 @@ module Spear.Window
     Dimensions,
     Context,
     WindowTitle,
-    FrameCap,
 
     -- * Window
     Window,
@@ -11,14 +10,9 @@ module Spear.Window
     Height,
     Init,
     withWindow,
-    events,
-
-    -- * Animation
-    Elapsed,
-    Dt,
-    Step,
-    loop,
-    GLFW.swapBuffers,
+    pollEvents,
+    shouldWindowClose,
+    swapBuffers,
 
     -- * Input
     whenKeyDown,
@@ -37,16 +31,9 @@ where
 import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad (foldM, unless, void, when)
-import Control.Monad.IO.Class
-import Data.Char (ord)
 import Data.Maybe (fromJust, fromMaybe, isJust)
-import GHC.Float
-import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLFW as GLFW
 import Spear.Game
-import Spear.Sys.Timer as Timer
-
-maxFPS = 60
 
 type Width = Int
 
@@ -55,12 +42,20 @@ type Height = Int
 -- | Window dimensions.
 type Dimensions = (Width, Height)
 
--- | A tuple specifying the desired OpenGL context, of the form (Major, Minor).
+-- | A pair specifying the desired OpenGL context, of the form (Major, Minor).
 type Context = (Int, Int)
 
 type WindowTitle = String
 
 type CloseRequest = MVar Bool
+
+-- | Game initialiser.
+type Init s = Window -> Game () s
+
+-- | Window exception.
+newtype WindowException = WindowException String deriving (Show)
+
+instance Exception WindowException
 
 -- | A window.
 data Window = Window
@@ -68,19 +63,6 @@ data Window = Window
     closeRequest :: CloseRequest,
     inputEvents :: MVar [InputEvent]
   }
-
--- | Poll the window's events.
-events :: MonadIO m => Window -> m [InputEvent]
-events window = liftIO $ do
-  es <-
-    tryTakeMVar (inputEvents window) >>= \xs -> case xs of
-      Nothing -> return []
-      Just es -> return es
-  putMVar (inputEvents window) []
-  return es
-
--- | Game initialiser.
-type Init s = Window -> Game () s
 
 withWindow ::
   Dimensions ->
@@ -91,8 +73,10 @@ withWindow ::
   IO a
 withWindow dim@(w, h) glVersion windowTitle init run = do
   flip runGame' () $ do
-    glfwInit
-    window <- setup dim glVersion windowTitle
+    window <- gameIO $ do
+      success <- GLFW.init
+      unless success $ throw (WindowException "GLFW.initialize failed")
+      setup dim glVersion windowTitle
     gameIO $ GLFW.makeContextCurrent (Just . glfwWindow $ window)
     gameState <- init window
     result <- evalSubGame (run window) gameState
@@ -105,86 +89,47 @@ setup ::
   Dimensions ->
   Context ->
   Maybe WindowTitle ->
-  Game s Window
+  IO Window
 setup (w, h) (major, minor) windowTitle = do
-  closeRequest <- gameIO newEmptyMVar
-  inputEvents <- gameIO newEmptyMVar
+  closeRequest <- newEmptyMVar
+  inputEvents <- newEmptyMVar
   let onResize' = onResize inputEvents
   let title = fromMaybe "" windowTitle
   let monitor = Nothing
-  maybeWindow <- gameIO $ do
+  maybeWindow <- do
     GLFW.windowHint $ GLFW.WindowHint'ContextVersionMajor major
     GLFW.windowHint $ GLFW.WindowHint'ContextVersionMinor minor
     when (major >= 3) $ GLFW.windowHint $ GLFW.WindowHint'OpenGLProfile GLFW.OpenGLProfile'Compat
     GLFW.createWindow w h title monitor Nothing
-  unless (isJust maybeWindow) $ gameError "GLFW.openWindow failed"
+  unless (isJust maybeWindow) $ throwIO (WindowException "GLFW.openWindow failed")
   let window = fromJust maybeWindow
-  liftIO $ do
-    GLFW.setWindowCloseCallback window . Just $ onWindowClose closeRequest
-    GLFW.setWindowSizeCallback window . Just $ onResize'
-    GLFW.setKeyCallback window . Just $ onKey inputEvents
-    GLFW.setCharCallback window . Just $ onChar inputEvents
-    GLFW.setMouseButtonCallback window . Just $ onMouseButton inputEvents
-    onMouseMove inputEvents >>= GLFW.setCursorPosCallback window . Just
-    onResize' window w h
+  GLFW.setWindowCloseCallback window . Just $ onWindowClose closeRequest
+  GLFW.setWindowSizeCallback window . Just $ onResize'
+  GLFW.setKeyCallback window . Just $ onKey inputEvents
+  GLFW.setCharCallback window . Just $ onChar inputEvents
+  GLFW.setMouseButtonCallback window . Just $ onMouseButton inputEvents
+  onMouseMove inputEvents >>= GLFW.setCursorPosCallback window . Just
+  onResize' window w h
   return $ Spear.Window.Window window closeRequest inputEvents
 
-glfwInit :: Game s ()
-glfwInit = do
-  result <- gameIO GLFW.init
-  if result then return () else gameError "GLFW.initialize failed"
+-- | Poll the window's events.
+pollEvents :: Window -> IO [InputEvent]
+pollEvents window = do
+  GLFW.pollEvents
+  events <-
+    tryTakeMVar (inputEvents window) >>= \xs -> case xs of
+      Nothing -> return []
+      Just events -> return events
+  putMVar (inputEvents window) []
+  return events
 
--- | Time elapsed since the application started.
-type Elapsed = Double
+-- | Return true when the user requests to close the window.
+shouldWindowClose :: Window -> IO Bool
+shouldWindowClose = getRequest . closeRequest
 
--- | Time elapsed since the last frame.
-type Dt = Float
-
--- | Return true if the application should continue running, false otherwise.
-type Step s = Elapsed -> Dt -> Game s Bool
-
--- | Maximum frame rate.
-type FrameCap = Int
-
-loop :: Step s -> Window -> Game s ()
-loop step window = do
-  let ddt = 1.0 / fromIntegral maxFPS
-      closeReq = closeRequest window
-  frameTimer <- gameIO $ start newTimer
-  controlTimer <- gameIO $ start newTimer
-  loop' window closeReq ddt frameTimer controlTimer 0 step
-  return ()
-
-loop' ::
-  Window ->
-  CloseRequest ->
-  Float ->
-  Timer ->
-  Timer ->
-  Elapsed ->
-  Step s ->
-  Game s ()
-loop' window closeRequest ddt frameTimer controlTimer elapsed step = do
-  controlTimer' <- gameIO $ tick controlTimer
-  frameTimer' <- gameIO $ tick frameTimer
-  let dt = getDelta frameTimer'
-  let elapsed' = elapsed + float2Double dt
-  gameIO GLFW.pollEvents
-  continue <- step elapsed' dt
-  gameIO . GLFW.swapBuffers $ glfwWindow window
-  close <- gameIO $ getRequest closeRequest
-  controlTimer'' <- gameIO $ tick controlTimer'
-  let dt = getDelta controlTimer''
-  when (dt < ddt) $ gameIO $ Timer.sleep (ddt - dt)
-  when (continue && not close) $
-    loop'
-      window
-      closeRequest
-      ddt
-      frameTimer'
-      controlTimer''
-      elapsed'
-      step
+-- | Swaps buffers.
+swapBuffers :: Window -> IO ()
+swapBuffers = GLFW.swapBuffers . glfwWindow
 
 getRequest :: MVar Bool -> IO Bool
 getRequest mvar =

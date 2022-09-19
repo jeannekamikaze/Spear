@@ -28,7 +28,8 @@ library
                    vector -any,
                    array -any
 
-    exposed-modules: Spear.Assets.Image
+    exposed-modules: Spear.App
+                     Spear.Assets.Image
                      Spear.Assets.Model
                      Spear.Game
                      Spear.GL

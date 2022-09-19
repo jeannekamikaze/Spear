@@ -17,5 +17,5 @@ cabal-version:       >=1.8
 executable pong
   -- hs-source-dirs:      src
   main-is:             Main.hs
-  -- other-modules:
+  other-modules:       Pong
   build-depends:       base, Spear, OpenGL

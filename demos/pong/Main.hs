@@ -4,6 +4,7 @@ import Data.Maybe (mapMaybe)
 import Graphics.Rendering.OpenGL.GL (($=))
 import qualified Graphics.Rendering.OpenGL.GL as GL
 import Pong
+import Spear.App
 import Spear.Game
 import Spear.Math.AABB
 import Spear.Math.Spatial2
@@ -27,19 +28,17 @@ initGame window = do
     GL.loadIdentity
   return $ GameState window newWorld
 
-step :: Elapsed -> Dt -> Game GameState Bool
-step elapsed dt = do
-  --gameIO $ putStrLn "Tick"
+step :: Elapsed -> Dt -> [InputEvent] -> Game GameState Bool
+step elapsed dt inputEvents = do
   gs <- getGameState
-  evts <- events (window gs)
-  gameIO . process $ evts
-  let evts' = translate evts
+  gameIO . process $ inputEvents
+  let events = translate inputEvents
   modifyGameState $ \gs ->
     gs
-      { world = stepWorld elapsed dt evts' (world gs)
+      { world = stepWorld elapsed dt events (world gs)
       }
   getGameState >>= \gs -> gameIO . render $ world gs
-  return (not $ exitRequested evts)
+  return (not $ exitRequested inputEvents)
 
 render world = do
   GL.clear [GL.ColorBuffer]

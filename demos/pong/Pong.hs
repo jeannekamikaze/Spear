@@ -76,16 +76,17 @@ newWorld =
 stepBall vel = collideBall vel .> moveBall
 
 collideBall :: Vector2 -> Step [GameObject] e GameObject (Vector2, GameObject)
-collideBall vel = step $ \_ _ gos _ ball ->
+collideBall vel = step $ \_ dt gos _ ball ->
   let (AABB2 pmin pmax) = aabb ball `aabbAdd` pos ball
       collideCol = x pmin < 0 || x pmax > 1
-      collideRow =
-        y pmin < 0 || y pmax > 1
-          || any (collide ball) (tail gos)
+      collideRow = y pmin < 0 || y pmax > 1 || any (collide ball) (tail gos)
       negx v@(Vector2 x y) = if collideCol then vec2 (- x) y else v
       negy v@(Vector2 x y) = if collideRow then vec2 x (- y) else v
       vel' = negx . negy $ vel
-   in ((vel', ball), collideBall vel')
+      delta = dt -- A small delta to apply when collision occurs.
+      adjustX = if collideCol then scale delta (vec2 (x vel) 0) else vec2 0 0
+      adjustY = if collideRow then scale delta (vec2 0 (y vel)) else vec2 0 0
+   in ((vel' + adjustX + adjustY, ball), collideBall vel')
 
 collide go1 go2 =
   let (AABB2 (Vector2 xmin1 ymin1) (Vector2 xmax1 ymax1)) =

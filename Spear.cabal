@@ -1,6 +1,6 @@
 name: Spear
 version: 0.1
-cabal-version: >=1.2
+cabal-version: >=1.8
 build-type: Simple
 license: BSD3
 license-file: LICENSE
@@ -115,3 +115,9 @@ library
     ghc-options: -O2
 
     ghc-prof-options: -O2 -fprof-auto -fprof-cafs
+
+executable pong
+  hs-source-dirs:      demos/pong
+  main-is:             Main.hs
+  other-modules:       Pong
+  build-depends:       base, Spear, OpenGL

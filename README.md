@@ -5,15 +5,22 @@ Spear is a simple 2.5D game engine I have been working on since I started learni
 The project's goal is to put what I learn into practise, to explore how far I can get with Haskell and if the results
 are decent enough, to build one or two game demos along the way.
 
-Installation
-------------
+Installation (Ubuntu)
+---------------------
 
-Simply clone the repo and build with cabal:
+Install dependencies, then build with cabal:
 
 ```
+$ sudo apt install libxxf86vm-dev libglfw3-dev
 $ git clone https://github.com/jeannekamikaze/Spear.git
 $ cd Spear
-$ cabal install
+$ cabal build
+```
+
+Run a demo:
+
+```
+$ cabal run pong
 ```
 
 Features

@@ -7,12 +7,12 @@ module Pong
   )
 where
 
-import Data.Monoid (mconcat)
-import GHC.Float (double2Float)
-import Spear.Math.AABB
-import Spear.Math.Spatial2
-import Spear.Math.Vector
-import Spear.Step
+import           Data.Monoid         (mconcat)
+import           GHC.Float           (double2Float)
+import           Spear.Math.AABB
+import           Spear.Math.Spatial2
+import           Spear.Math.Vector
+import           Spear.Step
 
 -- Configuration
 
@@ -42,8 +42,8 @@ data GameEvent
 -- Game objects
 
 data GameObject = GameObject
-  { aabb :: AABB2,
-    obj :: Obj2,
+  { aabb   :: AABB2,
+    obj    :: Obj2,
     gostep :: Step [GameObject] [GameEvent] GameObject GameObject
   }
 

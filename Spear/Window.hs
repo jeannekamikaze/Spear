@@ -28,12 +28,12 @@ module Spear.Window
   )
 where
 
-import Control.Concurrent.MVar
-import Control.Exception
-import Control.Monad (foldM, unless, void, when)
-import Data.Maybe (fromJust, fromMaybe, isJust)
-import qualified Graphics.UI.GLFW as GLFW
-import Spear.Game
+import           Control.Concurrent.MVar
+import           Control.Exception
+import           Control.Monad           (foldM, unless, void, when)
+import           Data.Maybe              (fromJust, fromMaybe, isJust)
+import qualified Graphics.UI.GLFW        as GLFW
+import           Spear.Game
 
 type Width = Int
 
@@ -59,9 +59,9 @@ instance Exception WindowException
 
 -- | A window.
 data Window = Window
-  { glfwWindow :: GLFW.Window,
+  { glfwWindow   :: GLFW.Window,
     closeRequest :: CloseRequest,
-    inputEvents :: MVar [InputEvent]
+    inputEvents  :: MVar [InputEvent]
   }
 
 withWindow ::
@@ -118,7 +118,7 @@ pollEvents window = do
   GLFW.pollEvents
   events <-
     tryTakeMVar (inputEvents window) >>= \xs -> case xs of
-      Nothing -> return []
+      Nothing     -> return []
       Just events -> return events
   putMVar (inputEvents window) []
   return events
@@ -154,14 +154,14 @@ onMouseButton events window button GLFW.MouseButtonState'Pressed _ = addEvent ev
 onMouseButton events window button GLFW.MouseButtonState'Released _ = addEvent events $ MouseUp (fromGLFWbutton button)
 
 onMouseMove :: MVar [InputEvent] -> IO GLFW.CursorPosCallback
-onMouseMove events = newEmptyMVar >>= return . flip onMouseMove' events
+onMouseMove events = newEmptyMVar <&> flip onMouseMove' events
 
 onMouseMove' :: MVar MousePos -> MVar [InputEvent] -> GLFW.CursorPosCallback
 onMouseMove' oldPos events window x y = do
   (old_x, old_y) <-
     tryTakeMVar oldPos >>= \old -> case old of
       Nothing -> return (x, y)
-      Just p -> return p
+      Just p  -> return p
   let delta = (x - old_x, y - old_y)
   putMVar oldPos (x, y)
   addEvent events $ MouseMove (x, y) delta
@@ -172,7 +172,7 @@ replaceMVar mvar val = tryTakeMVar mvar >> putMVar mvar val
 addEvent :: MVar [a] -> a -> IO ()
 addEvent mvar val =
   tryTakeMVar mvar >>= \xs -> case xs of
-    Nothing -> putMVar mvar [val]
+    Nothing     -> putMVar mvar [val]
     Just events -> putMVar mvar (val : events)
 
 -- Input
@@ -198,7 +198,8 @@ processKeys window = foldM f []
     f acc (key, result) = do
       isDown <-
         fmap (== GLFW.KeyState'Pressed) $
-          gameIO . GLFW.getKey window . toGLFWkey $ key
+          gameIO . GLFW.getKey window . toGLFWkey $
+            key
       return $ if isDown then result : acc else acc
 
 -- | Process the mouse buttons, returning those values for which their
@@ -209,7 +210,8 @@ processButtons window = foldM f []
     f acc (button, result) = do
       isDown <-
         fmap (== GLFW.MouseButtonState'Pressed) $
-          gameIO . GLFW.getMouseButton window . toGLFWbutton $ button
+          gameIO . GLFW.getMouseButton window . toGLFWbutton $
+            button
       return $ if isDown then result : acc else acc
 
 data InputEvent
@@ -290,61 +292,61 @@ type MousePos = (Double, Double)
 type MouseDelta = (Double, Double)
 
 fromGLFWkey :: GLFW.Key -> Key
-fromGLFWkey GLFW.Key'A = KEY_A
-fromGLFWkey GLFW.Key'B = KEY_B
-fromGLFWkey GLFW.Key'C = KEY_C
-fromGLFWkey GLFW.Key'D = KEY_D
-fromGLFWkey GLFW.Key'E = KEY_E
-fromGLFWkey GLFW.Key'F = KEY_F
-fromGLFWkey GLFW.Key'G = KEY_G
-fromGLFWkey GLFW.Key'H = KEY_H
-fromGLFWkey GLFW.Key'I = KEY_I
-fromGLFWkey GLFW.Key'J = KEY_J
-fromGLFWkey GLFW.Key'K = KEY_K
-fromGLFWkey GLFW.Key'L = KEY_L
-fromGLFWkey GLFW.Key'M = KEY_M
-fromGLFWkey GLFW.Key'N = KEY_N
-fromGLFWkey GLFW.Key'O = KEY_O
-fromGLFWkey GLFW.Key'P = KEY_P
-fromGLFWkey GLFW.Key'Q = KEY_Q
-fromGLFWkey GLFW.Key'R = KEY_R
-fromGLFWkey GLFW.Key'S = KEY_S
-fromGLFWkey GLFW.Key'T = KEY_T
-fromGLFWkey GLFW.Key'U = KEY_U
-fromGLFWkey GLFW.Key'V = KEY_V
-fromGLFWkey GLFW.Key'W = KEY_W
-fromGLFWkey GLFW.Key'X = KEY_X
-fromGLFWkey GLFW.Key'Y = KEY_Y
-fromGLFWkey GLFW.Key'Z = KEY_Z
-fromGLFWkey GLFW.Key'0 = KEY_0
-fromGLFWkey GLFW.Key'1 = KEY_1
-fromGLFWkey GLFW.Key'2 = KEY_2
-fromGLFWkey GLFW.Key'3 = KEY_3
-fromGLFWkey GLFW.Key'4 = KEY_4
-fromGLFWkey GLFW.Key'5 = KEY_5
-fromGLFWkey GLFW.Key'6 = KEY_6
-fromGLFWkey GLFW.Key'7 = KEY_7
-fromGLFWkey GLFW.Key'8 = KEY_8
-fromGLFWkey GLFW.Key'9 = KEY_9
-fromGLFWkey GLFW.Key'Space = KEY_SPACE
-fromGLFWkey GLFW.Key'F1 = KEY_F1
-fromGLFWkey GLFW.Key'F2 = KEY_F2
-fromGLFWkey GLFW.Key'F3 = KEY_F3
-fromGLFWkey GLFW.Key'F4 = KEY_F4
-fromGLFWkey GLFW.Key'F5 = KEY_F5
-fromGLFWkey GLFW.Key'F6 = KEY_F6
-fromGLFWkey GLFW.Key'F7 = KEY_F7
-fromGLFWkey GLFW.Key'F8 = KEY_F8
-fromGLFWkey GLFW.Key'F9 = KEY_F9
-fromGLFWkey GLFW.Key'F10 = KEY_F10
-fromGLFWkey GLFW.Key'F11 = KEY_F11
-fromGLFWkey GLFW.Key'F12 = KEY_F12
+fromGLFWkey GLFW.Key'A      = KEY_A
+fromGLFWkey GLFW.Key'B      = KEY_B
+fromGLFWkey GLFW.Key'C      = KEY_C
+fromGLFWkey GLFW.Key'D      = KEY_D
+fromGLFWkey GLFW.Key'E      = KEY_E
+fromGLFWkey GLFW.Key'F      = KEY_F
+fromGLFWkey GLFW.Key'G      = KEY_G
+fromGLFWkey GLFW.Key'H      = KEY_H
+fromGLFWkey GLFW.Key'I      = KEY_I
+fromGLFWkey GLFW.Key'J      = KEY_J
+fromGLFWkey GLFW.Key'K      = KEY_K
+fromGLFWkey GLFW.Key'L      = KEY_L
+fromGLFWkey GLFW.Key'M      = KEY_M
+fromGLFWkey GLFW.Key'N      = KEY_N
+fromGLFWkey GLFW.Key'O      = KEY_O
+fromGLFWkey GLFW.Key'P      = KEY_P
+fromGLFWkey GLFW.Key'Q      = KEY_Q
+fromGLFWkey GLFW.Key'R      = KEY_R
+fromGLFWkey GLFW.Key'S      = KEY_S
+fromGLFWkey GLFW.Key'T      = KEY_T
+fromGLFWkey GLFW.Key'U      = KEY_U
+fromGLFWkey GLFW.Key'V      = KEY_V
+fromGLFWkey GLFW.Key'W      = KEY_W
+fromGLFWkey GLFW.Key'X      = KEY_X
+fromGLFWkey GLFW.Key'Y      = KEY_Y
+fromGLFWkey GLFW.Key'Z      = KEY_Z
+fromGLFWkey GLFW.Key'0      = KEY_0
+fromGLFWkey GLFW.Key'1      = KEY_1
+fromGLFWkey GLFW.Key'2      = KEY_2
+fromGLFWkey GLFW.Key'3      = KEY_3
+fromGLFWkey GLFW.Key'4      = KEY_4
+fromGLFWkey GLFW.Key'5      = KEY_5
+fromGLFWkey GLFW.Key'6      = KEY_6
+fromGLFWkey GLFW.Key'7      = KEY_7
+fromGLFWkey GLFW.Key'8      = KEY_8
+fromGLFWkey GLFW.Key'9      = KEY_9
+fromGLFWkey GLFW.Key'Space  = KEY_SPACE
+fromGLFWkey GLFW.Key'F1     = KEY_F1
+fromGLFWkey GLFW.Key'F2     = KEY_F2
+fromGLFWkey GLFW.Key'F3     = KEY_F3
+fromGLFWkey GLFW.Key'F4     = KEY_F4
+fromGLFWkey GLFW.Key'F5     = KEY_F5
+fromGLFWkey GLFW.Key'F6     = KEY_F6
+fromGLFWkey GLFW.Key'F7     = KEY_F7
+fromGLFWkey GLFW.Key'F8     = KEY_F8
+fromGLFWkey GLFW.Key'F9     = KEY_F9
+fromGLFWkey GLFW.Key'F10    = KEY_F10
+fromGLFWkey GLFW.Key'F11    = KEY_F11
+fromGLFWkey GLFW.Key'F12    = KEY_F12
 fromGLFWkey GLFW.Key'Escape = KEY_ESC
-fromGLFWkey GLFW.Key'Up = KEY_UP
-fromGLFWkey GLFW.Key'Down = KEY_DOWN
-fromGLFWkey GLFW.Key'Left = KEY_LEFT
-fromGLFWkey GLFW.Key'Right = KEY_RIGHT
-fromGLFWkey _ = KEY_UNKNOWN
+fromGLFWkey GLFW.Key'Up     = KEY_UP
+fromGLFWkey GLFW.Key'Down   = KEY_DOWN
+fromGLFWkey GLFW.Key'Left   = KEY_LEFT
+fromGLFWkey GLFW.Key'Right  = KEY_RIGHT
+fromGLFWkey _               = KEY_UNKNOWN
 
 -- https://www.glfw.org/docs/3.3/group__buttons.html
 fromGLFWbutton :: GLFW.MouseButton -> MouseButton
@@ -353,60 +355,60 @@ fromGLFWbutton GLFW.MouseButton'2 = RMB
 fromGLFWbutton GLFW.MouseButton'3 = MMB
 
 toGLFWkey :: Key -> GLFW.Key
-toGLFWkey KEY_A = GLFW.Key'A
-toGLFWkey KEY_B = GLFW.Key'B
-toGLFWkey KEY_C = GLFW.Key'C
-toGLFWkey KEY_D = GLFW.Key'D
-toGLFWkey KEY_E = GLFW.Key'E
-toGLFWkey KEY_F = GLFW.Key'F
-toGLFWkey KEY_G = GLFW.Key'G
-toGLFWkey KEY_H = GLFW.Key'H
-toGLFWkey KEY_I = GLFW.Key'I
-toGLFWkey KEY_J = GLFW.Key'J
-toGLFWkey KEY_K = GLFW.Key'K
-toGLFWkey KEY_L = GLFW.Key'L
-toGLFWkey KEY_M = GLFW.Key'M
-toGLFWkey KEY_N = GLFW.Key'N
-toGLFWkey KEY_O = GLFW.Key'O
-toGLFWkey KEY_P = GLFW.Key'P
-toGLFWkey KEY_Q = GLFW.Key'Q
-toGLFWkey KEY_R = GLFW.Key'R
-toGLFWkey KEY_S = GLFW.Key'S
-toGLFWkey KEY_T = GLFW.Key'T
-toGLFWkey KEY_U = GLFW.Key'U
-toGLFWkey KEY_V = GLFW.Key'V
-toGLFWkey KEY_W = GLFW.Key'W
-toGLFWkey KEY_X = GLFW.Key'X
-toGLFWkey KEY_Y = GLFW.Key'Y
-toGLFWkey KEY_Z = GLFW.Key'Z
-toGLFWkey KEY_0 = GLFW.Key'0
-toGLFWkey KEY_1 = GLFW.Key'1
-toGLFWkey KEY_2 = GLFW.Key'2
-toGLFWkey KEY_3 = GLFW.Key'3
-toGLFWkey KEY_4 = GLFW.Key'4
-toGLFWkey KEY_5 = GLFW.Key'5
-toGLFWkey KEY_6 = GLFW.Key'6
-toGLFWkey KEY_7 = GLFW.Key'7
-toGLFWkey KEY_8 = GLFW.Key'8
-toGLFWkey KEY_9 = GLFW.Key'9
-toGLFWkey KEY_SPACE = GLFW.Key'Space
-toGLFWkey KEY_F1 = GLFW.Key'F1
-toGLFWkey KEY_F2 = GLFW.Key'F2
-toGLFWkey KEY_F3 = GLFW.Key'F3
-toGLFWkey KEY_F4 = GLFW.Key'F4
-toGLFWkey KEY_F5 = GLFW.Key'F5
-toGLFWkey KEY_F6 = GLFW.Key'F6
-toGLFWkey KEY_F7 = GLFW.Key'F7
-toGLFWkey KEY_F8 = GLFW.Key'F8
-toGLFWkey KEY_F9 = GLFW.Key'F9
-toGLFWkey KEY_F10 = GLFW.Key'F10
-toGLFWkey KEY_F11 = GLFW.Key'F11
-toGLFWkey KEY_F12 = GLFW.Key'F12
-toGLFWkey KEY_ESC = GLFW.Key'Escape
-toGLFWkey KEY_UP = GLFW.Key'Up
-toGLFWkey KEY_DOWN = GLFW.Key'Down
-toGLFWkey KEY_LEFT = GLFW.Key'Left
-toGLFWkey KEY_RIGHT = GLFW.Key'Right
+toGLFWkey KEY_A       = GLFW.Key'A
+toGLFWkey KEY_B       = GLFW.Key'B
+toGLFWkey KEY_C       = GLFW.Key'C
+toGLFWkey KEY_D       = GLFW.Key'D
+toGLFWkey KEY_E       = GLFW.Key'E
+toGLFWkey KEY_F       = GLFW.Key'F
+toGLFWkey KEY_G       = GLFW.Key'G
+toGLFWkey KEY_H       = GLFW.Key'H
+toGLFWkey KEY_I       = GLFW.Key'I
+toGLFWkey KEY_J       = GLFW.Key'J
+toGLFWkey KEY_K       = GLFW.Key'K
+toGLFWkey KEY_L       = GLFW.Key'L
+toGLFWkey KEY_M       = GLFW.Key'M
+toGLFWkey KEY_N       = GLFW.Key'N
+toGLFWkey KEY_O       = GLFW.Key'O
+toGLFWkey KEY_P       = GLFW.Key'P
+toGLFWkey KEY_Q       = GLFW.Key'Q
+toGLFWkey KEY_R       = GLFW.Key'R
+toGLFWkey KEY_S       = GLFW.Key'S
+toGLFWkey KEY_T       = GLFW.Key'T
+toGLFWkey KEY_U       = GLFW.Key'U
+toGLFWkey KEY_V       = GLFW.Key'V
+toGLFWkey KEY_W       = GLFW.Key'W
+toGLFWkey KEY_X       = GLFW.Key'X
+toGLFWkey KEY_Y       = GLFW.Key'Y
+toGLFWkey KEY_Z       = GLFW.Key'Z
+toGLFWkey KEY_0       = GLFW.Key'0
+toGLFWkey KEY_1       = GLFW.Key'1
+toGLFWkey KEY_2       = GLFW.Key'2
+toGLFWkey KEY_3       = GLFW.Key'3
+toGLFWkey KEY_4       = GLFW.Key'4
+toGLFWkey KEY_5       = GLFW.Key'5
+toGLFWkey KEY_6       = GLFW.Key'6
+toGLFWkey KEY_7       = GLFW.Key'7
+toGLFWkey KEY_8       = GLFW.Key'8
+toGLFWkey KEY_9       = GLFW.Key'9
+toGLFWkey KEY_SPACE   = GLFW.Key'Space
+toGLFWkey KEY_F1      = GLFW.Key'F1
+toGLFWkey KEY_F2      = GLFW.Key'F2
+toGLFWkey KEY_F3      = GLFW.Key'F3
+toGLFWkey KEY_F4      = GLFW.Key'F4
+toGLFWkey KEY_F5      = GLFW.Key'F5
+toGLFWkey KEY_F6      = GLFW.Key'F6
+toGLFWkey KEY_F7      = GLFW.Key'F7
+toGLFWkey KEY_F8      = GLFW.Key'F8
+toGLFWkey KEY_F9      = GLFW.Key'F9
+toGLFWkey KEY_F10     = GLFW.Key'F10
+toGLFWkey KEY_F11     = GLFW.Key'F11
+toGLFWkey KEY_F12     = GLFW.Key'F12
+toGLFWkey KEY_ESC     = GLFW.Key'Escape
+toGLFWkey KEY_UP      = GLFW.Key'Up
+toGLFWkey KEY_DOWN    = GLFW.Key'Down
+toGLFWkey KEY_LEFT    = GLFW.Key'Left
+toGLFWkey KEY_RIGHT   = GLFW.Key'Right
 toGLFWkey KEY_UNKNOWN = GLFW.Key'Unknown
 
 -- https://www.glfw.org/docs/3.3/group__buttons.html

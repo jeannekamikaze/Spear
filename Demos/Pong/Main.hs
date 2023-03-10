@@ -2,20 +2,20 @@
 
 module Main where
 
-import Data.Maybe (mapMaybe)
-import Graphics.Rendering.OpenGL.GL (($=))
-import Graphics.Rendering.OpenGL.GL qualified as GL
-import Pong
-import Spear.App
-import Spear.Game
-import Spear.Math.AABB
-import Spear.Math.Spatial2
-import Spear.Math.Vector
-import Spear.Window
+import           Data.Maybe                   (mapMaybe)
+import           Graphics.Rendering.OpenGL.GL (($=))
+import qualified Graphics.Rendering.OpenGL.GL as GL
+import           Pong
+import           Spear.App
+import           Spear.Game
+import           Spear.Math.AABB
+import           Spear.Math.Spatial2
+import           Spear.Math.Vector
+import           Spear.Window
 
 data GameState = GameState
   { window :: Window,
-    world :: [GameObject]
+    world  :: [GameObject]
   }
 
 main =
@@ -53,7 +53,7 @@ renderGO go = do
       (xmin, ymin, xmax, ymax) = (f2d xmin', f2d ymin', f2d xmax', f2d ymax')
   GL.preservingMatrix $ do
     GL.translate (GL.Vector3 (f2d xcenter) (f2d ycenter) 0)
-    GL.renderPrimitive (GL.TriangleStrip) $ do
+    GL.renderPrimitive GL.TriangleStrip $ do
       GL.vertex (GL.Vertex2 xmin ymax)
       GL.vertex (GL.Vertex2 xmin ymin)
       GL.vertex (GL.Vertex2 xmax ymax)
@@ -71,13 +71,13 @@ procEvent _ = return ()
 
 translate = mapMaybe translate'
 
-translate' (KeyDown KEY_LEFT) = Just MoveLeft
+translate' (KeyDown KEY_LEFT)  = Just MoveLeft
 translate' (KeyDown KEY_RIGHT) = Just MoveRight
-translate' (KeyUp KEY_LEFT) = Just StopLeft
-translate' (KeyUp KEY_RIGHT) = Just StopRight
-translate' _ = Nothing
+translate' (KeyUp KEY_LEFT)    = Just StopLeft
+translate' (KeyUp KEY_RIGHT)   = Just StopRight
+translate' _                   = Nothing
 
-exitRequested = any (== (KeyDown KEY_ESC))
+exitRequested = elem (KeyDown KEY_ESC)
 
 f2d :: Float -> GL.GLdouble
 f2d = realToFrac

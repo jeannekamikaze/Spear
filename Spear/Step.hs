@@ -26,10 +26,10 @@ module Spear.Step
   )
 where
 
-import Data.List (foldl')
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Monoid
+import           Data.List   (foldl')
+import           Data.Map    (Map)
+import qualified Data.Map    as Map
+import           Data.Monoid
 
 type Elapsed = Double
 
@@ -51,11 +51,6 @@ instance Semigroup (Step s e a a) where
 instance Monoid (Step s e a a) where
   mempty = sid
 
-  mappend (Step s1) (Step s2) = Step $ \elapsed dt g e a ->
-    let (b, s1') = s1 elapsed dt g e a
-        (c, s2') = s2 elapsed dt g e b
-     in (c, mappend s1' s2')
-
 -- | Construct a step from a function.
 step :: (Elapsed -> Dt -> s -> e -> a -> (b, Step s e a b)) -> Step s e a b
 step = Step
@@ -70,11 +65,11 @@ spure f = Step $ \_ _ _ _ x -> (f x, spure f)
 
 -- | The step that returns the first component in the tuple.
 sfst :: Step s e (a, b) a
-sfst = spure $ \(a, _) -> a
+sfst = spure fst
 
 -- | The step that returns the second component in the tuple.
 ssnd :: Step s e (a, b) b
-ssnd = spure $ \(_, b) -> b
+ssnd = spure snd
 
 -- | Construct a step that folds a given list of inputs.
 --
@@ -97,7 +92,7 @@ sfold' ::
   a ->
   [e] ->
   (a, Step s (Maybe e) a a)
-sfold' elapsed dt g s a es = foldl' f (a', s') es
+sfold' elapsed dt g s a = foldl' f (a', s')
   where
     f (a, s) e = runStep s elapsed dt g (Just e) a
     (a', s') = runStep s elapsed dt g Nothing a
@@ -128,19 +123,19 @@ szip f (Step s1) (Step s2) = Step $ \elapsed dt g e d ->
 switch ::
   Eq e =>
   e ->
-  (Step s (Maybe e) a a) ->
+  Step s (Maybe e) a a ->
   e ->
-  (Step s (Maybe e) a a) ->
+  Step s (Maybe e) a a ->
   Step s (Maybe e) a a
 switch flag1 s1 flag2 s2 = switch' s1 flag1 s1 flag2 s2
 
 switch' ::
   Eq e =>
-  (Step s (Maybe e) a a) ->
+  Step s (Maybe e) a a ->
   e ->
-  (Step s (Maybe e) a a) ->
+  Step s (Maybe e) a a ->
   e ->
-  (Step s (Maybe e) a a) ->
+  Step s (Maybe e) a a ->
   Step s (Maybe e) a a
 switch' cur flag1 s1 flag2 s2 = Step $ \elapsed dt g e a ->
   case e of
@@ -148,13 +143,10 @@ switch' cur flag1 s1 flag2 s2 = Step $ \elapsed dt g e a ->
       let (a', s') = runStep cur elapsed dt g Nothing a
        in (a', switch' s' flag1 s1 flag2 s2)
     Just e' ->
-      let next =
-            if e' == flag1
-              then s1
-              else
-                if e' == flag2
-                  then s2
-                  else cur
+      let next
+            | e' == flag1 = s1
+            | e' == flag2 = s2
+            | otherwise = cur
           (a', s') = runStep next elapsed dt g e a
        in (a', switch' s' flag1 s1 flag2 s2)
 
@@ -179,6 +171,6 @@ multiSwitch' curKey cur m = Step $ \elapsed dt g e a ->
           Just s ->
             let (a', s') = runStep s elapsed dt g e a
                 m' = case curKey of
-                  Nothing -> m
+                  Nothing  -> m
                   Just key -> Map.insert key cur m
              in (a', multiSwitch' e s' m')

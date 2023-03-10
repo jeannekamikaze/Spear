@@ -6,11 +6,11 @@ module Spear.App
   )
 where
 
-import Control.Monad
-import GHC.Float
-import Spear.Game
-import Spear.Sys.Timer as Timer
-import Spear.Window
+import           Control.Monad
+import           GHC.Float
+import           Spear.Game
+import           Spear.Sys.Timer as Timer
+import           Spear.Window
 
 maxFPS = 60
 

@@ -60,8 +60,8 @@ update elapsed dt evts gos go =
    in go' {gostep = s'}
 
 ballBox, padBox :: AABB2
-ballBox = AABB2 (vec2 (- s) (- s)) (vec2 s s) where s = ballSize
-padBox = AABB2 (- padSize) padSize
+ballBox = AABB2 (vec2 (-s) (-s)) (vec2 s s) where s = ballSize
+padBox = AABB2 (-padSize) padSize
 
 obj2 = obj2FromVectors unitx2 unity2
 
@@ -80,8 +80,8 @@ collideBall vel = step $ \_ dt gos _ ball ->
   let (AABB2 pmin pmax) = aabb ball `aabbAdd` pos ball
       collideCol = x pmin < 0 || x pmax > 1
       collideRow = y pmin < 0 || y pmax > 1 || any (collide ball) (tail gos)
-      negx v@(Vector2 x y) = if collideCol then vec2 (- x) y else v
-      negy v@(Vector2 x y) = if collideRow then vec2 x (- y) else v
+      negx v@(Vector2 x y) = if collideCol then vec2 (-x) y else v
+      negy v@(Vector2 x y) = if collideRow then vec2 x (-y) else v
       vel' = negx . negy $ vel
       delta = dt -- A small delta to apply when collision occurs.
       adjustX = if collideCol then scale delta (vec2 (x vel) 0) else vec2 0 0
@@ -94,7 +94,8 @@ collide go1 go2 =
       (AABB2 (Vector2 xmin2 ymin2) (Vector2 xmax2 ymax2)) =
         aabb go2 `aabbAdd` pos go2
    in not $
-        xmax1 < xmin2 || xmin1 > xmax2
+        xmax1 < xmin2
+          || xmin1 > xmax2
           || ymax1 < ymin2
           || ymin1 > ymax2
 
@@ -122,7 +123,7 @@ stepPlayer = sfold moveGO .> clamp
 
 moveGO =
   mconcat
-    [ switch StopLeft sid MoveLeft (moveGO' $ vec2 (- playerSpeed) 0),
+    [ switch StopLeft sid MoveLeft (moveGO' $ vec2 (-playerSpeed) 0),
       switch StopRight sid MoveRight (moveGO' $ vec2 playerSpeed 0)
     ]
 

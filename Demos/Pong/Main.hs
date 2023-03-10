@@ -1,8 +1,10 @@
+{-# LANGUAGE ImportQualifiedPost #-}
+
 module Main where
 
 import Data.Maybe (mapMaybe)
 import Graphics.Rendering.OpenGL.GL (($=))
-import qualified Graphics.Rendering.OpenGL.GL as GL
+import Graphics.Rendering.OpenGL.GL qualified as GL
 import Pong
 import Spear.App
 import Spear.Game

@@ -117,7 +117,7 @@ library
     ghc-prof-options: -O2 -fprof-auto -fprof-cafs
 
 executable pong
-  hs-source-dirs:      demos/pong
+  hs-source-dirs:      Demos/Pong
   main-is:             Main.hs
   other-modules:       Pong
   build-depends:       base, Spear, OpenGL

@@ -1,10 +1,9 @@
-{-# LANGUAGE ImportQualifiedPost #-}
-
 module Main where
 
-import           Data.Maybe                   (mapMaybe)
-import           Graphics.Rendering.OpenGL.GL (($=))
-import qualified Graphics.Rendering.OpenGL.GL as GL
+import           Data.Maybe                              (mapMaybe)
+import           Graphics.Rendering.OpenGL.GL            (($=))
+import qualified Graphics.Rendering.OpenGL.GL            as GL
+import           Graphics.Rendering.OpenGL.GL.VertexSpec (currentColor)
 import           Pong
 import           Spear.App
 import           Spear.Game
@@ -23,12 +22,7 @@ main =
     loop step
 
 initGame :: Window -> Game () GameState
-initGame window = do
-  gameIO $ do
-    GL.clearColor $= GL.Color4 0.7 0.5 0.7 1.0
-    GL.matrixMode $= GL.Modelview 0
-    GL.loadIdentity
-  return $ GameState window newWorld
+initGame window = return $ GameState window newWorld
 
 step :: Elapsed -> Dt -> [InputEvent] -> Game GameState Bool
 step elapsed dt inputEvents = do
@@ -43,8 +37,28 @@ step elapsed dt inputEvents = do
   return (not $ exitRequested inputEvents)
 
 render world = do
+  -- Clear the background to a different colour than the playable area to make
+  -- the latter distinguishable.
+  GL.clearColor $= GL.Color4 0.2 0.2 0.2 0.0
   GL.clear [GL.ColorBuffer]
+  GL.matrixMode $= GL.Modelview 0
+  GL.loadIdentity
+  renderBackground
+  -- Draw objects.
+  GL.currentColor $= GL.Color4 1.0 1.0 1.0 1.0
   mapM_ renderGO world
+
+renderBackground :: IO ()
+renderBackground =
+  let pmin = 0 :: Float
+      pmax = 1 :: Float
+  in do
+    GL.currentColor $= GL.Color4 0.7 0.5 0.7 1.0
+    GL.renderPrimitive GL.TriangleStrip $ do
+        GL.vertex (GL.Vertex2 pmin pmax)
+        GL.vertex (GL.Vertex2 pmin pmin)
+        GL.vertex (GL.Vertex2 pmax pmax)
+        GL.vertex (GL.Vertex2 pmax pmin)
 
 renderGO :: GameObject -> IO ()
 renderGO go = do
@@ -61,12 +75,19 @@ renderGO go = do
 
 process = mapM_ procEvent
 
-procEvent (Resize w h) = do
-  GL.viewport $= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
-  GL.matrixMode $= GL.Projection
-  GL.loadIdentity
-  GL.ortho 0 1 0 1 (-1) 1
-  GL.matrixMode $= GL.Modelview 0
+procEvent (Resize w h) =
+  let r = (fromIntegral w) / (fromIntegral h)
+      pad    = if r > 1 then (r-1) / 2 else (1/r - 1) / 2
+      left   = if r > 1 then -pad else 0
+      right  = if r > 1 then 1 + pad else 1
+      bottom = if r > 1 then 0 else -pad
+      top    = if r > 1 then 1 else 1 + pad
+  in do
+    GL.viewport $= (GL.Position 0 0, GL.Size (fromIntegral w) (fromIntegral h))
+    GL.matrixMode $= GL.Projection
+    GL.loadIdentity
+    GL.ortho left right bottom top (-1) 1
+    GL.matrixMode $= GL.Modelview 0
 procEvent _ = return ()
 
 translate = mapMaybe translate'

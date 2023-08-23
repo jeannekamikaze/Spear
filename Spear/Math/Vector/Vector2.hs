@@ -14,10 +14,10 @@ module Spear.Math.Vector.Vector2
 )
 where
 
-import Spear.Math.Vector.Class
+import           Spear.Math.Vector.Vector
 
-import Foreign.C.Types (CFloat)
-import Foreign.Storable
+import           Foreign.C.Types          (CFloat)
+import           Foreign.Storable
 
 type Right2 = Vector2
 type Up2 = Vector2
@@ -50,7 +50,7 @@ instance Ord Vector2 where
     min (Vector2 ax ay) (Vector2 bx by) = Vector2 (Prelude.min ax bx) (Prelude.min ay by)
 
 
-instance VectorClass Vector2 where
+instance Vector Vector2 where
          {-# INLINABLE fromList #-}
          fromList (ax:ay:_) = Vector2 ax ay
 
@@ -104,26 +104,18 @@ instance Storable Vector2 where
         pokeByteOff ptr sizeFloat ay
 
 
--- | Get the vector's x coordinate.
-
-
-
 -- | Unit vector along the X axis.
 unitx2 = Vector2 1 0
-
 
 -- | Unit vector along the Y axis.
 unity2 = Vector2 0 1
 
-
 -- | Zero vector.
 zero2 = Vector2 0 0
-
 
 -- | Create a vector from the given values.
 vec2 :: Float -> Float -> Vector2
 vec2 ax ay = Vector2 ax ay
-
 
 -- | Compute a vector perpendicular to the given one, satisfying:
 --

@@ -31,6 +31,7 @@ where
 import           Control.Concurrent.MVar
 import           Control.Exception
 import           Control.Monad           (foldM, unless, void, when)
+import           Data.Functor            ((<&>))
 import           Data.Maybe              (fromJust, fromMaybe, isJust)
 import qualified Graphics.UI.GLFW        as GLFW
 import           Spear.Game

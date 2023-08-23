@@ -12,10 +12,10 @@ module Spear.Math.Vector.Vector4
 where
 
 
-import Spear.Math.Vector.Class
+import           Spear.Math.Vector.Vector
 
-import Foreign.C.Types (CFloat)
-import Foreign.Storable
+import           Foreign.C.Types          (CFloat)
+import           Foreign.Storable
 
 
 -- | Represents a vector in 3D.
@@ -73,7 +73,7 @@ instance Ord Vector4 where
         Vector4 (Prelude.max ax bx) (Prelude.max ay by) (Prelude.max az bz) (Prelude.min aw bw)
 
 
-instance VectorClass Vector4 where
+instance Vector Vector4 where
          {-# INLINABLE fromList #-}
          fromList (ax:ay:az:aw:_) = Vector4 ax ay az aw
 

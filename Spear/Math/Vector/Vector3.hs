@@ -18,10 +18,10 @@ module Spear.Math.Vector.Vector3
 where
 
 
-import Spear.Math.Vector.Class
+import           Spear.Math.Vector.Vector
 
-import Foreign.C.Types (CFloat)
-import Foreign.Storable
+import           Foreign.C.Types          (CFloat)
+import           Foreign.Storable
 
 type Right3 = Vector3
 type Up3 = Vector3
@@ -76,7 +76,7 @@ instance Ord Vector3 where
     min (Vector3 ax ay az) (Vector3 bx by bz) = Vector3 (Prelude.min ax bx) (Prelude.min ay by) (Prelude.min az bz)
 
 
-instance VectorClass Vector3 where
+instance Vector Vector3 where
          {-# INLINABLE fromList #-}
          fromList (ax:ay:az:_) = Vector3 ax ay az
 

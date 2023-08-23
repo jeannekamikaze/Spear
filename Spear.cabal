@@ -52,7 +52,7 @@ library
                      Spear.Math.Triangle
                      Spear.Math.Utils
                      Spear.Math.Vector
-                     Spear.Math.Vector.Class
+                     Spear.Math.Vector.Vector
                      Spear.Math.Vector.Vector2
                      Spear.Math.Vector.Vector3
                      Spear.Math.Vector.Vector4

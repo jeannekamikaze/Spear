@@ -1,9 +1,10 @@
 Spear
 =====
 
-Spear is a simple 2.5D game engine I have been working on since I started learning Haskell.
-The project's goal is to put what I learn into practise, to explore how far I can get with Haskell and if the results
-are decent enough, to build one or two game demos along the way.
+Spear is a simple 2.5D game engine I have been working on since I started
+learning Haskell. The project's goal is to put what I learn into practise, to
+explore how far I can get with Haskell and if the results are decent enough, to
+build one or two game demos along the way.
 
 Installation (Ubuntu)
 ---------------------

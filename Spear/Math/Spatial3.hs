@@ -1,179 +1,153 @@
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+
 module Spear.Math.Spatial3
-(
-    Spatial3(..)
-,   Obj3
-,   move
-,   moveFwd
-,   moveBack
-,   moveLeft
-,   moveRight
-,   rotate
-,   pitch
-,   yaw
-,   roll
-,   pos
-,   fwd
-,   up
-,   right
-,   transform
-,   setTransform
-,   setPos
-,   lookAt
-,   Spear.Math.Spatial3.orbit
-,   fromVectors
-,   fromTransform
-)
 where
 
-import Spear.Math.Vector
-import qualified Spear.Math.Matrix4 as M
+import           Spear.Math.Algebra
+import qualified Spear.Math.Matrix4 as Matrix4
+import           Spear.Math.Matrix4 (Matrix4)
+import           Spear.Math.Spatial
+import           Spear.Math.Vector
+import           Spear.Prelude
 
-type Matrix4 = M.Matrix4
 
-class Spatial3 s where
+data Rotation3
+    = Pitch Angle
+    | Yaw   Angle
+    | Roll  Angle
+    | AxisAngle Vector3 Angle
+    | RotationMatrix Matrix4
 
-      -- | Gets the spatial's Obj3.
-      getObj3 :: s -> Obj3
 
-      -- | Set the spatial's Obj3.
-      setObj3 :: s -> Obj3 -> s
+-- | A 3D transform.
+newtype Transform3 = Transform3 { transform3Matrix :: Matrix4 } deriving Show
 
--- | Move the spatial.
-move :: Spatial3 s => Vector3 -> s -> s
-move d s = let o = getObj3 s in setObj3 s $ o { p = p o + d }
 
--- | Move the spatial forwards.
-moveFwd :: Spatial3 s => Float -> s -> s
-moveFwd a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (f o) }
+type Positional3 a = Positional a Vector3
+type Rotational3 a = Rotational a Angle
+type Spatial3    s = Spatial    s Vector3 Rotation3 Transform3
 
--- | Move the spatial backwards.
-moveBack :: Spatial3 s => Float -> s -> s
-moveBack a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (f o) }
 
--- | Make the spatial strafe left.
-moveLeft :: Spatial3 s => Float -> s -> s
-moveLeft a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale (-a) (r o) }
+instance Positional Transform3 Vector3 where
+    setPosition p (Transform3 matrix) =
+        Transform3 . Matrix4.setPosition p $ matrix
 
--- | Make the spatial Strafe right.
-moveRight :: Spatial3 s => Float -> s -> s
-moveRight a s = let o = getObj3 s in setObj3 s $ o { p = p o + scale a (r o) }
+    position = Matrix4.position . transform3Matrix
 
--- | Rotate the spatial about the given axis.
-rotate :: Spatial3 s => Vector3 -> Float -> s -> s
-rotate axis a s =
-       let t = transform s
-           axis' = M.inverseTransform t `M.muld` axis
-       in setTransform (t * M.axisAngle axis' a) s
+    translate v t@(Transform3 matrix) = setPosition (Matrix4.position matrix + v) t
 
--- | Rotate the spatial about its local X axis.
-pitch :: Spatial3 s => Float -> s -> s
-pitch a s =
-      let o  = getObj3 s
-          a' = toRAD a
-          sa = sin a'
-          ca = cos a'
-          f' = normalise $ scale ca (f o) + scale sa (u o)
-          u' = normalise $ r o `cross` f'
-      in  setObj3 s $ o { u = u', f = f' }
 
--- | Rotate the spatial about its local Y axis.
-yaw :: Spatial3 s => Float -> s -> s
-yaw a s =
-    let o  = getObj3 s
-        a' = toRAD a
-        sa = sin a'
-        ca = cos a'
-        r' = normalise $ scale ca (r o) + scale sa (f o)
-        f' = normalise $ u o `cross` r'
-    in  setObj3 s $ o { r = r', f = f' }
+instance Rotational Transform3 Vector3 Rotation3 where
+    setRotation rotation _ = Transform3 $ case rotation of
+        Pitch     angle       -> Matrix4.rotX angle
+        Yaw       angle       -> Matrix4.rotY angle
+        Roll      angle       -> Matrix4.rotZ angle
+        AxisAngle axis angle  -> Matrix4.axisAngle axis angle
+        RotationMatrix matrix -> matrix
 
--- | Rotate the spatial about its local Z axis.
-roll :: Spatial3 s => Float -> s -> s
-roll a s =
-     let o  = getObj3 s
-         a' = toRAD a
-         sa = sin a'
-         ca = cos a'
-         u' = normalise $ scale ca (u o) - scale sa (r o)
-         r' = normalise $ f o `cross` u'
-     in  setObj3 s $ o { r = r', u = u' }
+    rotation (Transform3 matrix) = RotationMatrix $ Matrix4.rotation matrix
 
--- | Get the spatial's position.
-pos :: Spatial3 s => s -> Vector3
-pos = p . getObj3
+    rotate rotation t@(Transform3 matrix) = case rotation of
+        Pitch angle          -> pitch angle t
+        Yaw angle            -> yaw   angle t
+        Roll angle           -> roll  angle t
+        AxisAngle axis angle -> Transform3 $ Matrix4.axisAngle axis angle * matrix
+        RotationMatrix rot   -> Transform3 $ rot * matrix
 
--- | Get the spatial's forward vector.
-fwd :: Spatial3 s => s -> Vector3
-fwd = f . getObj3
+    right (Transform3 matrix) = Matrix4.right matrix
 
--- | Get the spatial's up vector.
-up :: Spatial3 s => s -> Vector3
-up = u . getObj3
+    up (Transform3 matrix) = Matrix4.up matrix
 
--- | Get the spatial's right vector.
-right :: Spatial3 s => s -> Vector3
-right = r . getObj3
+    forward (Transform3 matrix )= Matrix4.forward matrix
 
--- | Get the spatial's transform.
-transform :: Spatial3 s => s -> Matrix4
-transform s = let o = getObj3 s in M.transform (r o) (u o) (scale (-1) $ f o) (p o)
+    setForward forward (Transform3 matrix) =
+        let right = forward `cross` unity3
+            up    = right `cross` forward
+       in Transform3 $ Matrix4.transform right up (neg forward) (Matrix4.position matrix)
 
--- | Set the spatial's transform.
-setTransform :: Spatial3 s => Matrix4 -> s -> s
-setTransform t s =
-             let o = Obj3 (M.right t) (M.up t) (scale (-1) $ M.forward t) (M.position t)
-             in setObj3 s o
 
--- | Set the spatial's position.
-setPos :: Spatial3 s => Vector3 -> s -> s
-setPos pos s = setObj3 s $ (getObj3 s) { p = pos }
+instance Spatial Transform3 Vector3 Rotation3 Matrix4 where
+    setTransform matrix _ = Transform3 $ Matrix4.transform
+        (Matrix4.right matrix)
+        (Matrix4.up matrix)
+        (neg $ Matrix4.forward matrix)
+        (Matrix4.position matrix)
 
--- | Make the spatial look at the given point.
-lookAt :: Spatial3 s => Vector3 -> s -> s
-lookAt pt s =
-       let position = pos s
-           fwd      = normalise $ pt - position
-           r        = fwd `cross` unity3
-           u        = r `cross` fwd
-       in setTransform (M.transform r u (-fwd) position) s
+    transform (Transform3 matrix) = Matrix4.transform
+        (Matrix4.right matrix)
+        (Matrix4.up matrix)
+        (neg $ Matrix4.forward matrix)
+        (Matrix4.position matrix)
 
--- | Make the spatial orbit around the given point
-orbit :: Spatial3 s
+
+class Has3dTransform a where
+    -- | Set the object's 3d transform.
+    set3dTransform :: Transform3 -> a -> a
+
+    -- | Get the object's 3d transform.
+    transform3 :: a -> Transform3
+
+
+with3dTransform :: Has3dTransform a => (Transform3 -> Transform3) -> a -> a
+with3dTransform f obj = set3dTransform (f $ transform3 obj) obj
+
+-- | Build a 3d transform from right, up, forward and position vectors.
+newTransform3 :: Vector3 -> Vector3 -> Vector3 -> Vector3 -> Transform3
+newTransform3 right up forward pos = Transform3 $
+    Matrix4.transform right up (neg forward) pos
+
+-- | Rotate the object about the given axis.
+rotate3 :: Vector3 -> Float -> Transform3 -> Transform3
+rotate3 axis angle (Transform3 matrix) =
+       let axis' = Matrix4.inverseTransform matrix `Matrix4.muld` axis
+       in Transform3 $ matrix * Matrix4.axisAngle axis' angle
+
+-- | Rotate the object about its local X axis.
+pitch :: Float -> Transform3 -> Transform3
+pitch angle (Transform3 matrix) =
+    let sa = sin angle
+        ca = cos angle
+        f' = normalise $ (ca * Matrix4.forward matrix) + (sa * Matrix4.up matrix)
+        u' = normalise $ Matrix4.right matrix `cross` f'
+    in Transform3 . Matrix4.setUp u' . Matrix4.setForward f' $ matrix
+
+-- | Rotate the object about its local Y axis.
+yaw :: Float -> Transform3 -> Transform3
+yaw angle (Transform3 matrix) =
+    let sa = sin angle
+        ca = cos angle
+        r' = normalise $ (ca * Matrix4.right matrix) + (sa * Matrix4.forward matrix)
+        f' = normalise $ Matrix4.up matrix `cross` r'
+    in Transform3 . Matrix4.setRight r' . Matrix4.setForward f' $ matrix
+
+-- | Rotate the object about its local Z axis.
+roll :: Float -> Transform3 -> Transform3
+roll angle (Transform3 matrix) =
+    let sa = sin angle
+        ca = cos angle
+        u' = normalise $ (ca * Matrix4.up matrix) - (sa * Matrix4.right matrix)
+        r' = normalise $ Matrix4.forward matrix `cross` u'
+    in Transform3 . Matrix4.setRight r' . Matrix4.setUp u' $ matrix
+
+
+-- | Make the object orbit around the given point
+orbit :: Positional a Vector3
       => Vector3 -- ^ Target point
       -> Float   -- ^ Horizontal angle
       -> Float   -- ^ Vertical angle
       -> Float   -- ^ Orbit radius.
-      -> s
-      -> s
-
-orbit pt anglex angley radius s =
-      let ax = anglex * pi / 180
-          ay = angley * pi / 180
-          sx = sin ax
-          sy = sin ay
-          cx = cos ax
-          cy = cos ay
-          px = (x pt) + radius*cy*sx
-          py = (y pt) + radius*sy
-          pz = (z pt) + radius*cx*cy
-      in setPos (vec3 px py pz) s
-
--- | An object in 3D space.
-data Obj3 = Obj3
-     { r :: Vector3
-     , u :: Vector3
-     , f :: Vector3
-     , p :: Vector3
-     } deriving Show
-
-instance Spatial3 Obj3 where
-         getObj3 = id
-         setObj3 _ o' = o'
-
-fromVectors :: Right3 -> Up3 -> Forward3 -> Position3 -> Obj3
-fromVectors = Obj3
-
-fromTransform :: Matrix4 -> Obj3
-fromTransform m = Obj3 (M.right m) (M.up m) (M.forward m) (M.position m)
-
-toRAD = (*pi) . (/180)
+      -> a
+      -> a
+orbit pt anglex angley radius =
+    let sx = sin anglex
+        sy = sin angley
+        cx = cos anglex
+        cy = cos angley
+        px = x pt + radius*cy*sx
+        py = y pt + radius*sy
+        pz = z pt + radius*cx*cy
+    in setPosition (vec3 px py pz)

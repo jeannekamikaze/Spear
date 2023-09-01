@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Spear.Math.Utils
 (
     Side(..)
@@ -7,9 +9,10 @@ module Spear.Math.Utils
 )
 where
 
-
-import Spear.Math.Matrix4 as M4
-import Spear.Math.Vector as V
+import           Spear.Math.Algebra
+import           Spear.Math.Matrix4 as M4
+import           Spear.Math.Vector  as V
+import           Spear.Prelude
 
 
 data Side = L | R deriving (Eq, Show)
@@ -33,6 +36,6 @@ viewToWorld2d p viewI =
         p1  = viewI `mulp` p1'
         p2  = p1 - M4.forward viewI
         lambda = (y p1 / (y p1 - y p2))
-        p'  = p1 + V.scale lambda (p2 - p1)
+        p'  = p1 + lambda * (p2 - p1)
     in
         vec2 (x p') (-z p')

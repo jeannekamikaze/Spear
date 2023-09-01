@@ -1,3 +1,7 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE TypeFamilies          #-}
+
 module Spear.Math.Matrix4
 (
     Matrix4
@@ -9,6 +13,7 @@ module Spear.Math.Matrix4
 ,   col0, col1, col2, col3
 ,   row0, row1, row2, row3
 ,   right, up, forward, position
+,   setRight, setUp, setForward, setPosition
     -- * Construction
 ,   mat4
 ,   mat4fromVec
@@ -50,10 +55,11 @@ module Spear.Math.Matrix4
 )
 where
 
+import           Spear.Math.Algebra hiding (mul)
+import           Spear.Math.Vector
+import           Spear.Prelude      hiding (mul)
 
-import Spear.Math.Vector
-
-import Foreign.Storable
+import           Foreign.Storable
 
 
 -- | Represents a 4x4 column major matrix.
@@ -66,7 +72,6 @@ data Matrix4 = Matrix4
 
 
 instance Show Matrix4 where
-
     show (Matrix4 m00 m10 m20 m30 m01 m11 m21 m31 m02 m12 m22 m32 m03 m13 m23 m33) =
         show' m00 ++ ", " ++ show' m10 ++ ", " ++ show' m20 ++ ", " ++ show' m30 ++ "\n" ++
         show' m01 ++ ", " ++ show' m11 ++ ", " ++ show' m21 ++ ", " ++ show' m31 ++ "\n" ++
@@ -76,7 +81,7 @@ instance Show Matrix4 where
             show' f = if abs f < 0.0000001 then "0" else show f
 
 
-instance Num Matrix4 where
+instance Addition Matrix4 Matrix4 where
     (Matrix4 a00 a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 a11 a12 a13 a14 a15)
         + (Matrix4 b00 b01 b02 b03 b04 b05 b06 b07 b08 b09 b10 b11 b12 b13 b14 b15)
             = Matrix4 (a00 + b00) (a01 + b01) (a02 + b02) (a03 + b03)
@@ -84,6 +89,8 @@ instance Num Matrix4 where
                       (a08 + b08) (a09 + b09) (a10 + b10) (a11 + b11)
                       (a12 + b12) (a13 + b13) (a14 + b14) (a15 + b15)
 
+
+instance Subtraction Matrix4 Matrix4 where
     (Matrix4 a00 a01 a02 a03 a04 a05 a06 a07 a08 a09 a10 a11 a12 a13 a14 a15)
         - (Matrix4 b00 b01 b02 b03 b04 b05 b06 b07 b08 b09 b10 b11 b12 b13 b14 b15)
             = Matrix4 (a00 - b00) (a01 - b01) (a02 - b02) (a03 - b03)
@@ -91,6 +98,8 @@ instance Num Matrix4 where
                       (a08 - b08) (a09 - b09) (a10 - b10) (a11 - b11)
                       (a12 - b12) (a13 - b13) (a14 - b14) (a15 - b15)
 
+
+instance Product Matrix4 Matrix4 Matrix4 where
     (Matrix4 a00 a10 a20 a30 a01 a11 a21 a31 a02 a12 a22 a32 a03 a13 a23 a33)
         * (Matrix4 b00 b10 b20 b30 b01 b11 b21 b31 b02 b12 b22 b32 b03 b13 b23 b33)
             = Matrix4 (a00 * b00 + a10 * b01 + a20 * b02 + a30 * b03)
@@ -113,11 +122,13 @@ instance Num Matrix4 where
                       (a03 * b20 + a13 * b21 + a23 * b22 + a33 * b23)
                       (a03 * b30 + a13 * b31 + a23 * b32 + a33 * b33)
 
-    abs = Spear.Math.Matrix4.map abs
 
-    signum = Spear.Math.Matrix4.map signum
-
-    fromInteger i = mat4 i' i' i' i' i' i' i' i' i' i' i' i' i' i' i' i' where i' = fromInteger i
+instance Product Matrix4 Float Matrix4 where
+    (Matrix4 a00 a10 a20 a30 a01 a11 a21 a31 a02 a12 a22 a32 a03 a13 a23 a33) * s =
+        Matrix4 (a00 * s) (a10 * s) (a20 * s) (a30 * s)
+                (a01 * s) (a11 * s) (a21 * s) (a31 * s)
+                (a02 * s) (a12 * s) (a22 * s) (a32 * s)
+                (a03 * s) (a13 * s) (a23 * s) (a33 * s)
 
 
 instance Storable Matrix4 where
@@ -150,22 +161,23 @@ col1 (Matrix4 _   a10 _   _   _   a11 _   _   _   a12 _   _   _   a13 _   _  ) =
 col2 (Matrix4 _   _   a20 _   _   _   a21 _   _   _   a22 _   _   _   a23 _  ) = vec4 a20 a21 a22 a23
 col3 (Matrix4 _   _   _   a30 _   _   _   a31 _   _   _   a32 _   _   _   a33) = vec4 a30 a31 a32 a33
 
-
 row0 (Matrix4 a00 a01 a02 a03 _   _   _   _   _   _   _   _   _   _   _   _  ) = vec4 a00 a01 a02 a03
 row1 (Matrix4 _   _   _   _   a10 a11 a12 a13 _   _   _   _   _   _   _   _  ) = vec4 a10 a11 a12 a13
 row2 (Matrix4 _   _   _   _   _   _   _   _   a20 a21 a22 a23 _   _   _   _  ) = vec4 a20 a21 a22 a23
 row3 (Matrix4 _   _   _   _   _   _   _   _   _   _   _   _   a30 a31 a32 a33) = vec4 a30 a31 a32 a33
-
 
 right    (Matrix4 a00 _   _   _   a01 _   _   _   a02 _   _   _   _   _   _   _) = vec3 a00 a01 a02
 up       (Matrix4 _   a10 _   _   _   a11 _   _   _   a12 _   _   _   _   _   _) = vec3 a10 a11 a12
 forward  (Matrix4 _   _   a20 _   _   _   a21 _   _   _   a22 _   _   _   _   _) = vec3 a20 a21 a22
 position (Matrix4 _   _   _   a30 _   _   _   a31 _   _   _   a32 _   _   _   _) = vec3 a30 a31 a32
 
+setRight    (Vector3 x y z) matrix = matrix { m00 = x, m01 = y, m02 = z }
+setUp       (Vector3 x y z) matrix = matrix { m10 = x, m11 = y, m12 = z }
+setForward  (Vector3 x y z) matrix = matrix { m20 = x, m21 = y, m22 = z }
+setPosition (Vector3 x y z) matrix = matrix { m30 = x, m31 = y, m32 = z }
 
 -- | Build a matrix from the specified values.
 mat4 = Matrix4
-
 
 -- | Build a matrix from four vectors in 4D.
 mat4fromVec :: Vector4 -> Vector4 -> Vector4 -> Vector4 -> Matrix4
@@ -175,20 +187,17 @@ mat4fromVec v0 v1 v2 v3 = Matrix4
     (z v0) (z v1) (z v2) (z v3)
     (w v0) (w v1) (w v2) (w v3)
 
-
 -- | Build a transformation 'Matrix4' from the given vectors.
 transform :: Vector3 -- ^ Right vector.
           -> Vector3 -- ^ Up vector.
           -> Vector3 -- ^ Forward vector.
           -> Vector3 -- ^ Position.
           -> Matrix4
-
 transform right up fwd pos = mat4
     (x right) (x up) (x fwd) (x pos)
     (y right) (y up) (y fwd) (y pos)
     (z right) (z up) (z fwd) (z pos)
            0      0       0       1
-
 
 -- | Get the translation part of the given transformation matrix.
 translation :: Matrix4 -> Matrix4
@@ -203,7 +212,6 @@ translation (Matrix4
     0   0   1   a32
     0   0   0   a33
 
-
 -- | Get the rotation part of the given transformation matrix.
 rotation :: Matrix4 -> Matrix4
 rotation (Matrix4
@@ -217,19 +225,16 @@ rotation (Matrix4
     a02 a12 a22 0
     a03 a13 a23 1
 
-
 -- | Build a transformation 'Matrix4' defined by the given position and target.
 lookAt :: Vector3 -- ^ Eye position.
        -> Vector3 -- ^ Target point.
        -> Matrix4
-
 lookAt pos target =
         let fwd = normalise $ target - pos
             r    = fwd `cross` unity3
             u    = r `cross` fwd
         in
             transform r u (-fwd) pos
-
 
 -- | Zip two matrices together with the specified function.
 zipWith :: (Float -> Float -> Float) -> Matrix4 -> Matrix4 -> Matrix4
@@ -239,7 +244,6 @@ zipWith f a b = Matrix4
     (f (m02 a) (m02 b)) (f (m12 a) (m12 b)) (f (m22 a) (m22 b)) (f (m32 a) (m32 b))
     (f (m03 a) (m03 b)) (f (m13 a) (m13 b)) (f (m23 a) (m23 b)) (f (m33 a) (m33 b))
 
-
 -- | Map the specified function to the specified matrix.
 map :: (Float -> Float) -> Matrix4 -> Matrix4
 map f m = Matrix4
@@ -247,7 +251,6 @@ map f m = Matrix4
     (f . m01 $ m) (f . m11 $ m) (f . m21 $ m) (f . m31 $ m)
     (f . m02 $ m) (f . m12 $ m) (f . m22 $ m) (f . m32 $ m)
     (f . m03 $ m) (f . m13 $ m) (f . m23 $ m) (f . m33 $ m)
-
 
 -- | Return the identity matrix.
 id :: Matrix4
@@ -257,7 +260,6 @@ id = mat4
     0   0   1   0
     0   0   0   1
 
-
 -- | Create a translation matrix.
 transl :: Float -> Float -> Float -> Matrix4
 transl x y z = mat4
@@ -266,7 +268,6 @@ transl x y z = mat4
     0   0   1   z
     0   0   0   1
 
-
 -- | Create a translation matrix.
 translv :: Vector3 -> Matrix4
 translv v = mat4
@@ -274,7 +275,6 @@ translv v = mat4
     0    1    0    (y v)
     0    0    1    (z v)
     0    0    0    1
-
 
 -- | Create a rotation matrix rotating about the X axis.
 -- The given angle must be in degrees.
@@ -285,9 +285,8 @@ rotX angle = mat4
     0    s    c    0
     0    0    0    1
     where
-        s = sin . toRAD $ angle
-        c = cos . toRAD $ angle
-
+        s = sin angle
+        c = cos angle
 
 -- | Create a rotation matrix rotating about the Y axis.
 -- The given angle must be in degrees.
@@ -298,9 +297,8 @@ rotY angle = mat4
     (-s) 0    c    0
     0    0    0    1
     where
-        s = sin . toRAD $ angle
-        c = cos . toRAD $ angle
-
+        s = sin angle
+        c = cos angle
 
 -- | Create a rotation matrix rotating about the Z axis.
 -- The given angle must be in degrees.
@@ -311,9 +309,8 @@ rotZ angle = mat4
     0    0    1    0
     0    0    0    1
     where
-        s = sin . toRAD $ angle
-        c = cos . toRAD $ angle
-
+        s = sin angle
+        c = cos angle
 
 -- | Create a rotation matrix rotating about the specified axis.
 -- The given angle must be in degrees.
@@ -327,16 +324,15 @@ axisAngle v angle = mat4
         ax  = x v
         ay  = y v
         az  = z v
-        s   = sin . toRAD $ angle
-        c   = cos . toRAD $ angle
+        s   = sin angle
+        c   = cos angle
         xy  = ax*ay
         xz  = ax*az
         yz  = ay*az
         sx  = s*ax
         sy  = s*ay
         sz  = s*az
-        omc = 1 - c
-
+        omc = (1::Float) - c
 
 -- | Create a scale matrix.
 scale :: Float -> Float -> Float -> Matrix4
@@ -345,7 +341,6 @@ scale sx sy sz = mat4
     0   sy  0   0
     0   0   sz  0
     0   0   0   1
-
 
 -- | Create a scale matrix.
 scalev :: Vector3 -> Matrix4
@@ -359,7 +354,6 @@ scalev v = mat4
             sy = y v
             sz = z v
 
-
 -- | Create an X reflection matrix.
 reflectX :: Matrix4
 reflectX = mat4
@@ -367,7 +361,6 @@ reflectX = mat4
     0     1   0   0
     0     0   1   0
     0     0   0   1
-
 
 -- | Create a Y reflection matrix.
 reflectY :: Matrix4
@@ -377,7 +370,6 @@ reflectY = mat4
     0   0     1   0
     0   0     0   1
 
-
 -- | Create a Z reflection matrix.
 reflectZ :: Matrix4
 reflectZ = mat4
@@ -385,7 +377,6 @@ reflectZ = mat4
     0   1   0     0
     0   0   (-1)  0
     0   0   0     1
-
 
 -- | Create an orthogonal projection matrix.
 ortho :: Float -- ^ Left.
@@ -395,7 +386,6 @@ ortho :: Float -- ^ Left.
       -> Float -- ^ Near clip.
       -> Float -- ^ Far clip.
       -> Matrix4
-
 ortho l r b t n f =
     let tx = (-(r+l)/(r-l))
         ty = (-(t+b)/(t-b))
@@ -406,7 +396,6 @@ ortho l r b t n f =
         0         0         ((-2)/(f-n)) tz
         0         0         0            1
 
-
 -- | Create a perspective projection matrix.
 perspective :: Float -- ^ Fovy - Vertical field of view angle in degrees.
             -> Float -- ^ Aspect ratio.
@@ -414,14 +403,13 @@ perspective :: Float -- ^ Fovy - Vertical field of view angle in degrees.
             -> Float -- ^ Far clip distance
             -> Matrix4
 perspective fovy r near far =
-    let f = 1 / tan (toRAD fovy / 2)
+    let f = 1 / tan (fovy / (2::Float))
         a = near - far
     in mat4
         (f/r) 0    0              0
         0     f    0              0
-        0     0    ((far+near)/a) (2*far*near/a)
+        0     0    ((far+near)/a) ((2::Float)*far*near/a)
         0     0    (-1)           0
-
 
 -- | Create a plane projection matrix.
 planeProj :: Vector3 -- ^ Plane normal
@@ -442,7 +430,6 @@ planeProj n d l =
         (-nx*lz)        (-ny*lz)        (d + c - nz*lz) (-lz*d)
         (-nx)           (-ny)           (-nz)           c
 
-
 -- | Transpose the specified matrix.
 transpose :: Matrix4 -> Matrix4
 transpose m = mat4
@@ -450,7 +437,6 @@ transpose m = mat4
     (m10 m) (m11 m) (m12 m) (m13 m)
     (m20 m) (m21 m) (m22 m) (m23 m)
     (m30 m) (m31 m) (m32 m) (m33 m)
-
 
 -- | Invert the given transformation matrix.
 inverseTransform :: Matrix4 -> Matrix4
@@ -466,7 +452,6 @@ inverseTransform mat =
             (x u) (y u) (z u) (-t `dot` u)
             (x f) (y f) (z f) (-t `dot` f)
             0        0        0        1
-
 
 -- | Invert the given matrix.
 inverse :: Matrix4 -> Matrix4
@@ -605,7 +590,7 @@ inverse mat =
     in
         if det' == 0 then Spear.Math.Matrix4.id
         else
-            let det = 1 / det'
+            let det = (1::Float) / det'
             in mat4
                 (m00' * det) (m04' * det) (m08' * det) (m12' * det)
                 (m01' * det) (m05' * det) (m09' * det) (m13' * det)
@@ -622,16 +607,13 @@ mul w m v = vec3 x' y' z'
         y' = row1 m `dot` v'
         z' = row2 m `dot` v'
 
-
 -- | Transform the given point vector in 3D space with the given matrix.
 mulp :: Matrix4 -> Vector3 -> Vector3
 mulp = mul 1
 
-
 -- | Transform the given directional vector in 3D space with the given matrix.
 muld :: Matrix4 -> Vector3 -> Vector3
 muld = mul 0
-
 
 -- | Transform the given vector with the given matrix.
 --
@@ -645,6 +627,3 @@ mul' w m v = vec3 (x'/w') (y'/w') (z'/w')
         y' = row1 m `dot` v'
         z' = row2 m `dot` v'
         w' = row3 m `dot` v'
-
-
-toRAD = (*pi) . (/180)

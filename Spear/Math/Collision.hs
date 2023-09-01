@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Spear.Math.Collision
 (
     CollisionType(..)
@@ -23,15 +25,17 @@ module Spear.Math.Collision
 )
 where
 
-import Spear.Assets.Model
-import Spear.Math.AABB
-import Spear.Math.Circle
+import           Spear.Assets.Model
+import           Spear.Math.AABB
+import           Spear.Math.Algebra
+import           Spear.Math.Circle
 import qualified Spear.Math.Matrix4 as M4
-import Spear.Math.Plane
-import Spear.Math.Sphere
-import Spear.Math.Vector
+import           Spear.Math.Plane
+import           Spear.Math.Sphere
+import           Spear.Math.Vector
+import           Spear.Prelude
 
-import Data.List (foldl')
+import           Data.List          (foldl')
 
 data CollisionType = NoCollision | Collision | FullyContains | FullyContainedBy
      deriving (Eq, Show)
@@ -39,7 +43,6 @@ data CollisionType = NoCollision | Collision | FullyContains | FullyContainedBy
 -- 2D collision
 
 class Collisionable2 a where
-
       -- | Collide the object with an AABB.
       collideAABB2 :: AABB2 -> a -> CollisionType
 
@@ -47,7 +50,6 @@ class Collisionable2 a where
       collideCircle :: Circle -> a -> CollisionType
 
 instance Collisionable2 AABB2 where
-
     collideAABB2 box1@(AABB2 min1 max1) box2@(AABB2 min2 max2)
         | (x max1) < (x min2) = NoCollision
         | (x min1) > (x max2) = NoCollision
@@ -63,15 +65,14 @@ instance Collisionable2 AABB2 where
         | otherwise = Collision
             where
                 test = collideAABB2 aabb $ aabb2FromCircle circle
-                boxC = min + (max-min)/2
+                boxC = min + (max-min) / (2::Float)
                 l = norm $ min + (vec2 (x boxC) (y min)) - min
 
 instance Collisionable2 Circle where
-
     collideAABB2 box circle = case collideCircle circle box of
         FullyContains    -> FullyContainedBy
         FullyContainedBy -> FullyContains
-        x -> x
+        x                -> x
 
     collideCircle s1@(Circle c1 r1) s2@(Circle c2 r2)
         | distance_centers <= sub_radii = if (r1 > r2) then FullyContains else FullyContainedBy
@@ -83,12 +84,12 @@ instance Collisionable2 Circle where
             sub_radii    = (r1 - r2)^2
 
 instance Collisionable2 Collisioner2 where
-
     collideAABB2 box (AABB2Col self)  = collideAABB2 box self
     collideAABB2 box (CircleCol self) = collideAABB2 box self
 
     collideCircle circle (AABB2Col self)  = collideCircle circle self
     collideCircle circle (CircleCol self) = collideCircle circle self
+
 
 aabbPoints :: AABB2 -> [Vector2]
 aabbPoints (AABB2 min max) = [p1,p2,p3,p4,p5,p6,p7,p8]
@@ -142,15 +143,15 @@ buildAABB2 cols = aabb2 $ generatePoints cols
 aabb2FromCircle :: Circle -> AABB2
 aabb2FromCircle (Circle c r) = AABB2 bot top
     where
-        bot = c - (vec2 r r)
-        top = c + (vec2 r r)
+        bot = c - vec2 r r
+        top = c + vec2 r r
 
 -- | Create the minimal circle fully containing the specified box.
 circleFromAABB2 :: AABB2 -> Circle
 circleFromAABB2 (AABB2 min max) = Circle c r
     where
-        c = scale 0.5 (min + max)
-        r = norm . scale 0.5 $ max - min
+        c = (0.5::Float) * (min + max)
+        r = norm . (*(0.5::Float)) $ max - min
 
 generatePoints :: [Collisioner2] -> [Vector2]
 generatePoints = foldl' generate []
@@ -168,10 +169,10 @@ generatePoints = foldl' generate []
 
         generate acc (CircleCol (Circle c r)) = p1:p2:p3:p4:acc
             where
-                p1 = c + unitx2 * (vec2 r r)
-                p2 = c - unitx2 * (vec2 r r)
-                p3 = c + unity2 * (vec2 r r)
-                p4 = c - unity2 * (vec2 r r)
+                p1 = c + unitx2 * vec2 r r
+                p2 = c - unitx2 * vec2 r r
+                p3 = c + unity2 * vec2 r r
+                p4 = c - unity2 * vec2 r r
 
 -- | Collide the given collisioners.
 collide :: Collisioner2 -> Collisioner2 -> CollisionType
@@ -183,13 +184,11 @@ collide (CircleCol circle) (AABB2Col box) = collideCircle circle box
 -- | Move the collisioner.
 move :: Vector2 -> Collisioner2 -> Collisioner2
 move v (AABB2Col (AABB2 min max)) = AABB2Col (AABB2 (min+v) (max+v))
-move v (CircleCol (Circle c r)) = CircleCol (Circle (c+v) r)
+move v (CircleCol (Circle c r))   = CircleCol (Circle (c+v) r)
 
 
--- 3D collision
-
+-- | 3D collision
 class Collisionable3 a where
-
       -- | Collide the object with an AABB.
       collideAABB3 :: AABB3 -> a -> CollisionType
 
@@ -197,12 +196,11 @@ class Collisionable3 a where
       collideSphere :: Sphere -> a -> CollisionType
 
 instance Collisionable3 AABB3 where
-
          collideAABB3 box1@(AABB3 min1 max1) box2@(AABB3 min2 max2)
-                      | (x max1) < (x min2) = NoCollision
-                      | (x min1) > (x max2) = NoCollision
-                      | (y max1) < (y min2) = NoCollision
-                      | (y min1) > (y max2) = NoCollision
+                      | x max1 < x min2 = NoCollision
+                      | x min1 > x max2 = NoCollision
+                      | y max1 < y min2 = NoCollision
+                      | y min1 > y max2 = NoCollision
                       | box1 `aabb3pt` min2 && box1 `aabb3pt` max2 = FullyContains
                       | box2 `aabb3pt` min1 && box2 `aabb3pt` max1 = FullyContainedBy
                       | otherwise = Collision
@@ -215,18 +213,17 @@ instance Collisionable3 AABB3 where
                             test = collideAABB3 aabb $ aabb3FromSphere sphere
                             boxC = min + v
                             l = norm v
-                            v = (max-min)/2
+                            v = (max-min) / (2::Float)
 
 instance Collisionable3 Sphere where
-
          collideAABB3 box sphere = case collideSphere sphere box of
                       FullyContains    -> FullyContainedBy
                       FullyContainedBy -> FullyContains
-                      x -> x
+                      x                -> x
 
          collideSphere s1@(Sphere c1 r1) s2@(Sphere c2 r2)
                        | distance_centers <= sub_radii =
-                         if (r1 > r2) then FullyContains else FullyContainedBy
+                         if r1 > r2 then FullyContains else FullyContainedBy
                        | distance_centers <= sum_radii = Collision
                        | otherwise = NoCollision
                          where
@@ -238,5 +235,5 @@ instance Collisionable3 Sphere where
 aabb3FromSphere :: Sphere -> AABB3
 aabb3FromSphere (Sphere c r) = AABB3 bot top
     where
-        bot = c - (vec3 r r r)
-        top = c + (vec3 r r r)
+        bot = c - vec3 r r r
+        top = c + vec3 r r r

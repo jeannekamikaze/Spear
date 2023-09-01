@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Spear.Math.MatrixUtils
 (
     fastNormalMatrix
@@ -11,11 +13,12 @@ module Spear.Math.MatrixUtils
 )
 where
 
-import Spear.Math.Camera as Cam
-import Spear.Math.Matrix3 as M3
-import Spear.Math.Matrix4 as M4
-import Spear.Math.Spatial3 as S
-import Spear.Math.Vector as V
+import           Spear.Math.Camera   as Cam
+import           Spear.Math.Matrix3  as M3
+import           Spear.Math.Matrix4  as M4
+import           Spear.Math.Spatial3 as S
+import           Spear.Math.Vector   as V
+import           Spear.Prelude
 
 -- | Compute the normal matrix of the given matrix.
 fastNormalMatrix :: Matrix4 -> Matrix3
@@ -39,9 +42,9 @@ unproject :: Matrix4 -- ^ Inverse projection matrix
           -> Vector3
 unproject projI modelviewI vpx vpy w h x y z =
     let
-        xmouse = 2*(x-vpx)/w - 1
-        ymouse = 2*(y-vpy)/h - 1
-        zmouse = 2*z - 1
+        xmouse = (2::Float) * (x-vpx)/w - (1::Float)
+        ymouse = (2::Float) * (y-vpy)/h - (1::Float)
+        zmouse = (2::Float) * z - (1::Float)
     in
         (modelviewI * projI) `M4.mulp` vec3 xmouse ymouse zmouse
 
@@ -64,7 +67,7 @@ rpgUnproject projI viewI vpx vpy w h wx wy =
         p1 = unproject projI viewI vpx vpy w h wx wy 0
         p2 = unproject projI viewI vpx vpy w h wx wy (-1)
         lambda = (y p1 / (y p1 - y p2))
-        p' = p1 + V.scale lambda (p2 - p1)
+        p' = p1 + lambda * (p2 - p1)
     in
         vec2 (x p') (-(z p'))
 
@@ -77,10 +80,10 @@ rpgTransform
     -> Matrix4 -- ^ Inverse view matrix
     -> Matrix4
 rpgTransform h a axis pos viewI =
-    let p1 = viewI `M4.mulp` (vec3 (x pos) (y pos) 0)
-        p2 = viewI `M4.mulp` (vec3 (x pos) (y pos) (-1))
+    let p1 = viewI `M4.mulp` vec3 (x pos) (y pos) 0
+        p2 = viewI `M4.mulp` vec3 (x pos) (y pos) (-1)
         lambda  = (y p1 / (y p1 - y p2))
-        p  = p1 + V.scale lambda (p2 - p1)
+        p  = p1 + lambda * (p2 - p1)
         mat' = axisAngle axis a
         r = M4.right mat'
         u = M4.up mat'
@@ -134,8 +137,8 @@ pltInverse = M4.inverseTransform . pltTransform
 objToClip :: Camera -> Matrix4 -> Vector3 -> Vector2
 objToClip cam model p =
     let
-        view = M4.inverseTransform $ S.transform cam
-        proj = Cam.projection cam
+        view = M4.inverseTransform . transform3Matrix . transform3 $ cam
+        proj = projection cam
         p' = (proj * view * model) `M4.mulp` p
     in
         vec2 (x p') (y p')

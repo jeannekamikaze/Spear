@@ -1,3 +1,5 @@
+{-# LANGUAGE MultiParamTypeClasses #-}
+
 module Spear.Math.Camera
 (
     Camera
@@ -15,27 +17,52 @@ module Spear.Math.Camera
 )
 where
 
-import qualified Spear.Math.Matrix4 as M
-import Spear.Math.Spatial3
-import Spear.Math.Vector
+import qualified Spear.Math.Matrix4  as M
+import           Spear.Math.Spatial
+import           Spear.Math.Spatial3
+import           Spear.Math.Vector
+
 
 data Camera = Camera
     { projection :: M.Matrix4 -- ^ Get the camera's projection.
-    , spatial    :: Obj3
+    , basis      :: Transform3
     }
 
-instance Spatial3 Camera where
-    getObj3 = spatial
-    setObj3 cam o = cam { spatial = o }
 
-type Fovy = Float
+instance Has3dTransform Camera where
+    set3dTransform transform camera = camera { basis = transform }
+    transform3 = basis
+
+
+instance Positional Camera Vector3 where
+    setPosition p = with3dTransform (setPosition p)
+    position = position . basis
+    translate v = with3dTransform (translate v)
+
+
+instance Rotational Camera Vector3 Rotation3 where
+    setRotation rotation = with3dTransform (setRotation rotation)
+    rotation = rotation . basis
+    rotate rot = with3dTransform (rotate rot)
+    right = right . basis
+    up = up . basis
+    forward = forward . basis
+    setForward forward = with3dTransform (setForward forward)
+
+
+instance Spatial Camera Vector3 Rotation3 Transform3 where
+    setTransform transform camera = camera { basis = transform }
+    transform = basis
+
+
+type Fovy   = Float
 type Aspect = Float
-type Near = Float
-type Far = Float
-type Left = Float
-type Right = Float
+type Near   = Float
+type Far    = Float
+type Left   = Float
+type Right  = Float
 type Bottom = Float
-type Top = Float
+type Top    = Float
 
 -- | Build a perspective camera.
 perspective :: Fovy      -- ^ Fovy - Vertical field of view angle in degrees.
@@ -47,13 +74,11 @@ perspective :: Fovy      -- ^ Fovy - Vertical field of view angle in degrees.
             -> Forward3  -- ^ Forward vector.
             -> Position3 -- ^ Position vector.
             -> Camera
-
 perspective fovy r n f right up fwd pos =
     Camera
     { projection = M.perspective fovy r n f
-    , spatial    = fromVectors right up fwd pos
+    , basis      = newTransform3 right up fwd pos
     }
-
 
 -- | Build an orthogonal camera.
 ortho :: Left      -- ^ Left.
@@ -67,9 +92,8 @@ ortho :: Left      -- ^ Left.
       -> Forward3  -- ^ Forward vector.
       -> Position3 -- ^ Position vector.
       -> Camera
-
 ortho l r b t n f right up fwd pos =
     Camera
     { projection = M.ortho l r b t n f
-    , spatial    = fromVectors right up fwd pos
+    , basis      = newTransform3 right up fwd pos
     }

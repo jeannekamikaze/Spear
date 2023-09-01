@@ -20,26 +20,31 @@ module Spear.Render.StaticModel
   )
 where
 
-import qualified Data.Vector as V
-import Spear.Assets.Model
-import Spear.GL
-import Spear.Game
-import Spear.Math.AABB
-import Spear.Math.Collision
-import Spear.Math.Matrix4 (Matrix4)
-import Spear.Math.Vector
-import Spear.Render.Material
-import Spear.Render.Model
-import Spear.Render.Program
-import Unsafe.Coerce (unsafeCoerce)
+import           Spear.Assets.Model
+import           Spear.Game
+import           Spear.GL
+import           Spear.Math.AABB
+import           Spear.Math.Algebra
+import           Spear.Math.Collision
+import           Spear.Math.Matrix4    (Matrix4)
+import           Spear.Math.Vector
+import           Spear.Render.Material
+import           Spear.Render.Model
+import           Spear.Render.Program
+
+import qualified Data.Vector           as V
+import           Foreign.C.Types
+import           Prelude               hiding ((*))
+import           Unsafe.Coerce         (unsafeCoerce)
+
 
 data StaticModelResource = StaticModelResource
-  { vao :: VAO,
+  { vao       :: VAO,
     nVertices :: Int,
-    material :: Material,
-    texture :: Texture,
-    boxes :: V.Vector Box,
-    rkey :: Resource
+    material  :: Material,
+    texture   :: Texture,
+    boxes     :: V.Vector Box,
+    rkey      :: Resource
   }
 
 instance Eq StaticModelResource where
@@ -75,7 +80,7 @@ staticModelResource (StaticProgramChannels vertChan normChan texChan) material t
   boxes <- gameIO $ modelBoxes model
 
   gameIO $ do
-    let elemSize = 32
+    let elemSize = 32::CUInt
         elemSize' = fromIntegral elemSize
         n = numVertices
 

@@ -31,7 +31,7 @@ import           Data.Map    (Map)
 import qualified Data.Map    as Map
 import           Data.Monoid
 
-type Elapsed = Double
+type Elapsed = Float
 
 type Dt = Float
 

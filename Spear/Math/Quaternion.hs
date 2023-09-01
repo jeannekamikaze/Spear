@@ -1,3 +1,5 @@
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Spear.Math.Quaternion
 (
     Quaternion
@@ -16,8 +18,9 @@ module Spear.Math.Quaternion
 )
 where
 
-
-import Spear.Math.Vector
+import           Spear.Math.Algebra
+import           Spear.Math.Vector
+import           Spear.Prelude
 
 
 newtype Quaternion = Quaternion { getVec :: Vector4 }
@@ -47,7 +50,7 @@ qAxisAngle :: Vector3 -> Float -> Quaternion
 qAxisAngle axis angle =
     let s'  = norm axis
         s   = if s' == 0 then 1 else s'
-        a   = angle * toRAD * 0.5
+        a   = angle * (0.5::Float)
         sa  = sin a
         qw  = cos a
         qx  = x axis * sa * s
@@ -102,7 +105,3 @@ qnorm = norm . getVec
 qrot :: Quaternion -> Vector3 -> Vector3
 qrot q v = toVec3 $ q `qmul` qvec3 v 0 `qmul` qconj q
     where toVec3 (Quaternion q) = vec3 (x q) (y q) (z q)
-
-
-toRAD = pi / 180
-

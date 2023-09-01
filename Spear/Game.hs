@@ -30,9 +30,9 @@ module Spear.Game
   )
 where
 
-import Control.Monad.Catch
-import Control.Monad.State.Strict
-import Control.Monad.Trans.Class (lift)
+import           Control.Monad.Catch
+import           Control.Monad.State.Strict
+import           Control.Monad.Trans.Class    (lift)
 import qualified Control.Monad.Trans.Resource as R
 
 type Resource = R.ReleaseKey
@@ -83,7 +83,7 @@ gameError' = lift . lift . throwM
 -- | Throw the given error if given 'Nothing'.
 assertMaybe :: Maybe a -> GameException -> Game s a
 assertMaybe Nothing err = gameError' err
-assertMaybe (Just x) _ = return x
+assertMaybe (Just x) _  = return x
 
 -- | Run the given game with the given error handler.
 catchGameError :: Game s a -> (GameException -> Game s a) -> Game s a

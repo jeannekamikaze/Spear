@@ -87,29 +87,32 @@ module Spear.GL
   )
 where
 
-import Control.Monad
-import Control.Monad.Trans.Class
-import Control.Monad.Trans.State as State
-import qualified Data.ByteString.Char8 as B
-import Data.StateVar
-import Data.Word
-import Foreign.C.String
-import Foreign.C.Types
-import Foreign.Marshal.Alloc (alloca)
-import Foreign.Marshal.Array (withArray)
-import Foreign.Marshal.Utils as Foreign (with)
-import Foreign.Ptr
-import Foreign.Storable
-import Foreign.Storable (peek)
-import Graphics.GL.Core46
-import Spear.Assets.Image
-import Spear.Game
-import Spear.Math.Matrix3 (Matrix3)
-import Spear.Math.Matrix4 (Matrix4)
-import Spear.Math.Vector
-import System.Directory (doesFileExist, getCurrentDirectory, setCurrentDirectory)
-import System.IO (hPutStrLn, stderr)
-import Unsafe.Coerce
+import           Control.Monad
+import           Control.Monad.Trans.Class
+import           Control.Monad.Trans.State as State
+import qualified Data.ByteString.Char8     as B
+import           Data.StateVar
+import           Data.Word
+import           Foreign.C.String
+import           Foreign.C.Types
+import           Foreign.Marshal.Alloc     (alloca)
+import           Foreign.Marshal.Array     (withArray)
+import           Foreign.Marshal.Utils     as Foreign (with)
+import           Foreign.Ptr
+import           Foreign.Storable
+import           Foreign.Storable          (peek)
+import           Graphics.GL.Core46
+import           Prelude                   hiding ((*))
+import           Spear.Assets.Image
+import           Spear.Game
+import           Spear.Math.Algebra
+import           Spear.Math.Matrix3        (Matrix3)
+import           Spear.Math.Matrix4        (Matrix4)
+import           Spear.Math.Vector
+import           System.Directory          (doesFileExist, getCurrentDirectory,
+                                            setCurrentDirectory)
+import           System.IO                 (hPutStrLn, stderr)
+import           Unsafe.Coerce
 
 --
 -- MANAGEMENT
@@ -117,7 +120,7 @@ import Unsafe.Coerce
 
 -- | A GLSL shader handle.
 data GLSLShader = GLSLShader
-  { getShader :: GLuint,
+  { getShader    :: GLuint,
     getShaderKey :: Resource
   }
 
@@ -126,7 +129,7 @@ instance ResourceClass GLSLShader where
 
 -- | A GLSL program handle.
 data GLSLProgram = GLSLProgram
-  { getProgram :: GLuint,
+  { getProgram    :: GLuint,
     getProgramKey :: Resource
   }
 
@@ -137,7 +140,7 @@ instance ResourceClass GLSLProgram where
 data ShaderType = VertexShader | FragmentShader | GeometryShader deriving (Eq, Show)
 
 toGLShader :: ShaderType -> GLenum
-toGLShader VertexShader = GL_VERTEX_SHADER
+toGLShader VertexShader   = GL_VERTEX_SHADER
 toGLShader FragmentShader = GL_FRAGMENT_SHADER
 toGLShader GeometryShader = GL_GEOMETRY_SHADER
 
@@ -529,7 +532,7 @@ drawElements mode count t idxs = glDrawElements mode (unsafeCoerce count) t idxs
 -- | An OpenGL buffer.
 data GLBuffer = GLBuffer
   { getBuffer :: GLuint,
-    rkey :: Resource
+    rkey      :: Resource
   }
 
 instance ResourceClass GLBuffer where
@@ -544,10 +547,10 @@ data TargetBuffer
   deriving (Eq, Show)
 
 fromTarget :: TargetBuffer -> GLenum
-fromTarget ArrayBuffer = GL_ARRAY_BUFFER
+fromTarget ArrayBuffer        = GL_ARRAY_BUFFER
 fromTarget ElementArrayBuffer = GL_ELEMENT_ARRAY_BUFFER
-fromTarget PixelPackBuffer = GL_PIXEL_PACK_BUFFER
-fromTarget PixelUnpackBuffer = GL_PIXEL_UNPACK_BUFFER
+fromTarget PixelPackBuffer    = GL_PIXEL_PACK_BUFFER
+fromTarget PixelUnpackBuffer  = GL_PIXEL_UNPACK_BUFFER
 
 -- | A buffer usage.
 data BufferUsage
@@ -563,12 +566,12 @@ data BufferUsage
   deriving (Eq, Show)
 
 fromUsage :: BufferUsage -> GLenum
-fromUsage StreamDraw = GL_STREAM_DRAW
-fromUsage StreamRead = GL_STREAM_READ
-fromUsage StreamCopy = GL_STREAM_COPY
-fromUsage StaticDraw = GL_STATIC_DRAW
-fromUsage StaticRead = GL_STATIC_READ
-fromUsage StaticCopy = GL_STATIC_COPY
+fromUsage StreamDraw  = GL_STREAM_DRAW
+fromUsage StreamRead  = GL_STREAM_READ
+fromUsage StreamCopy  = GL_STREAM_COPY
+fromUsage StaticDraw  = GL_STATIC_DRAW
+fromUsage StaticRead  = GL_STATIC_READ
+fromUsage StaticCopy  = GL_STATIC_COPY
 fromUsage DynamicDraw = GL_DYNAMIC_DRAW
 fromUsage DynamicRead = GL_DYNAMIC_READ
 fromUsage DynamicCopy = GL_DYNAMIC_COPY
@@ -780,7 +783,7 @@ getGLError = fmap translate glGetError
 printGLError :: IO ()
 printGLError =
   getGLError >>= \err -> case err of
-    Nothing -> return ()
+    Nothing  -> return ()
     Just str -> hPutStrLn stderr str
 
 -- | Run the given setup action and check for OpenGL errors.
@@ -793,4 +796,4 @@ assertGL action err = do
   status <- gameIO getGLError
   case status of
     Just str -> gameError $ "OpenGL error raised: " ++ err ++ "; " ++ str
-    Nothing -> return result
+    Nothing  -> return result

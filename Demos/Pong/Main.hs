@@ -8,6 +8,7 @@ import           Pong
 import           Spear.App
 import           Spear.Game
 import           Spear.Math.AABB
+import           Spear.Math.Spatial
 import           Spear.Math.Spatial2
 import           Spear.Math.Vector
 import           Spear.Window
@@ -28,10 +29,10 @@ step :: Elapsed -> Dt -> [InputEvent] -> Game GameState Bool
 step elapsed dt inputEvents = do
   gs <- getGameState
   gameIO . process $ inputEvents
-  let events = translate inputEvents
+  let events = translateEvents inputEvents
   modifyGameState $ \gs ->
     gs
-      { world = stepWorld elapsed dt events (world gs)
+      { world = stepWorld (realToFrac elapsed) dt events (world gs)
       }
   getGameState >>= \gs -> gameIO . render $ world gs
   return (not $ exitRequested inputEvents)
@@ -63,7 +64,7 @@ renderBackground =
 renderGO :: GameObject -> IO ()
 renderGO go = do
   let (AABB2 (Vector2 xmin' ymin') (Vector2 xmax' ymax')) = aabb go
-      (Vector2 xcenter ycenter) = pos go
+      (Vector2 xcenter ycenter) = position go
       (xmin, ymin, xmax, ymax) = (f2d xmin', f2d ymin', f2d xmax', f2d ymax')
   GL.preservingMatrix $ do
     GL.translate (GL.Vector3 (f2d xcenter) (f2d ycenter) 0)
@@ -76,7 +77,7 @@ renderGO go = do
 process = mapM_ procEvent
 
 procEvent (Resize w h) =
-  let r = (fromIntegral w) / (fromIntegral h)
+  let r = fromIntegral w / fromIntegral h
       pad    = if r > 1 then (r-1) / 2 else (1/r - 1) / 2
       left   = if r > 1 then -pad else 0
       right  = if r > 1 then 1 + pad else 1
@@ -90,13 +91,12 @@ procEvent (Resize w h) =
     GL.matrixMode $= GL.Modelview 0
 procEvent _ = return ()
 
-translate = mapMaybe translate'
-
-translate' (KeyDown KEY_LEFT)  = Just MoveLeft
-translate' (KeyDown KEY_RIGHT) = Just MoveRight
-translate' (KeyUp KEY_LEFT)    = Just StopLeft
-translate' (KeyUp KEY_RIGHT)   = Just StopRight
-translate' _                   = Nothing
+translateEvents = mapMaybe translateEvents'
+  where translateEvents' (KeyDown KEY_LEFT)  = Just MoveLeft
+        translateEvents' (KeyDown KEY_RIGHT) = Just MoveRight
+        translateEvents' (KeyUp KEY_LEFT)    = Just StopLeft
+        translateEvents' (KeyUp KEY_RIGHT)   = Just StopRight
+        translateEvents' _                   = Nothing
 
 exitRequested = elem (KeyDown KEY_ESC)
 

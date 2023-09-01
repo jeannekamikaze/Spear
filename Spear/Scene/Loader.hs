@@ -15,26 +15,28 @@ module Spear.Scene.Loader
   )
 where
 
-import Control.Monad.State.Strict
-import Control.Monad.Trans (lift)
-import Data.List as L (find)
-import Data.Map as M
-import qualified Data.StateVar as SV (get)
-import Spear.Assets.Model as Model
-import qualified Spear.GL as GL
-import Spear.Game
-import Spear.Math.Collision
-import Spear.Math.Matrix3 as M3
-import Spear.Math.Matrix4 as M4
-import Spear.Math.MatrixUtils (fastNormalMatrix)
-import Spear.Math.Vector
-import Spear.Render.AnimatedModel as AM
-import Spear.Render.Material
-import Spear.Render.Program
-import Spear.Render.StaticModel as SM
-import Spear.Scene.Graph
-import Spear.Scene.SceneResources
-import Text.Printf (printf)
+import           Control.Monad.State.Strict
+import           Control.Monad.Trans        (lift)
+import           Data.List                  as L (find)
+import           Data.Map                   as M
+import qualified Data.StateVar              as SV (get)
+import           Prelude                    hiding ((*))
+import           Spear.Assets.Model         as Model
+import           Spear.Game
+import qualified Spear.GL                   as GL
+import           Spear.Math.Algebra
+import           Spear.Math.Collision
+import           Spear.Math.Matrix3         as M3
+import           Spear.Math.Matrix4         as M4
+import           Spear.Math.MatrixUtils     (fastNormalMatrix)
+import           Spear.Math.Vector
+import           Spear.Render.AnimatedModel as AM
+import           Spear.Render.Material
+import           Spear.Render.Program
+import           Spear.Render.StaticModel   as SM
+import           Spear.Scene.Graph
+import           Spear.Scene.SceneResources
+import           Text.Printf                (printf)
 
 type Loader = Game SceneResources
 
@@ -62,8 +64,8 @@ resourceMap' :: SceneGraph -> Loader ()
 resourceMap' node@(SceneLeaf nid props) = do
   case nid of
     "shader-program" -> newShaderProgram node
-    "model" -> newModel node
-    x -> return ()
+    "model"          -> newModel node
+    x                -> return ()
 resourceMap' node@(SceneNode nid props children) = do
   mapM_ resourceMap' children
 
@@ -169,7 +171,7 @@ loadModel' :: FilePath -> Maybe Rotation -> Maybe Vector3 -> Game s Model
 loadModel' file rotation scale = do
   let transform =
         ( case rotation of
-            Nothing -> Prelude.id
+            Nothing  -> Prelude.id
             Just rot -> rotateModel rot
         )
           . ( case scale of
@@ -300,17 +302,17 @@ loadShader' file shaderType = loadResource file shaders addShader $ GL.loadShade
 -- Get the value of the given key.
 value :: String -> [Property] -> Maybe [String]
 value name props = case L.find ((==) name . fst) props of
-  Nothing -> Nothing
+  Nothing   -> Nothing
   Just prop -> Just . snd $ prop
 
 unspecified :: Maybe a -> a -> a
 unspecified (Just x) _ = x
-unspecified Nothing x = x
+unspecified Nothing x  = x
 
 mandatory :: String -> [Property] -> Game s [String]
 mandatory name props = case value name props of
   Nothing -> gameError $ "Loader::mandatory: key not found: " ++ name
-  Just x -> return x
+  Just x  -> return x
 
 mandatory' :: String -> [Property] -> Loader [String]
 mandatory' name props = mandatory name props
@@ -325,19 +327,19 @@ asVec2 :: Functor f => f [String] -> f Vector2
 asVec2 val = fmap toVec2 val
   where
     toVec2 (x : y : _) = vec2 (read x) (read y)
-    toVec2 (x : []) = let x' = read x in vec2 x' x'
+    toVec2 (x : [])    = let x' = read x in vec2 x' x'
 
 asVec3 :: Functor f => f [String] -> f Vector3
 asVec3 val = fmap toVec3 val
   where
     toVec3 (x : y : z : _) = vec3 (read x) (read y) (read z)
-    toVec3 (x : []) = let x' = read x in vec3 x' x' x'
+    toVec3 (x : [])        = let x' = read x in vec3 x' x' x'
 
 asVec4 :: Functor f => f [String] -> f Vector4
 asVec4 val = fmap toVec4 val
   where
     toVec4 (x : y : z : w : _) = vec4 (read x) (read y) (read z) (read w)
-    toVec4 (x : []) = let x' = read x in vec4 x' x' x' x'
+    toVec4 (x : [])            = let x' = read x in vec4 x' x' x' x'
 
 asRotation :: Functor f => f [String] -> f Rotation
 asRotation val = fmap parseRotation val
@@ -345,9 +347,9 @@ asRotation val = fmap parseRotation val
     parseRotation (ax : ay : az : order : _) = Rotation (read ax) (read ay) (read az) (readOrder order)
 
 data Rotation = Rotation
-  { ax :: Float,
-    ay :: Float,
-    az :: Float,
+  { ax    :: Float,
+    ay    :: Float,
+    az    :: Float,
     order :: RotationOrder
   }
 

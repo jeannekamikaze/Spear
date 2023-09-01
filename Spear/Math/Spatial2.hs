@@ -1,151 +1,110 @@
+{-# LANGUAGE ConstraintKinds       #-}
+{-# LANGUAGE FlexibleContexts      #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NoImplicitPrelude     #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
+
 module Spear.Math.Spatial2
-(
-    Spatial2(..)
-,   Obj2
-,   Angle
-,   Radius
-,   move
-,   moveFwd
-,   moveBack
-,   moveUp
-,   moveDown
-,   moveLeft
-,   moveRight
-,   rotate
-,   setRotation
-,   pos
-,   fwd
-,   up
-,   right
-,   transform
-,   setTransform
-,   setPos
-,   lookAt
-,   Spear.Math.Spatial2.orbit
-,   obj2FromVectors
-,   obj2FromTransform
-)
 where
 
-import Spear.Math.Vector
-import qualified Spear.Math.Matrix3 as M
+import qualified Spear.Math.Matrix3 as Matrix3
+import           Spear.Math.Matrix3 (Matrix3)
+import           Spear.Math.Spatial as Spatial
+import           Spear.Math.Vector
+import           Spear.Prelude
 
-type Angle = Float
-type Radius = Float
 
--- | An entity that can be moved around in 2D space.
-class Spatial2 s where
+type Positional2 a = Positional a Vector2
+type Rotational2 a = Rotational a Angle
+type Spatial2    s = Spatial    s Vector2 Angle Transform2
 
-      -- | Gets the spatial's Obj2.
-      getObj2 :: s -> Obj2
 
-      -- | Set the spatial's Obj2.
-      setObj2 :: s -> Obj2 -> s
+-- | A 2D transform.
+newtype Transform2 = Transform2 { transform2Matrix :: Matrix3 } deriving Show
 
--- | Move the spatial.
-move :: Spatial2 s => Vector2 -> s -> s
-move v s = let o = getObj2 s in setObj2 s $ o { p = p o + v }
 
--- | Move the spatial forwards.
-moveFwd :: Spatial2 s => Float -> s -> s
-moveFwd a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale a (fwd o) }
+instance Rotational Vector2 Vector2 Angle where
+    setRotation angle v = norm v * Vector2 (cos angle) (sin angle)
 
--- | Move the spatial backwards.
-moveBack :: Spatial2 s => Float -> s -> s
-moveBack a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale (-a) (fwd o) }
+    rotation v@(Vector2 x _) = acos (x / norm v)
 
--- | Move the spatial up.
-moveUp :: Spatial2 s => Float -> s -> s
-moveUp a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale a (fwd o) }
+    rotate angle v = Vector2 (x v * cos angle) (y v * sin angle)
 
--- | Move the spatial down.
-moveDown :: Spatial2 s => Float -> s -> s
-moveDown a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale (-a) (fwd o) }
+    right = perp
 
--- | Make the spatial strafe left.
-moveLeft :: Spatial2 s => Float -> s -> s
-moveLeft a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale (-a) (right o) }
+    up = id
 
--- | Make the spatial Strafe right.
-moveRight :: Spatial2 s => Float -> s -> s
-moveRight a s = let o = getObj2 s in setObj2 s $ o { p = p o + scale a (right o) }
+    forward = id
 
--- | Rotate the spatial.
-rotate :: Spatial2 s => Float -> s -> s
-rotate angle s = let o = getObj2 s in setObj2 s $ o
-       { r = rotate' angle (r o)
-       , u = rotate' angle (u o)
-       }
+    setForward newForward _ = newForward
 
--- | Set the spatial's rotation.
-setRotation :: Spatial2 s => Float -> s -> s
-setRotation angle s = let o = getObj2 s in setObj2 s $ o
-            { r = rotate' angle unitx2
-            , u = rotate' angle unity2
-            }
 
-rotate' :: Float -> Vector2 -> Vector2
-rotate' a' (Vector2 x y) = vec2 (x * cos a) (y * sin a) where a = a'*pi/180
+instance Positional Transform2 Vector2 where
+    setPosition p (Transform2 matrix) =
+        Transform2 . Matrix3.setPosition p $ matrix
 
--- | Get the spatial's position.
-pos :: Spatial2 s => s -> Vector2
-pos = p . getObj2
+    position = Matrix3.position . transform2Matrix
 
--- | Get the spatial's forward vector.
-fwd :: Spatial2 s => s -> Vector2
-fwd = u . getObj2
+    translate v t@(Transform2 matrix) = setPosition (Matrix3.position matrix + v) t
 
--- | Get the spatial's up vector.
-up :: Spatial2 s => s -> Vector2
-up = u . getObj2
 
--- | Get the spatial's right vector.
-right :: Spatial2 s => s -> Vector2
-right = r . getObj2
+instance Rotational Transform2 Vector2 Angle where
+    setRotation angle =
+        Transform2 . Matrix3.setRight r' . Matrix3.setUp u' . transform2Matrix
+        where r' = Spatial.rotate angle unitx2
+              u' = Spatial.rotate angle unity2
 
--- | Get the spatial's transform.
-transform :: Spatial2 s => s -> M.Matrix3
-transform s = let o = getObj2 s in M.transform (r o) (u o) (p o)
+    rotation = rotation . Matrix3.right . transform2Matrix
 
--- | Set the spatial's transform.
-setTransform :: Spatial2 s => M.Matrix3 -> s -> s
-setTransform t s =
-             let o = Obj2 (M.right t) (M.up t) (M.position t)
-             in setObj2 s o
+    rotate angle (Transform2 matrix) =
+        Transform2 . Matrix3.setRight r' . Matrix3.setUp u' $ matrix
+        where r' = Spatial.rotate angle (Matrix3.right matrix)
+              u' = Spatial.rotate angle (Matrix3.up    matrix)
 
--- | Set the spatial's position.
-setPos :: Spatial2 s => Vector2 -> s -> s
-setPos pos s = setObj2 s $ (getObj2 s) { p = pos }
+    right = Matrix3.right . transform2Matrix
 
--- | Make the spatial look at the given point.
-lookAt :: Spatial2 s => Vector2 -> s -> s
-lookAt pt s =
-       let position = pos s
-           fwd      = normalise $ pt - position
-           r        = perp fwd
-       in setTransform (M.transform r fwd position) s
+    up = Matrix3.up . transform2Matrix
 
--- | Make the 'Spatial' orbit around the given point
-orbit :: Spatial2 s => Vector2 -> Angle -> Radius -> s -> s
+    forward = up
+
+    setForward forward (Transform2 matrix) =
+        Transform2 $ Matrix3.transform (perp forward) forward (Matrix3.position matrix)
+
+
+instance Spatial Transform2 Vector2 Angle Matrix3 where
+    setTransform matrix _ = Transform2 matrix
+
+    transform (Transform2 matrix) = matrix
+
+
+class Has2dTransform a where
+    -- | Set the object's 2d transform.
+    set2dTransform :: Transform2 -> a -> a
+
+    -- | Get the object's 2d transform.
+    transform2 :: a -> Transform2
+
+
+with2dTransform :: Has2dTransform a => (Transform2 -> Transform2) -> a -> a
+with2dTransform f obj = set2dTransform (f $ transform2 obj) obj
+
+-- | Build a 2d transform from right, up, and position vectors.
+newTransform2 :: Vector2 -> Vector2 -> Vector2 -> Transform2
+newTransform2 right up position =
+    Transform2 $ Matrix3.transform right up position
+
+-- | Get a transform matrix from a 2d positional.
+posTransform2 :: Positional a Vector2 => a -> Matrix3
+posTransform2 = Matrix3.translatev . position
+
+-- TODO: Get a transform matrix from a 2d rotational.
+
+-- | Make the object orbit around the given point
+--
+-- This only changes the object's position and not its direction. Use 'lookAt'
+-- to aim the object.
+orbit :: Positional a Vector2 => Vector2 -> Angle -> Radius -> a -> a
 orbit pt angle radius s =
-      let a = angle * pi / 180
-          px = (x pt) + radius * sin a
-          py = (y pt) + radius * cos a
-      in setPos (vec2 px py) s
-
--- | An object in 2D space.
-data Obj2 = Obj2
-     { r :: Vector2
-     , u :: Vector2
-     , p :: Vector2
-     } deriving Show
-
-instance Spatial2 Obj2 where
-         getObj2 = id
-         setObj2 _ o' = o'
-
-obj2FromVectors :: Right2 -> Up2 -> Position2 -> Obj2
-obj2FromVectors = Obj2
-
-obj2FromTransform :: M.Matrix3 -> Obj2
-obj2FromTransform m = Obj2 (M.right m) (M.up m) (M.position m)
+    let px = x pt + radius * sin angle
+        py = y pt + radius * cos angle
+    in setPosition (vec2 px py) s

@@ -12,63 +12,68 @@ author: Marc Sunet
 data-dir: ""
 
 library
-    build-depends: GLFW-b -any,
-                   OpenGL >= 3,
-                   OpenGLRaw -any,
-                   StateVar -any,
-                   base -any,
-                   bytestring -any,
-                   directory -any,
-                   exceptions -any,
-                   mtl -any,
-                   transformers -any,
-                   resourcet -any,
-                   parsec >= 3,
-                   containers -any,
-                   vector -any,
-                   array -any
+    build-depends:
+      GLFW-b -any,
+      OpenGL >= 3,
+      OpenGLRaw -any,
+      StateVar -any,
+      base -any,
+      bytestring -any,
+      directory -any,
+      exceptions -any,
+      mtl -any,
+      transformers -any,
+      resourcet -any,
+      parsec >= 3,
+      containers -any,
+      vector -any,
+      array -any
 
-    exposed-modules: Spear.App
-                     Spear.Assets.Image
-                     Spear.Assets.Model
-                     Spear.Game
-                     Spear.GL
-                     Spear.Math.AABB
-                     Spear.Math.Camera
-                     Spear.Math.Circle
-                     Spear.Math.Collision
-                     Spear.Math.Frustum
-                     Spear.Math.Matrix3
-                     Spear.Math.Matrix4
-                     Spear.Math.MatrixUtils
-                     Spear.Math.Octree
-                     Spear.Math.Plane
-                     Spear.Math.Quaternion
-                     Spear.Math.Ray
-                     Spear.Math.Segment
-                     Spear.Math.Spatial2
-                     Spear.Math.Spatial3
-                     Spear.Math.Sphere
-                     Spear.Math.Triangle
-                     Spear.Math.Utils
-                     Spear.Math.Vector
-                     Spear.Math.Vector.Vector
-                     Spear.Math.Vector.Vector2
-                     Spear.Math.Vector.Vector3
-                     Spear.Math.Vector.Vector4
-                     Spear.Render.AnimatedModel
-                     Spear.Render.Material
-                     Spear.Render.Model
-                     Spear.Render.Program
-                     Spear.Render.StaticModel
-                     Spear.Scene.Graph
-                     Spear.Scene.Loader
-                     Spear.Scene.SceneResources
-                     Spear.Step
-                     Spear.Sys.Store
-                     Spear.Sys.Store.ID
-                     Spear.Sys.Timer
-                     Spear.Window
+    exposed-modules:
+      Spear.App
+      Spear.Assets.Image
+      Spear.Assets.Model
+      Spear.Game
+      Spear.GL
+      Spear.Math.AABB
+      Spear.Math.Algebra
+      Spear.Math.Camera
+      Spear.Math.Circle
+      Spear.Math.Collision
+      Spear.Math.Frustum
+      Spear.Math.Matrix3
+      Spear.Math.Matrix4
+      Spear.Math.MatrixUtils
+      Spear.Math.Octree
+      Spear.Math.Plane
+      Spear.Math.Quaternion
+      Spear.Math.Ray
+      Spear.Math.Segment
+      Spear.Math.Spatial
+      Spear.Math.Spatial2
+      Spear.Math.Spatial3
+      Spear.Math.Sphere
+      Spear.Math.Triangle
+      Spear.Math.Utils
+      Spear.Math.Vector
+      Spear.Math.Vector.Vector
+      Spear.Math.Vector.Vector2
+      Spear.Math.Vector.Vector3
+      Spear.Math.Vector.Vector4
+      Spear.Prelude
+      Spear.Render.AnimatedModel
+      Spear.Render.Material
+      Spear.Render.Model
+      Spear.Render.Program
+      Spear.Render.StaticModel
+      Spear.Scene.Graph
+      Spear.Scene.Loader
+      Spear.Scene.SceneResources
+      Spear.Step
+      Spear.Sys.Store
+      Spear.Sys.Store.ID
+      Spear.Sys.Timer
+      Spear.Window
 
     exposed: True
 
@@ -87,28 +92,28 @@ library
                Spear/Render/RenderModel.c
                Spear/Sys/Timer/ctimer.c
 
-    extensions: TypeFamilies
+    includes:
+      Spear/Assets/Image/BMP/BMP_load.h
+      Spear/Assets/Image/Image.h
+      Spear/Assets/Image/Image_error_code.h
+      Spear/Assets/Image/sys_types.h
+      Spear/Assets/Model/MD2/MD2_load.h
+      Spear/Assets/Model/OBJ/OBJ_load.h
+      Spear/Assets/Model/OBJ/cvector.h
+      Spear/Assets/Model/Model.h
+      Spear/Assets/Model/Model_error_code.h
+      Spear/Assets/Model/sys_types.h
+      Spear/Render/RenderModel.h
+      Timer/Timer.h
 
-    includes: Spear/Assets/Image/BMP/BMP_load.h
-              Spear/Assets/Image/Image.h
-              Spear/Assets/Image/Image_error_code.h
-              Spear/Assets/Image/sys_types.h
-              Spear/Assets/Model/MD2/MD2_load.h
-              Spear/Assets/Model/OBJ/OBJ_load.h
-              Spear/Assets/Model/OBJ/cvector.h
-              Spear/Assets/Model/Model.h
-              Spear/Assets/Model/Model_error_code.h
-              Spear/Assets/Model/sys_types.h
-              Spear/Render/RenderModel.h
-              Timer/Timer.h
-
-    include-dirs: .
-                  Spear
-                  Spear/Assets/Image
-                  Spear/Assets/Image/BMP
-                  Spear/Assets/Model
-                  Spear/Render
-                  Spear/Sys
+    include-dirs:
+      .
+      Spear
+      Spear/Assets/Image
+      Spear/Assets/Image/BMP
+      Spear/Assets/Model
+      Spear/Render
+      Spear/Sys
 
     hs-source-dirs: .
 

@@ -1,3 +1,6 @@
+
+{-# LANGUAGE NoImplicitPrelude #-}
+
 module Spear.Render.AnimatedModel
   ( -- * Data types
     AnimatedModelResource,
@@ -31,19 +34,24 @@ module Spear.Render.AnimatedModel
   )
 where
 
-import Control.Applicative ((<$>), (<*>))
-import qualified Data.Vector as V
-import Spear.Assets.Model
-import Spear.GL
-import Spear.Game
-import Spear.Math.AABB
-import Spear.Math.Collision
-import Spear.Math.Matrix4 (Matrix4)
-import Spear.Math.Vector
-import Spear.Render.Material
-import Spear.Render.Model
-import Spear.Render.Program
-import Unsafe.Coerce (unsafeCoerce)
+import           Spear.Assets.Model
+import           Spear.Game
+import           Spear.GL
+import           Spear.Math.AABB
+import           Spear.Math.Algebra
+import           Spear.Math.Collision
+import           Spear.Math.Matrix4    (Matrix4)
+import           Spear.Math.Vector
+import           Spear.Prelude
+import           Spear.Render.Material
+import           Spear.Render.Model
+import           Spear.Render.Program
+
+import           Control.Applicative   ((<$>), (<*>))
+import qualified Data.Vector           as V
+import           Foreign.C.Types
+import           Unsafe.Coerce         (unsafeCoerce)
+
 
 type AnimationSpeed = Float
 
@@ -51,14 +59,14 @@ type AnimationSpeed = Float
 --
 -- Contains model data necessary to render an animated model.
 data AnimatedModelResource = AnimatedModelResource
-  { model :: Model,
-    vao :: VAO,
-    nFrames :: Int,
+  { model     :: Model,
+    vao       :: VAO,
+    nFrames   :: Int,
     nVertices :: Int,
-    material :: Material,
-    texture :: Texture,
-    boxes :: V.Vector Box,
-    rkey :: Resource
+    material  :: Material,
+    texture   :: Texture,
+    boxes     :: V.Vector Box,
+    rkey      :: Resource
   }
 
 instance Eq AnimatedModelResource where
@@ -82,14 +90,14 @@ instance ResourceClass AnimatedModelResource where
 -- state changes by sorting 'AnimatedModelRenderer's by their underlying
 -- 'AnimatedModelResource' when rendering the scene.
 data AnimatedModelRenderer = AnimatedModelRenderer
-  { modelResource :: AnimatedModelResource,
-    currentAnim :: Int,
-    frameStart :: Int,
-    frameEnd :: Int,
+  { modelResource  :: AnimatedModelResource,
+    currentAnim    :: Int,
+    frameStart     :: Int,
+    frameEnd       :: Int,
     -- | Get the renderer's current frame.
-    currentFrame :: Int,
+    currentFrame   :: Int,
     -- | Get the renderer's frame progress.
-    frameProgress :: Float,
+    frameProgress  :: Float,
     -- | Get the renderer's animation speed.
     animationSpeed :: Float
   }
@@ -119,7 +127,7 @@ animatedModelResource
     boxes <- gameIO $ modelBoxes model
 
     gameIO $ do
-      let elemSize = 56
+      let elemSize = 56::CUInt
           elemSize' = fromIntegral elemSize
           n = numVertices * numFrames
 
@@ -132,7 +140,7 @@ animatedModelResource
       attribVAOPointer vertChan2 3 GL_FLOAT False elemSize' 12
       attribVAOPointer normChan1 3 GL_FLOAT False elemSize' 24
       attribVAOPointer normChan2 3 GL_FLOAT False elemSize' 36
-      attribVAOPointer texChan 2 GL_FLOAT False elemSize' 48
+      attribVAOPointer texChan   2 GL_FLOAT False elemSize' 48
 
       enableVAOAttrib vertChan1
       enableVAOAttrib vertChan2
@@ -162,17 +170,18 @@ animatedModelRenderer animSpeed modelResource =
   AnimatedModelRenderer modelResource 0 0 0 0 0 animSpeed
 
 -- | Update the renderer.
+update :: Float -> AnimatedModelRenderer -> AnimatedModelRenderer
 update dt (AnimatedModelRenderer model curAnim startFrame endFrame curFrame fp s) =
   AnimatedModelRenderer model curAnim startFrame endFrame curFrame' fp' s
   where
     f = fp + dt * s
     nextFrame = f >= 1.0
-    fp' = if nextFrame then f - 1.0 else f
+    fp' = if nextFrame then f - (1::Float) else f
     curFrame' =
       if nextFrame
         then
-          let x = curFrame + 1
-           in if x > endFrame then startFrame else x
+          let x = curFrame + (1::Int)
+          in if x > endFrame then startFrame else x
         else curFrame
 
 -- | Get the model's ith bounding box.
@@ -193,7 +202,7 @@ nextFrame rend =
   let curFrame = currentFrame rend
    in if curFrame == frameEnd rend
         then frameStart rend
-        else curFrame + 1
+        else curFrame + (1::Int)
 
 -- | Set the active animation to the given one.
 setAnimation :: Enum a => a -> AnimatedModelRenderer -> AnimatedModelRenderer
@@ -248,7 +257,7 @@ mkColsFromAnimated f1 f2 fp modelview modelRes =
       max1 = vec3 xmax1 ymax1 zmax1
       min2 = vec3 xmin2 ymin2 zmin2
       max2 = vec3 xmax2 ymax2 zmax2
-      min = min1 + scale fp (min2 - min1)
-      max = max1 + scale fp (max2 - max1)
+      min = min1 + fp * (min2 - min1)
+      max = max1 + fp * (max2 - max1)
    in mkCols modelview $
         Box (Vec3 (x min) (y min) (z min)) (Vec3 (x max) (y max) (z max))
